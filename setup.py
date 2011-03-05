@@ -39,6 +39,10 @@ setup(
     author_email = 'dstahlke@gmail.com',
     # url = '', # FIXME
     license = 'BSD',
-    packages = ['qitensor', 'qitensor.tests'],
+    packages = [
+        'qitensor',
+        'qitensor.tests',
+        'qitensor.sage',
+    ],
     cmdclass = {'test': test_qitensor },
 )

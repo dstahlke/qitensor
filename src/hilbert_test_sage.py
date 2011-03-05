@@ -1,3 +1,5 @@
+from qitensor.sage import *
+
 HA = qudit('A', 3)
 HB = qudit('B', 3)
 HAbar = qudit('Abar', 3)

@@ -37,7 +37,7 @@ setup(
     description = 'Quantum Tensors',
     author = 'Dan Stahlke',
     author_email = 'dstahlke@gmail.com',
-    # url = '', # FIXME
+    url = 'http://www.stahlke.org/dan/qitensor',
     license = 'BSD',
     packages = [
         'qitensor',

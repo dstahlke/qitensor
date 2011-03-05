@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+if [ "$SAGE_LOCAL" = "" ]; then
+   echo "SAGE_LOCAL undefined ... exiting";
+   echo "Maybe run 'sage -sh'?"
+   exit 1
+fi
+
+# Delete old files
+if [ "$SAGE_ROOT" = "" ]; then
+    echo "Please set the SAGE_ROOT variable"
+    exit 1
+fi
+echo "Deleting $SAGE_ROOT/local/lib/python2.5/site-packages/qitensor*"
+rm -rf $SAGE_ROOT/local/lib/python2.5/site-packages/qitensor*
+
+cd src/
+
+python setup.py install

@@ -1,0 +1,31 @@
+= QiTensor =
+
+== Description ==
+
+Wrapper for numpy arrays with labeled axes and Hilbert space operations.
+
+== Website ==
+
+http://www.stahlke.org/dan/qitensor
+
+== License ==
+
+New BSD: http://www.opensource.org/licenses/bsd-license.php
+
+== SPKG Maintainers ==
+ * Dan Stahlke
+
+== Upstream Contact ==
+
+dstahlke@gmail.com
+
+== Dependencies ==
+ * None
+
+== Special Update/Build Instructions ==
+ * None
+
+== Changelog ==
+
+=== qitensor-0.1 (Dan Stahlke, Mar 5th, 2011) ===
+ * initial version

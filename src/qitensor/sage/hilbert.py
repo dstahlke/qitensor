@@ -1,14 +1,14 @@
 #!/usr/bin/python
 
-import hilbert
+import qitensor
 import numpy as np
 from sage.structure.sage_object import SageObject
 from sage.all import *
 
-class SageHilbertBaseField(hilbert.HilbertBaseField):
+class SageHilbertBaseField(qitensor.HilbertBaseField):
     def __init__(self, dtype, sage_ring):
         unique_id = 'sage_'+str(sage_ring)
-        hilbert.HilbertBaseField.__init__(self, dtype, unique_id)
+        qitensor.HilbertBaseField.__init__(self, dtype, unique_id)
         self.sage_ring = sage_ring
 
     def complex_unit(self):
@@ -53,15 +53,15 @@ class SageHilbertSpaceMixins(object):
     def reshaped_sage_matrix(self, m):
         return self.reshaped_np_matrix(np.array(m, dtype=self.base_field.dtype))
 
-class SageHilbertAtom(SageHilbertAtomMixins, SageHilbertSpaceMixins, hilbert.HilbertAtom, SageObject):
+class SageHilbertAtom(SageHilbertAtomMixins, SageHilbertSpaceMixins, qitensor.HilbertAtom, SageObject):
     pass
 
-class SageHilbertSpace(SageHilbertSpaceMixins, hilbert.HilbertSpace, SageObject):
+class SageHilbertSpace(SageHilbertSpaceMixins, qitensor.HilbertSpace, SageObject):
     pass
 
-class SageHilbertArray(hilbert.HilbertArray, SageObject):
+class SageHilbertArray(qitensor.HilbertArray, SageObject):
     def __init__(self, space, data, noinit_data, reshape):
-        hilbert.HilbertArray.__init__(self, space, data, noinit_data, reshape)
+        qitensor.HilbertArray.__init__(self, space, data, noinit_data, reshape)
 
     def _matrix_(self, R=None):
         np_mat = np.array(self.as_np_matrix())
@@ -122,7 +122,7 @@ cdf_base_field = SageHilbertBaseField(object, CDF)
 # convenience functions
 
 def lookup_base_field(base_field):
-    if isinstance(base_field, hilbert.HilbertBaseField):
+    if isinstance(base_field, qitensor.HilbertBaseField):
         return base_field
     elif base_field == SR:
         return sr_base_field

@@ -11,8 +11,8 @@ if [ "$SAGE_ROOT" = "" ]; then
     echo "Please set the SAGE_ROOT variable"
     exit 1
 fi
-echo "Deleting $SAGE_ROOT/local/lib/python2.5/site-packages/qitensor*"
-rm -rf $SAGE_ROOT/local/lib/python2.5/site-packages/qitensor*
+echo "Deleting $SAGE_ROOT/local/lib/python2.*/site-packages/qitensor"
+rm -rf $SAGE_ROOT/local/lib/python2.*/site-packages/qitensor
 
 cd src/
 

@@ -1,10 +1,10 @@
 #!/usr/bin/python
 
 import unittest
-import hilbert
-from hilbert import qubit, qudit, indexed_space
-from hilbert import MismatchedIndexSetError, DuplicatedSpaceError
-from hilbert import BraKetMixtureError, HilbertIndexError, HilbertShapeError
+import qitensor
+from qitensor import qubit, qudit, indexed_space
+from qitensor import MismatchedIndexSetError, DuplicatedSpaceError
+from qitensor import BraKetMixtureError, HilbertIndexError, HilbertShapeError
 
 class HilbertBasicTests(unittest.TestCase):
     def setUp(self):
@@ -188,5 +188,12 @@ class HilbertComplicatedTests(unittest.TestCase):
         self.assertEqual(str(U2.space), '|Abar,Bbar><A,B|')
         self.failUnless( (U2-U).norm() < self.epsilon )
 
+def suite():
+    return unittest.TestSuite(map(unittest.TestLoader().loadTestsFromTestCase, [
+        HilbertBasicTests,
+        HilbertOperTests,
+        HilbertComplicatedTests,
+    ]))
+
 if __name__ == "__main__":
-    unittest.main()
+    unittest.TextTestRunner().run(suite())

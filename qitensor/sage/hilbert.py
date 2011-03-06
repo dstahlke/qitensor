@@ -14,10 +14,10 @@ class SageHilbertBaseField(qitensor.HilbertBaseField):
         self.sage_ring = sage_ring
 
     def complex_unit(self):
-        return I
+        return self.sage_ring(I)
 
     def fractional_phase(self, a, b):
-        return exp(2 * pi * I * a / b)
+        return self.sage_ring(exp(2 * pi * I * a / b))
 
     def eye(self, size):
         return np.array(identity_matrix(self.sage_ring, size), dtype=self.dtype)
@@ -53,6 +53,9 @@ class SageHilbertAtomMixins(object):
 
 class SageHilbertSpaceMixins(object):
     def reshaped_sage_matrix(self, m):
+        sage_ring = self.space.base_field.sage_ring
+        if m.base_ring() != sage_ring:
+            m = m.change_ring(sage_ring)
         return self.reshaped_np_matrix(np.array(m, dtype=self.base_field.dtype))
 
 class SageHilbertAtom(SageHilbertAtomMixins, SageHilbertSpaceMixins, qitensor.HilbertAtom, SageObject):

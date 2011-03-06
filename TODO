@@ -2,6 +2,5 @@ finish docs
 make sure pickle is done right
 trace
 eigenvalues
-base_field param for qubit convenience function that takes complex, SR, etc.
 quantum circuit operators (cnot, etc.)
 overview docs

@@ -3,9 +3,9 @@
 import qitensor
 import numpy as np
 
+from sage.all import *
 from sage.structure.sage_object import SageObject
 import sage.rings.ring
-from sage.all import *
 
 class SageHilbertBaseField(qitensor.HilbertBaseField):
     def __init__(self, sage_ring):

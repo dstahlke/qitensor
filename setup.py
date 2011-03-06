@@ -42,7 +42,6 @@ setup(
     packages = [
         'qitensor',
         'qitensor.tests',
-        'qitensor.sage',
     ],
     cmdclass = {'test': test_qitensor },
 )

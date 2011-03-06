@@ -9,7 +9,14 @@ ver=$(PYTHONPATH="..:$PYTHONPATH" python -c 'import qitensor; print qitensor.__v
 build="qitensor-$ver"
 mkdir -p $build || fatal
 cp SPKG.txt spkg-install $build || fatal
-rsync -av --delete .. $build/src --exclude $build --exclude .git --exclude "*.spkg" || fatal
+rsync -av --delete .. $build/src \
+	--exclude $build \
+	--exclude .git \
+	--exclude build \
+	--exclude _build \
+	--exclude "*.spkg" \
+	--exclude "*/.*.swp" \
+	|| fatal
 sage --spkg $build || fatal
 ls -la $build.spkg || fatal
 echo Done.

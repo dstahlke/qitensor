@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 # FIXME - cannot set slice data e.g. m[0:3] = [1,2,3]
 # FIXME - use singletons for HilbertAtom and HilbertBaseField (and make pickle restore the singletons)
 
@@ -126,11 +124,48 @@ class HilbertBaseField(object):
         return (U, S, V)
 
     def create_space1(self, kets_and_bras):
+        r"""
+        Creates a ``HilbertSpace`` from a collection of ``HilbertAtom`` objects.
+
+        This provides an alternative to using the multiplication operator
+        to combine ``HilbertAtom`` objects.
+
+        :param kets_and_bras: a collection of ``HilbertAtom`` objects
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> hb = qubit('b')
+        >>> ha * hb == complex_field.create_space1([ha, hb])
+        True
+        >>> ha.H * hb == complex_field.create_space1([ha.H, hb])
+        True
+        """
         return self.create_space2(
             frozenset([x for x in kets_and_bras if not x.is_dual]),
             frozenset([x for x in kets_and_bras if x.is_dual]))
 
     def create_space2(self, ket_set, bra_set):
+        r"""
+        Creates a ``HilbertSpace`` from frozensets of ``HilbertAtom`` kets and bras.
+
+        This provides an alternative to using the multiplication operator
+        to combine ``HilbertAtom`` objects.
+
+        :param ket_set: a collection of ``HilbertAtom`` objects for which ``is_dual==False``
+        :param bra_set: a collection of ``HilbertAtom`` objects for which ``is_dual==True``
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> hb = qubit('b')
+        >>> ha * hb == complex_field.create_space2(frozenset([ha, hb]), frozenset())
+        True
+        >>> ha.H * hb == complex_field.create_space2(frozenset([hb]), frozenset([ha.H]))
+        True
+        """
+
+        assert isinstance(ket_set, frozenset)
+        assert isinstance(bra_set, frozenset)
+
         for x in ket_set | bra_set:
             if x.base_field != self:
                 raise IncompatibleBaseFieldError('Different base_fields: '+
@@ -154,12 +189,62 @@ class HilbertBaseField(object):
         return HilbertArray(space, data, noinit_data, reshape)
 
     def indexed_space(self, label, indices, latex_label=None):
+        r"""
+        Returns a finite-dimensional Hilbert space with an arbitrary index set.
+
+        :param label: a unique label for this Hilbert space
+        :param indices: a sequence defining the index set
+        :param latex_label: an optional latex representation of the label
+
+        See also: :func:`qubit`, :func:`qudit`
+
+        >>> from qitensor import *
+        >>> ha = indexed_space('a', ['x', 'y', 'z'])
+        >>> ha
+        |a>
+        >>> ha.indices
+        ['x', 'y', 'z']
+        """
+
         return self._atom_factory(label, latex_label, indices)
 
     def qudit(self, label, dim, latex_label=None):
+        r"""
+        Returns a finite-dimensional Hilbert space with index set [0, 1, ..., n-1].
+
+        :param label: a unique label for this Hilbert space
+        :param dim: the dimension of the Hilbert space
+        :param latex_label: an optional latex representation of the label
+
+        See also: :func:`qubit`, :func:`indexed_space`
+
+        >>> from qitensor import *
+        >>> ha = qudit('a', 3)
+        >>> ha
+        |a>
+        >>> ha.indices
+        [0, 1, 2]
+        """
+
         return self.indexed_space(label, range(dim), latex_label)
 
     def qubit(self, label, latex_label=None):
+        r"""
+        Returns a two-dimensional Hilbert space with index set [0, 1].
+
+        :param label: a unique label for this Hilbert space
+        :param latex_label: an optional latex representation of the label
+
+        See also: :func:`qudit`, :func:`indexed_space`
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> ha
+        |a>
+        >>> ha.indices
+        [0, 1]
+        """
+
         return self.qudit(label, 2, latex_label)
 
 class HilbertSpace(object):

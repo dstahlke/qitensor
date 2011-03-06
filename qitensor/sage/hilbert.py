@@ -2,13 +2,15 @@
 
 import qitensor
 import numpy as np
+
 from sage.structure.sage_object import SageObject
+import sage.rings.ring
 from sage.all import *
 
 class SageHilbertBaseField(qitensor.HilbertBaseField):
-    def __init__(self, dtype, sage_ring):
-        unique_id = 'sage_'+str(sage_ring)
-        qitensor.HilbertBaseField.__init__(self, dtype, unique_id)
+    def __init__(self, sage_ring):
+        unique_id = 'sage '+repr(sage_ring)
+        qitensor.HilbertBaseField.__init__(self, object, unique_id)
         self.sage_ring = sage_ring
 
     def complex_unit(self):
@@ -115,27 +117,9 @@ class SageHilbertArray(qitensor.HilbertArray, SageObject):
             out_hilb = out_hilb.H
         return out_hilb.reshaped_sage_matrix(m)
 
-sr_base_field = SageHilbertBaseField(object, SR)
-cc_base_field = SageHilbertBaseField(object, CC)
-cdf_base_field = SageHilbertBaseField(object, CDF)
+def can_use_type(dtype):
+    return isinstance(dtype, sage.rings.ring.CommutativeRing)
 
-# convenience functions
-
-def lookup_base_field(base_field):
-    if isinstance(base_field, qitensor.HilbertBaseField):
-        return base_field
-    elif base_field == SR:
-        return sr_base_field
-    elif base_field == CC:
-        return cc_base_field
-    elif base_field == CDF:
-        return cdf_base_field
-
-def indexed_space(label, indices, base_field=SR, latex_label=None):
-    return lookup_base_field(base_field).indexed_space(label, indices, latex_label)
-
-def qudit(label, dim, base_field=SR, latex_label=None):
-    return lookup_base_field(base_field).qudit(label, dim, latex_label)
-
-def qubit(label, base_field=SR, latex_label=None):
-    return lookup_base_field(base_field).qubit(label, latex_label)
+def create_base_field(dtype):
+    assert can_use_type(dtype)
+    return SageHilbertBaseField(dtype)

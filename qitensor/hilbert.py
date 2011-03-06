@@ -136,9 +136,10 @@ class HilbertBaseField(object):
         >>> from qitensor import *
         >>> ha = qubit('a')
         >>> hb = qubit('b')
-        >>> ha * hb == complex_field.create_space1([ha, hb])
+        >>> field = base_field_lookup(complex)
+        >>> ha * hb == field.create_space1([ha, hb])
         True
-        >>> ha.H * hb == complex_field.create_space1([ha.H, hb])
+        >>> ha.H * hb == field.create_space1([ha.H, hb])
         True
         """
         return self.create_space2(
@@ -158,9 +159,10 @@ class HilbertBaseField(object):
         >>> from qitensor import *
         >>> ha = qubit('a')
         >>> hb = qubit('b')
-        >>> ha * hb == complex_field.create_space2(frozenset([ha, hb]), frozenset())
+        >>> field = base_field_lookup(complex)
+        >>> ha * hb == field.create_space2(frozenset([ha, hb]), frozenset())
         True
-        >>> ha.H * hb == complex_field.create_space2(frozenset([hb]), frozenset([ha.H]))
+        >>> ha.H * hb == field.create_space2(frozenset([hb]), frozenset([ha.H]))
         True
         """
 
@@ -1427,16 +1429,40 @@ class HilbertArray(object):
 
 ################################
 
-# FIXME - hide inside a lookup function
-complex_field = HilbertBaseField(complex, 'complex_field')
+base_field_cache = {}
+
+def base_field_lookup(dtype):
+    if base_field_cache.has_key(dtype):
+        return base_field_cache[dtype]
+
+    have_sage = False
+    try:
+        import qitensor.sage
+        have_sage = True
+    except:
+        pass
+
+    if have_sage and qitensor.sage.can_use_type(dtype):
+        base_field_cache[dtype] = qitensor.sage.create_base_field(dtype)
+    elif isinstance(dtype, type):
+        base_field_cache[dtype] = HilbertBaseField(dtype, repr(dtype))
+    else:
+        raise NotImplementedError("data type not supported")
+
+    return base_field_cache[dtype]
+
+################################
 
 # convenience functions
 
-def indexed_space(label, indices):
-    return complex_field.indexed_space(label, indices)
+def indexed_space(label, indices, dtype=complex, latex_label=None):
+    field = base_field_lookup(dtype)
+    return field.indexed_space(label, indices, latex_label)
 
-def qudit(label, dim):
-    return complex_field.qudit(label, dim)
+def qudit(label, dim, dtype=complex, latex_label=None):
+    field = base_field_lookup(dtype)
+    return field.qudit(label, dim, latex_label)
 
-def qubit(label):
-    return complex_field.qubit(label)
+def qubit(label, dtype=complex, latex_label=None):
+    field = base_field_lookup(dtype)
+    return field.qubit(label, latex_label)

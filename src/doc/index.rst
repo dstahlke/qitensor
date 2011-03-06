@@ -18,6 +18,12 @@ Contents:
 .. autoclass:: HilbertBaseField
     :members:
 
+.. autoclass:: HilbertSpace
+    :members:
+
+.. autoclass:: HilbertAtom
+    :members:
+
 Indices and tables
 ==================
 

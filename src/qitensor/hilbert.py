@@ -180,12 +180,30 @@ class HilbertBaseField(object):
             return self._space_factory(ket_set, bra_set)
 
     def _atom_factory(self, label, latex_label, indices):
+        r"""
+        Factory method for creating ``HilbertAtom`` objects.
+
+        Subclasses can override this method in order to return custom
+        subclasses of ``HilbertAtom``.
+        """
         return HilbertAtom(label, latex_label, indices, self)
 
     def _space_factory(self, ket_set, bra_set):
+        r"""
+        Factory method for creating ``HilbertSpace`` objects.
+
+        Subclasses can override this method in order to return custom
+        subclasses of ``HilbertSpace``.
+        """
         return HilbertSpace(ket_set, bra_set, self)
 
     def _array_factory(self, space, data, noinit_data, reshape):
+        r"""
+        Factory method for creating ``HilbertArray`` objects.
+
+        Subclasses can override this method in order to return custom
+        subclasses of ``HilbertArray``.
+        """
         return HilbertArray(space, data, noinit_data, reshape)
 
     def indexed_space(self, label, indices, latex_label=None):
@@ -249,6 +267,10 @@ class HilbertBaseField(object):
 
 class HilbertSpace(object):
     def __init__(self, ket_set, bra_set, base_field):
+        """
+        Constructor should only be called from :func:`HilbertBaseField._space_factory`
+        """
+
         self.base_field = base_field
         self._H = None
 
@@ -276,9 +298,29 @@ class HilbertSpace(object):
             self.shape = tuple(ket_shape + bra_shape)
 
     def bra_space(self):
+        """
+        Returns a ``HilbertSpace`` consisting of only the bra space of this
+        space.
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> hb = qubit('b')
+        >>> (ha.H * hb).bra_space()
+        <a|
+        """
         return self.base_field.create_space2(frozenset(), self.bra_set)
 
     def ket_space(self):
+        """
+        Returns a ``HilbertSpace`` consisting of only the ket space of this
+        space.
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> hb = qubit('b')
+        >>> (ha.H * hb).ket_space()
+        |b>
+        """
         return self.base_field.create_space2(self.ket_set, frozenset())
 
     @property

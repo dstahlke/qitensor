@@ -14,6 +14,7 @@
 import sys, os
 
 import numpy
+# this is needed so that the doctests will pass
 numpy.set_printoptions(precision = 6, suppress = True)
 
 # If extensions (or modules to document with autodoc) are in another directory,

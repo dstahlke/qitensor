@@ -1,12 +1,12 @@
-from qitensor.sage import *
+from qitensor import *
 
-HA = qudit('A', 3)
-HB = qudit('B', 3)
-HAbar = qudit('Abar', 3)
-HBbar = qudit('Bbar', 3)
-Hc = qudit('c', 5)
-Ha = qudit('a', 5)
-Hb = qudit('b', 5)
+HA = qudit('A', 3, SR)
+HB = qudit('B', 3, SR)
+HAbar = qudit('Abar', 3, SR)
+HBbar = qudit('Bbar', 3, SR)
+Hc = qudit('c', 5, SR)
+Ha = qudit('a', 5, SR)
+Hb = qudit('b', 5, SR)
 
 U = ((HA*HB).H*(HAbar*HBbar)).eye()
 U[{HA.H: 1, HB.H: 2, HAbar: 1, HBbar: 2}] = 0

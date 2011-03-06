@@ -6,17 +6,16 @@
 Welcome to qitensor's documentation!
 ====================================
 
+.. automodule:: qitensor
+
 Contents:
 
 .. toctree::
    :maxdepth: 2
 
-.. automodule:: qitensor
-
-.. automodule:: qitensor.hilbert
-
-.. autoclass:: HilbertBaseField
-    :members:
+   basefield
+   atom
+   array
 
 .. autoclass:: HilbertSpace
     :members:

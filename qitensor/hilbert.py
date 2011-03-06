@@ -1,5 +1,6 @@
 # FIXME - cannot set slice data e.g. m[0:3] = [1,2,3]
 # FIXME - use singletons for HilbertAtom and HilbertBaseField (and make pickle restore the singletons)
+# FIXME - np.product returns float for empty list
 
 import numpy as np
 import numpy.linalg as linalg
@@ -305,8 +306,11 @@ class HilbertSpace(object):
         >>> from qitensor import *
         >>> ha = qubit('a')
         >>> hb = qubit('b')
-        >>> (ha.H * hb).bra_space()
-        <a|
+        >>> hc = qubit('c')
+        >>> sp = (ha.H * hb * hc * hc.H); sp
+        |b,c><a,c|
+        >>> sp.bra_space()
+        <a,c|
         """
         return self.base_field.create_space2(frozenset(), self.bra_set)
 
@@ -318,13 +322,33 @@ class HilbertSpace(object):
         >>> from qitensor import *
         >>> ha = qubit('a')
         >>> hb = qubit('b')
-        >>> (ha.H * hb).ket_space()
-        |b>
+        >>> hc = qubit('c')
+        >>> sp = (ha.H * hb * hc * hc.H); sp
+        |b,c><a,c|
+        >>> sp.ket_space()
+        |b,c>
         """
         return self.base_field.create_space2(self.ket_set, frozenset())
 
     @property
     def H(self):
+        """
+        The adjoint of this Hilbert space.
+
+        A ``HilbertSpace`` is returned which has bras turned into kets and
+        kets turned into bras.
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> hb = qubit('b')
+        >>> hc = qubit('c')
+        >>> sp = ha * hb * hc.H; sp
+        |a,b><c|
+        >>> sp.H
+        |c><a,b|
+        >>> sp.H.H
+        |a,b><c|
+        """
         if self._H is None:
             self._H = self.base_field.create_space1(
                 [x.H for x in self.bra_ket_set])
@@ -332,6 +356,19 @@ class HilbertSpace(object):
 
     @property
     def O(self):
+        """
+        The operator space for a bra or ket space.
+
+        This just returns ``self * self.H``.
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> hb = qubit('b')
+        >>> ha.O
+        |a><a|
+        >>> (ha*hb).O
+        |a,b><a,b|
+        """
         return self * self.H
 
     def __cmp__(self, other):
@@ -400,21 +437,150 @@ class HilbertSpace(object):
         return self.__mul__(other)
 
     def reshaped_np_matrix(self, m):
+        """
+        Returns a ``HilbertArray`` created from a given numpy matrix.
+
+        The number of rows and columns must match the dimensions of the ket and
+        bra spaces.  It is required that ``len(m.shape)==2``.
+
+        :param m: the input matrix.
+        :type m: numpy.matrix or numpy.array
+
+        See also: :func:`array`
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> hb = qubit('b')
+
+        >>> ha.reshaped_np_matrix(np.matrix([[1], [2]]))
+        HilbertArray(|a>,
+        array([ 1.+0.j,  2.+0.j]))
+
+        >>> ha.H.reshaped_np_matrix(np.matrix([1, 2]))
+        HilbertArray(<a|,
+        array([ 1.+0.j,  2.+0.j]))
+
+        >>> (ha*hb).O.reshaped_np_matrix(np.diag([1, 2, 3, 4]))
+        HilbertArray(|a,b><a,b|,
+        array([[[[ 1.+0.j,  0.+0.j],
+                 [ 0.+0.j,  0.+0.j]],
+        <BLANKLINE>
+                [[ 0.+0.j,  2.+0.j],
+                 [ 0.+0.j,  0.+0.j]]],
+        <BLANKLINE>
+        <BLANKLINE>
+               [[[ 0.+0.j,  0.+0.j],
+                 [ 3.+0.j,  0.+0.j]],
+        <BLANKLINE>
+                [[ 0.+0.j,  0.+0.j],
+                 [ 0.+0.j,  4.+0.j]]]]))
+        """
+
         ket_size = np.product([len(x.indices) for x in self.ket_set])
         bra_size = np.product([len(x.indices) for x in self.bra_set])
-        if m.shape[0] != ket_size:
-            raise HilbertShapeError(m.shape[0], ket_size)
-        if m.shape[1] != bra_size:
-            raise HilbertShapeError(m.shape[1], bra_size)
+
+        if len(m.shape) != 2 or m.shape[0] != ket_size or m.shape[1] != bra_size:
+            raise HilbertShapeError(m.shape, (ket_size, bra_size))
+
         return self.array(m, reshape=True)
 
     def array(self, data=None, noinit_data=False, reshape=False):
+        """
+        Returns a ``HilbertArray`` created from the given data, or filled with
+        zeros if no data is given.
+
+        If the ``reshape`` parameter is ``True`` then the given ``data`` array
+        can be any shape as long as the total number of elements is equal to
+        the dimension of this Hilbert space (bra dimension times ket
+        dimension).  If ``reshape`` is ``False`` (the default) then ``data``
+        must have an axis for each of the components of this Hilbert space.
+
+        Since it is not always clear which axes should correspond to which
+        Hilbert space components, it is recommended to specify ``data`` only
+        when there is at most one bra component and at most one ket component.
+        In this case, the first axis will correspond to the ket space (if it
+        exists) and the last axis will correspond ot the bra space (if it
+        exists).
+
+        :param data: the array will be initialized with the data if given,
+            otherwise it will be initialized with zeros.
+        :type data: anything that can be used to create a numpy.array
+
+        :param noinit_data: If true, the underlying numpy.array object will not
+            be allocated.  Don't use this unless you are sure you know what you
+            are doing.
+        :type noinit_data: bool; default False
+
+        :param reshape: If true, the array given by the ``data`` parameter will
+            be reshaped if needed.  Otherwise, an exception will be raised if
+            it is not the proper shape.
+        :type reshape: bool; default False
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> ha.array([1,2])
+        HilbertArray(|a>,
+        array([ 1.+0.j,  2.+0.j]))
+
+        >>> ha.H.array([1,2])
+        HilbertArray(<a|,
+        array([ 1.+0.j,  2.+0.j]))
+
+        >>> ha.O.array([[1, 2], [3, 4]])
+        HilbertArray(|a><a|,
+        array([[ 1.+0.j,  2.+0.j],
+               [ 3.+0.j,  4.+0.j]]))
+        
+        >>> ha.O.array([1, 2, 3, 4], reshape=True)
+        HilbertArray(|a><a|,
+        array([[ 1.+0.j,  2.+0.j],
+               [ 3.+0.j,  4.+0.j]]))
+        """
+
         return self.base_field._array_factory(self, data, noinit_data, reshape)
 
     def random_array(self):
+        """
+        Returns a ``HilbertArray`` with random values.
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> ha.random_array() # doctest: +SKIP
+        HilbertArray(|a>,
+        array([ 0.633571+0.j,  0.673767+0.j]))
+
+        """
         return self.array(self.base_field.random_array(self.shape))
 
     def eye(self):
+        """
+        Returns a ``HilbertArray`` corresponding to the identity matrix.
+
+        If the bra space or ket space is empty, then the nonempty of those two
+        is used to form an operator space (i.e. ``self.O``).  If both the
+        bra and ket spaces are nonempty, they must be of the same dimension
+        since the identity matrix must be square.
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> hb = qubit('b')
+
+        >>> ha.eye()
+        HilbertArray(|a><a|,
+        array([[ 1.+0.j,  0.+0.j],
+               [ 0.+0.j,  1.+0.j]]))
+
+        >>> (ha*hb.H).eye()
+        HilbertArray(|a><b|,
+        array([[ 1.+0.j,  0.+0.j],
+               [ 0.+0.j,  1.+0.j]]))
+
+        >>> ha.eye() == ha.H.eye()
+        True
+        >>> ha.eye() == ha.O.eye()
+        True
+        """
+
         if len(self.ket_set) == 0 or len(self.bra_set) == 0:
             return (self * self.H).eye()
 
@@ -426,6 +592,39 @@ class HilbertSpace(object):
         return self.array(self.base_field.eye(bra_size), reshape=True)
 
     def basis_vec(self, idx):
+        """
+        Returns a ``HilbertArray`` corresponding to a basis vector.
+
+        The returned vector has a 1 in the slot corresponding to ``idx`` and
+        zeros elsewhere.
+
+        :param idx: if this Hilbert space has only one component, this should
+            be a member of that component's index set.  Otherwise, this should
+            be a tuple of indices.
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> hb = qubit('b')
+        >>> hc = indexed_space('c', ['x', 'y', 'z'])
+
+        >>> ha.basis_vec(0)
+        HilbertArray(|a>,
+        array([ 1.+0.j,  0.+0.j]))
+
+        >>> ha.basis_vec(1)
+        HilbertArray(|a>,
+        array([ 0.+0.j,  1.+0.j]))
+
+        >>> (ha*hb).basis_vec((0, 1))
+        HilbertArray(|a,b>,
+        array([[ 0.+0.j,  1.+0.j],
+               [ 0.+0.j,  0.+0.j]]))
+
+        >>> hc.basis_vec('y')
+        HilbertArray(|c>,
+        array([ 0.+0.j,  1.+0.j,  0.+0.j]))
+        """
+
         ret = self.array()
         index_map = ret._index_key_to_map(idx)
         if len(index_map) != len(self.shape):
@@ -434,6 +633,10 @@ class HilbertSpace(object):
         return ret
 
     def assert_ket_space(self):
+        """
+        Throws an exception unless the bra space is empty.
+        """
+
         if self.bra_set:
             raise NotKetSpaceError(repr(self))
 
@@ -617,7 +820,7 @@ class HilbertArray(object):
         else:
             self.nparray = np.array(data, dtype=hs.base_field.dtype)
             if reshape:
-                if np.product(data.shape) != np.product(hs.shape):
+                if np.product(self.nparray.shape) != np.product(hs.shape):
                     raise HilbertShapeError(np.product(data.shape), 
                         np.product(hs.shape))
                 self.nparray = self.nparray.reshape(hs.shape)

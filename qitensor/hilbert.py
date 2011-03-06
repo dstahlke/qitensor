@@ -852,10 +852,11 @@ class HilbertAtom(HilbertSpace):
             return self.O.array([[0, -j], [j, 0]])
 
     def pauliZ(self, order=1):
-        """
+        r"""
         Returns the generalized Pauli Z operator.
 
-        :params order: this method will return `Z^{order}`
+        :param order: if given, :math:`Z^\textrm{order}` will be returned.  This is
+            only useful for spaces that are larger than qubits.
         :type order: integer; default 1
 
         See also: :func:`Z`

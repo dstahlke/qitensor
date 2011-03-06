@@ -4,3 +4,6 @@ trace
 eigenvalues
 quantum circuit operators (cnot, etc.)
 overview docs
+cannot set slice data e.g. m[0:3] = [1,2,3]
+use singletons for HilbertAtom and HilbertBaseField (and make pickle restore the singletons)
+np.product returns float for empty list

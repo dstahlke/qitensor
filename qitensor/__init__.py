@@ -19,4 +19,20 @@ AUTHORS:
 
 __version__ = "0.1"
 
-from hilbert import *
+from exceptions import *
+from basefield import *
+from space import *
+from atom import *
+from array import *
+
+def indexed_space(label, indices, dtype=complex, latex_label=None):
+    field = base_field_lookup(dtype)
+    return field.indexed_space(label, indices, latex_label)
+
+def qudit(label, dim, dtype=complex, latex_label=None):
+    field = base_field_lookup(dtype)
+    return field.qudit(label, dim, latex_label)
+
+def qubit(label, dtype=complex, latex_label=None):
+    field = base_field_lookup(dtype)
+    return field.qubit(label, latex_label)

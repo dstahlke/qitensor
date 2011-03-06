@@ -1,10 +1,7 @@
 Base Fields
 ===========
 
-.. automodule:: qitensor.hilbert
+.. automodule:: qitensor.basefield
    :members:
    :undoc-members:
    :show-inheritance:
-
-.. autoclass:: HilbertBaseField
-    :members:

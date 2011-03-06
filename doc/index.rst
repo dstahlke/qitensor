@@ -15,13 +15,9 @@ Contents:
 
    basefield
    atom
+   space
    array
-
-.. autoclass:: HilbertSpace
-    :members:
-
-.. autoclass:: HilbertAtom
-    :members:
+   exceptions
 
 Indices and tables
 ==================

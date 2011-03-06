@@ -697,6 +697,17 @@ class HilbertAtom(HilbertSpace):
 
     @property
     def prime(self):
+        """
+        Returns a ``HilbertAtom`` just like this one but with an apostrophe
+        appended to the label.
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> ha.prime
+        |a'>
+        >>> ha.prime.prime
+        |a''>
+        """
         if self._prime is None:
             if self.is_dual:
                 self._prime = self.H.prime.H
@@ -706,12 +717,54 @@ class HilbertAtom(HilbertSpace):
         return self._prime
 
     def bra(self, idx):
+        """
+        Returns a bra basis vector.
+
+        The returned vector has a 1 in the slot corresponding to ``idx`` and
+        zeros elsewhere.
+
+        :param idx: a member of this space's index set
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> hx = indexed_space('x', ['x', 'y', 'z'])
+
+        >>> ha.bra(0)
+        HilbertArray(|a>,
+        array([ 1.+0.j,  0.+0.j]))
+
+        >>> hx.bra('y')
+        HilbertArray(|x>,
+        array([ 0.+0.j,  1.+0.j,  0.+0.j]))
+        """
+
         if self.is_dual:
             return self.H.basis_vec({self.H: idx})
         else:
             return self.basis_vec({self: idx})
 
     def ket(self, idx):
+        """
+        Returns a ket basis vector.
+
+        The returned vector has a 1 in the slot corresponding to ``idx`` and
+        zeros elsewhere.
+
+        :param idx: a member of this space's index set
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> hx = indexed_space('x', ['x', 'y', 'z'])
+
+        >>> ha.ket(0)
+        HilbertArray(<a|,
+        array([ 1.+0.j,  0.+0.j]))
+
+        >>> hx.ket('y')
+        HilbertArray(<x|,
+        array([ 0.+0.j,  1.+0.j,  0.+0.j]))
+        """
+
         if self.is_dual:
             return self.basis_vec({self: idx})
         else:
@@ -756,12 +809,42 @@ class HilbertAtom(HilbertSpace):
     # Special operators
 
     def pauliX(self):
+        """
+        Returns the Pauli X operator.
+
+        This is only available for qubit spaces.
+
+        See also: :func:`X`
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> ha.pauliX()
+        HilbertArray(|a><a|,
+        array([[ 0.+0.j,  1.+0.j],
+               [ 1.+0.j,  0.+0.j]]))
+        """
+
         if len(self.indices) != 2:
             raise NotImplementedError("pauliX is only implemented for qubits")
         else:
             return self.O.array([[0, 1], [1, 0]])
 
     def pauliY(self):
+        """
+        Returns the Pauli Y operator.
+
+        This is only available for qubit spaces.
+
+        See also: :func:`Y`
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> ha.pauliY()
+        HilbertArray(|a><a|,
+        array([[ 0.+0.j, -0.-1.j],
+               [ 0.+1.j,  0.+0.j]]))
+        """
+
         if len(self.indices) != 2:
             raise NotImplementedError("pauliY is only implemented for qubits")
         else:
@@ -769,6 +852,37 @@ class HilbertAtom(HilbertSpace):
             return self.O.array([[0, -j], [j, 0]])
 
     def pauliZ(self, order=1):
+        """
+        Returns the generalized Pauli Z operator.
+
+        :params order: this method will return `Z^{order}`
+        :type order: integer; default 1
+
+        See also: :func:`Z`
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> ha.pauliZ()
+        HilbertArray(|a><a|,
+        array([[ 1.+0.j,  0.+0.j],
+               [ 0.+0.j, -1.+0.j]]))
+
+        >>> hx = indexed_space('x', ['x', 'y', 'z', 'w'])
+        >>> hx.pauliZ()
+        HilbertArray(|x><x|,
+        array([[ 1.+0.j,  0.+0.j,  0.+0.j,  0.+0.j],
+               [ 0.+0.j,  0.+1.j,  0.+0.j,  0.+0.j],
+               [ 0.+0.j,  0.+0.j, -1.+0.j,  0.+0.j],
+               [ 0.+0.j,  0.+0.j,  0.+0.j, -0.-1.j]]))
+
+        >>> hx.pauliZ(2)
+        HilbertArray(|x><x|,
+        array([[ 1.+0.j,  0.+0.j,  0.+0.j,  0.+0.j],
+               [ 0.+0.j, -1.+0.j,  0.+0.j,  0.+0.j],
+               [ 0.+0.j,  0.+0.j,  1.-0.j,  0.+0.j],
+               [ 0.+0.j,  0.+0.j,  0.+0.j, -1.+0.j]]))
+        """
+
         ret = self.O.array()
         N = len(self.indices)
         for (i, k) in enumerate(self.indices):
@@ -777,23 +891,97 @@ class HilbertAtom(HilbertSpace):
 
     @property
     def X(self):
+        """
+        Returns the Pauli X operator.
+
+        This is only available for qubit spaces.
+
+        See also: :func:`pauliX`
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> ha.X
+        HilbertArray(|a><a|,
+        array([[ 0.+0.j,  1.+0.j],
+               [ 1.+0.j,  0.+0.j]]))
+        """
         return self.pauliX()
 
     @property
     def Y(self):
+        """
+        Returns the Pauli Y operator.
+
+        This is only available for qubit spaces.
+
+        See also: :func:`pauliY`
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> ha.Y
+        HilbertArray(|a><a|,
+        array([[ 0.+0.j, -0.-1.j],
+               [ 0.+1.j,  0.+0.j]]))
+        """
         return self.pauliY()
 
     @property
     def Z(self):
+        """
+        Returns the generalized Pauli Z operator.
+
+        See also: :func:`pauliZ`
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> ha.Z
+        HilbertArray(|a><a|,
+        array([[ 1.+0.j,  0.+0.j],
+               [ 0.+0.j, -1.+0.j]]))
+
+        >>> hx = indexed_space('x', ['x', 'y', 'z', 'w'])
+        >>> hx.Z
+        HilbertArray(|x><x|,
+        array([[ 1.+0.j,  0.+0.j,  0.+0.j,  0.+0.j],
+               [ 0.+0.j,  0.+1.j,  0.+0.j,  0.+0.j],
+               [ 0.+0.j,  0.+0.j, -1.+0.j,  0.+0.j],
+               [ 0.+0.j,  0.+0.j,  0.+0.j, -0.-1.j]]))
+        """
         return self.pauliZ()
 
     def hadamard(self):
+        """
+        Returns the Hadamard operator.
+
+        This is only available for qubit spaces.
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> ha.hadamard()
+        HilbertArray(|a><a|,
+        array([[ 0.707107+0.j,  0.707107+0.j],
+               [ 0.707107+0.j, -0.707107+0.j]]))
+        """
+
         if len(self.indices) != 2:
             raise NotImplementedError("hadamard is only implemented for qubits")
         else:
             return self.O.array([[1, 1], [1, -1]]) / np.sqrt(2)
 
     def gateS(self):
+        """
+        Returns the S-gate operator.
+
+        This is only available for qubit spaces.
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> ha.gateS()
+        HilbertArray(|a><a|,
+        array([[ 1.+0.j,  0.+0.j],
+               [ 0.+0.j,  0.+1.j]]))
+        """
+
         if len(self.indices) != 2:
             raise NotImplementedError("gateS is only implemented for qubits")
         else:
@@ -801,6 +989,19 @@ class HilbertAtom(HilbertSpace):
             return self.O.array([[1, 0], [0, j]])
 
     def gateT(self):
+        """
+        Returns the T-gate operator.
+
+        This is only available for qubit spaces.
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> ha.gateT()
+        HilbertArray(|a><a|,
+        array([[ 1.000000+0.j      ,  0.000000+0.j      ],
+               [ 0.000000+0.j      ,  0.707107+0.707107j]]))
+        """
+
         if len(self.indices) != 2:
             raise NotImplementedError("gateT is only implemented for qubits")
         else:

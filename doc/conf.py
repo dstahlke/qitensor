@@ -13,6 +13,9 @@
 
 import sys, os
 
+import numpy
+numpy.set_printoptions(precision = 6, suppress = True)
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.

@@ -2,3 +2,5 @@
 build/
 dist/
 MANIFEST
+sage_package/qitensor-*/
+sage_package/qitensor-*.spkg

@@ -235,13 +235,13 @@ def base_field_lookup(dtype):
 
     have_sage = False
     try:
-        import qitensor.sage
+        import qitensor.sagewrapper
         have_sage = True
     except:
         pass
 
-    if have_sage and qitensor.sage.can_use_type(dtype):
-        base_field_cache[dtype] = qitensor.sage.create_base_field(dtype)
+    if have_sage and qitensor.sagewrapper.can_use_type(dtype):
+        base_field_cache[dtype] = qitensor.sagewrapper.create_base_field(dtype)
     elif isinstance(dtype, type):
         base_field_cache[dtype] = HilbertBaseField(dtype, repr(dtype))
     else:

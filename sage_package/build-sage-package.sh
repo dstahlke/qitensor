@@ -14,6 +14,7 @@ rsync -av --delete .. $build/src \
 	--exclude .git \
 	--exclude build \
 	--exclude _build \
+	--exclude "*.pyc" \
 	--exclude "*.spkg" \
 	--exclude "*/.*.swp" \
 	|| fatal

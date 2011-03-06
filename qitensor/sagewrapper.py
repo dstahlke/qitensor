@@ -3,14 +3,15 @@
 import qitensor
 import numpy as np
 
-from sage.all import *
-from sage.structure.sage_object import SageObject
-import sage.rings.ring
+from sage.all import I, exp, pi
+from sage.all import matrix, block_matrix, identity_matrix
+from sage.all import SageObject, CommutativeRing
+from qitensor import HilbertBaseField, HilbertAtom, HilbertSpace, HilbertArray
 
-class SageHilbertBaseField(qitensor.HilbertBaseField):
+class SageHilbertBaseField(HilbertBaseField):
     def __init__(self, sage_ring):
         unique_id = 'sage '+repr(sage_ring)
-        qitensor.HilbertBaseField.__init__(self, object, unique_id)
+        HilbertBaseField.__init__(self, object, unique_id)
         self.sage_ring = sage_ring
 
     def complex_unit(self):
@@ -58,15 +59,15 @@ class SageHilbertSpaceMixins(object):
             m = m.change_ring(sage_ring)
         return self.reshaped_np_matrix(np.array(m, dtype=self.base_field.dtype))
 
-class SageHilbertAtom(SageHilbertAtomMixins, SageHilbertSpaceMixins, qitensor.HilbertAtom, SageObject):
+class SageHilbertAtom(SageHilbertAtomMixins, SageHilbertSpaceMixins, HilbertAtom, SageObject):
     pass
 
-class SageHilbertSpace(SageHilbertSpaceMixins, qitensor.HilbertSpace, SageObject):
+class SageHilbertSpace(SageHilbertSpaceMixins, HilbertSpace, SageObject):
     pass
 
-class SageHilbertArray(qitensor.HilbertArray, SageObject):
+class SageHilbertArray(HilbertArray, SageObject):
     def __init__(self, space, data, noinit_data, reshape):
-        qitensor.HilbertArray.__init__(self, space, data, noinit_data, reshape)
+        HilbertArray.__init__(self, space, data, noinit_data, reshape)
 
     def _matrix_(self, R=None):
         np_mat = np.array(self.as_np_matrix())
@@ -121,7 +122,7 @@ class SageHilbertArray(qitensor.HilbertArray, SageObject):
         return out_hilb.reshaped_sage_matrix(m)
 
 def can_use_type(dtype):
-    return isinstance(dtype, sage.rings.ring.CommutativeRing)
+    return isinstance(dtype, CommutativeRing)
 
 def create_base_field(dtype):
     assert can_use_type(dtype)

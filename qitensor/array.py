@@ -789,43 +789,116 @@ class HilbertArray(object):
 
         return self.space.base_field.mat_expm(self, q)
 
-    def svd(self, inner_spaces=None, full_matrices=True):
-        if inner_spaces is None:
+    def svd(self, full_matrices=True, inner_space=None):
+        """
+        Return the singular value decomposition of this array.
+
+        :param full_matrices: if True, U and V are square.  If False,
+            S is square.
+        :type full_matrices: bool; default True
+        :param inner_space: Hilbert space for S.
+        :type inner_space: HilbertSpace
+
+        x.svd() returns a tuple (U, S, V) such that:
+        * ``x == U * S * V``
+        * ``U.H * U`` is identity
+        * ``S`` is diagonal
+        * ``V * V.H`` is identity
+
+        If full_matrices is True:
+
+        * U and V will be square.
+
+        * If inner_space is None, the bra and ket spaces of U will be the same
+          as the ket space of the input and the bra and ket spaces of V will be
+          the same as the bra space of the input.  The Hilbert space of S will be
+          the same as that of the input.  If the input is not square (the
+          dimension of the bra space does not match that of the ket space) then S
+          will not be square.
+
+        * If inner_space is not None, it should be a HilbertSpace whose bra and
+          ket dimensions are the same as those of the input.
+
+        If full_matrices is False:
+
+        * S will be square.  One of U or V will be square.
+
+        * If inner_space is None, the bra and ket spaces of S will be the same.
+          Either the bra or the ket space of the input will be used for S,
+          whichever is of smaller dimension.  If they are of equal dimension
+          but are not the same spaces, then there is an ambiguity and an
+          exception will be raised.  In this case, you must manually specify
+          inner_space.
+
+        * If inner_space is not None, it should be a ket space, and must be
+          of the same dimension as the smaller of the bra or ket spaces of the
+          input.  The given space will be used for both the bra and the ket
+          space of S.
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> hb = qubit('b')
+        >>> hc = qubit('c')
+        >>> x = (ha * hb.H * hc.H).random_array()
+        >>> x.space
+        |a><b,c|
+
+        >>> (U, S, V) = x.svd()
+        >>> [h.space for h in (U, S, V)]
+        [|a><a|, |a><b,c|, |b,c><b,c|]
+        >>> (U * S * V - x).norm() < 1e-14
+        True
+
+        >>> (U, S, V) = x.svd(full_matrices=False)
+        >>> [h.space for h in (U, S, V)]
+        [|a><a|, |a><a|, |a><b,c|]
+        >>> (U * S * V - x).norm() < 1e-14
+        True
+
+        >>> hS = qubit('d1') * qudit('d2', 4).H
+        >>> hS
+        |d1><d2|
+        >>> (U, S, V) = x.svd(full_matrices=True, inner_space=hS)
+        >>> [h.space for h in (U, S, V)]
+        [|a><d1|, |d1><d2|, |d2><b,c|]
+        >>> (U * S * V - x).norm() < 1e-14
+        True
+
+        >>> hS = qubit('d')
+        >>> (U, S, V) = x.svd(full_matrices=False, inner_space=hS)
+        >>> [h.space for h in (U, S, V)]
+        [|a><d|, |d><d|, |d><b,c|]
+        >>> (U * S * V - x).norm() < 1e-14
+        True
+        """
+
+        if inner_space is None:
             hs = self.space
-            bs = hs.bra_space()
-            ks = hs.ket_space()
             if full_matrices:
-                inner_spaces = (ks, bs.H)
+                inner_space = hs
             else:
+                bs = hs.bra_space()
+                ks = hs.ket_space()
                 bra_size = np.product(bs.shape)
                 ket_size = np.product(ks.shape)
                 if ks == bs:
-                    inner_spaces = (ks,)
+                    inner_space = ks
                 elif bra_size < ket_size:
-                    inner_spaces = (bs.H,)
+                    inner_space = bs.H
                 elif ket_size < bra_size:
-                    inner_spaces = (ks,)
+                    inner_space = ks
                 else:
                     # Ambiguity as to which space to take, force user to
                     # specify.
                     raise HilbertError('Please specify which Hilbert space to '+
                         'use for the singular values of this square matrix')
 
-        if not isinstance(inner_spaces, tuple):
-            raise TypeError('inner_spaces must be a tuple')
+        if not isinstance(inner_space, HilbertSpace):
+            raise TypeError('inner_space must be HilbertSpace')
 
         if full_matrices:
-            if len(inner_spaces) != 2:
-                raise ValueError('full_matrices=True requires inner_spaces to '+
-                    'be a tuple of length 2')
-            (u_inner_space, v_inner_space) = inner_spaces
-            u_inner_space.assert_ket_space()
-            v_inner_space.assert_ket_space()
             return self.space.base_field.mat_svd_full(
-                self, u_inner_space, v_inner_space)
+                self, inner_space)
         else:
-            if len(inner_spaces) != 1:
-                raise ValueError('full_matrices=True requires inner_spaces to '+
-                    'be a tuple of length 1')
-            (s_space,) = inner_spaces
-            return self.space.base_field.mat_svd_partial(self, s_space)
+            inner_space.assert_ket_space()
+            return self.space.base_field.mat_svd_partial(self, inner_space)

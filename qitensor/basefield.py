@@ -55,16 +55,15 @@ class HilbertBaseField(object):
         import scipy.linalg
         return m.np_matrix_transform(lambda x: scipy.linalg.expm(x, q))
 
-    def mat_svd_full(self, m, u_inner_space, v_inner_space):
+    def mat_svd_full(self, m, s_space):
         (u, s, v) = linalg.svd(m.as_np_matrix())
-        u_space = m.space.ket_space() * u_inner_space.H
-        s_space = u_inner_space * v_inner_space.H
-        v_space = v_inner_space * m.space.bra_space()
+        u_space = m.space.ket_space() * s_space.ket_space().H
+        v_space = m.space.bra_space() * s_space.bra_space().H
         U = u_space.reshaped_np_matrix(u)
         V = v_space.reshaped_np_matrix(v)
 
-        dim1 = np.product(u_inner_space.shape)
-        dim2 = np.product(v_inner_space.shape)
+        dim1 = np.product(s_space.ket_space().shape)
+        dim2 = np.product(s_space.bra_space().shape)
         min_dim = np.min([dim1, dim2])
         Sm = np.zeros((dim1, dim2), dtype=self.dtype)
         Sm[:min_dim, :min_dim] = np.diag(s)

@@ -5,4 +5,5 @@ Examples
    :maxdepth: 2
 
    entangling_power
+   group_indices
    symbolic

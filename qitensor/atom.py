@@ -79,33 +79,6 @@ class HilbertAtom(HilbertSpace):
                     self.label+"'", self.indices, "{"+self.latex_label+"}'")
         return self._prime
 
-    def bra(self, idx):
-        """
-        Returns a bra basis vector.
-
-        The returned vector has a 1 in the slot corresponding to ``idx`` and
-        zeros elsewhere.
-
-        :param idx: a member of this space's index set
-
-        >>> from qitensor import *
-        >>> ha = qubit('a')
-        >>> hx = indexed_space('x', ['x', 'y', 'z'])
-
-        >>> ha.bra(0)
-        HilbertArray(|a>,
-        array([ 1.+0.j,  0.+0.j]))
-
-        >>> hx.bra('y')
-        HilbertArray(|x>,
-        array([ 0.+0.j,  1.+0.j,  0.+0.j]))
-        """
-
-        if self.is_dual:
-            return self.H.basis_vec({self.H: idx})
-        else:
-            return self.basis_vec({self: idx})
-
     def ket(self, idx):
         """
         Returns a ket basis vector.
@@ -120,10 +93,37 @@ class HilbertAtom(HilbertSpace):
         >>> hx = indexed_space('x', ['x', 'y', 'z'])
 
         >>> ha.ket(0)
-        HilbertArray(<a|,
+        HilbertArray(|a>,
         array([ 1.+0.j,  0.+0.j]))
 
         >>> hx.ket('y')
+        HilbertArray(|x>,
+        array([ 0.+0.j,  1.+0.j,  0.+0.j]))
+        """
+
+        if self.is_dual:
+            return self.H.basis_vec({self.H: idx})
+        else:
+            return self.basis_vec({self: idx})
+
+    def bra(self, idx):
+        """
+        Returns a bra basis vector.
+
+        The returned vector has a 1 in the slot corresponding to ``idx`` and
+        zeros elsewhere.
+
+        :param idx: a member of this space's index set
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> hx = indexed_space('x', ['x', 'y', 'z'])
+
+        >>> ha.bra(0)
+        HilbertArray(<a|,
+        array([ 1.+0.j,  0.+0.j]))
+
+        >>> hx.bra('y')
         HilbertArray(<x|,
         array([ 0.+0.j,  1.+0.j,  0.+0.j]))
         """

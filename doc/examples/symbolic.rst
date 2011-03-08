@@ -1,10 +1,10 @@
-Symbolics in Sage
-=====================================
+Sage: Vectors Over the Symbolic Ring
+====================================
 
 ::
     sage: from qitensor import qubit
-    sage: ha = qubit('a', SR)
-    sage: hb = qubit('b', SR)
+    sage: ha = qubit('a', dtype=SR)
+    sage: hb = qubit('b', dtype=SR)
     sage: (x, y) = var('x y')
     sage: s = ha.array([1, x])
     sage: t = hb.array([1, y])

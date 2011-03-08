@@ -2,10 +2,14 @@ import numpy as np
 
 from qitensor.exceptions import *
 from qitensor.space import *
+from qitensor.atom import *
 
 class HilbertArray(object):
-    # only called from HilbertSpace.array
     def __init__(self, space, data, noinit_data, reshape):
+        """
+        Don't call this constructor yourself, use HilbertSpace.array
+        """
+
         hs = space
         self.space = hs
 
@@ -26,6 +30,24 @@ class HilbertArray(object):
         self.axes = hs.sorted_kets + hs.sorted_bras
 
     def copy(self):
+        """
+        Creates a copy (not a view) of this array.
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> x = ha.array([1, 2]); x
+        HilbertArray(|a>,
+        array([ 1.+0.j,  2.+0.j]))
+        >>> y = x.copy()
+        >>> y[0] = 3
+        >>> y
+        HilbertArray(|a>,
+        array([ 3.+0.j,  2.+0.j]))
+        >>> x
+        HilbertArray(|a>,
+        array([ 1.+0.j,  2.+0.j]))
+        """
+
         ret = self.space.array(noinit_data=True)
         ret.nparray = self.nparray.copy()
         return ret
@@ -36,22 +58,96 @@ class HilbertArray(object):
         self.axes = other.axes
 
     def get_dim(self, simple_hilb):
+        """
+        Returns the axis corresponding to the given HilbertAtom.
+
+        This is useful when working with the underlying numpy array.
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> hb = qubit('b')
+        >>> x = (ha * hb).array([[1, 2], [4, 8]])
+        >>> [x.get_dim(h) for h in (ha, hb)]
+        [0, 1]
+        >>> x.nparray.sum(axis=x.get_dim(ha))
+        array([  5.+0.j,  10.+0.j])
+        >>> x.nparray.sum(axis=x.get_dim(hb))
+        array([  3.+0.j,  12.+0.j])
+        """
+
         return self.axes.index(simple_hilb)
 
-    def assert_same_axes(self, other):
+    def _assert_same_axes(self, other):
         if self.axes != other.axes:
             raise HilbertIndexError('Mismatched HilbertSpaces: '+
                 repr(self.space)+' vs. '+repr(other.space))
 
     def set_data(self, new_data):
+        """
+        Sets this array equal to the given argument.
+
+        :param new_data: the new data
+        :type new_data: HilbertArray or anything that can be made into a
+            numpy.array
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> hb = qubit('b')
+        >>> x = (ha*hb).array()
+        >>> y = (ha*hb).random_array()
+        >>> x.set_data(y)
+        >>> x == y
+        True
+        >>> x.set_data([[1, 2], [3, 4]])
+        >>> x
+        HilbertArray(|a,b>,
+        array([[ 1.+0.j,  2.+0.j],
+               [ 3.+0.j,  4.+0.j]]))
+        """
+
         if isinstance(new_data, HilbertArray):
-            self.assert_same_axes(new_data)
+            self._assert_same_axes(new_data)
             self.set_data(new_data.nparray)
         else:
             # This is needed to make slices work properly
             self.nparray[:] = new_data
 
     def tensordot(self, other, contraction_spaces=None):
+        """
+        Inner or outer product of two arrays.
+
+        :param other: the other array taking place in this operation
+        :type other: HilbertArray
+        :param contraction_spaces: the spaces on which to do a tensor
+            contraction
+        :type other: None, frozenset, or HilbertSpace; default None
+
+        If ``contraction_spaces`` is ``None`` (the default), contraction will
+        be across the intersection of the bra space of this array and the ket
+        space of ``other``.  If a ``frozenset`` is given, it should consist of
+        ``HilbertAtom`` objects which are kets.  If a ``HilbertSpace`` is
+        given, it must be a ket space.
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> hb = qubit('b')
+        >>> hc = qubit('c')
+        >>> x = (ha * hb.H * hc.H).random_array()
+        >>> x.space
+        |a><b,c|
+        >>> y = (hc * ha.H).random_array()
+        >>> y.space
+        |c><a|
+        >>> x.tensordot(y) == x * y
+        True
+        >>> x.tensordot(y).space
+        |a><a,b|
+        >>> x.tensordot(y, frozenset()).space
+        |a,c><a,b,c|
+        >>> x.tensordot(y, hc).space
+        |a><a,b|
+        """
+
         hs = self.space
         ohs = other.space
         #print str(hs)+'*'+str(ohs)
@@ -62,12 +158,24 @@ class HilbertArray(object):
             mul_space = frozenset([x.H for x in hs.bra_set]) & ohs.ket_set
         elif isinstance(contraction_spaces, frozenset):
             mul_space = contraction_spaces
+            for x in mul_space:
+                if not isinstance(x, HilbertSpace):
+                    raise TypeError('contraction space must consist of '+
+                        'HilbertAtoms')
+                if x.is_dual():
+                    raise NotKetSpaceError('contraction space must consist of '+
+                        'kets')
         elif isinstance(contraction_spaces, HilbertSpace):
+            if len(contraction_spaces.bra_set) > 0:
+                raise NotKetSpaceError('contraction space must consist of kets')
             mul_space = contraction_spaces.ket_set
-            contraction_spaces.assert_ket_space()
         else:
             raise TypeError('contraction space must be HilbertSpace '+
                 'or frozenset')
+
+        for x in mul_space:
+            assert isinstance(x, HilbertAtom)
+            assert not x.is_dual
 
         mul_H = frozenset([x.H for x in mul_space])
         #print mul_space
@@ -108,6 +216,39 @@ class HilbertArray(object):
         return ret
 
     def transpose(self, tpose_axes=None):
+        """
+        Perform a transpose or partial transpose operation.
+
+        :param tpose_axes: the space on which to transpose
+        :type tpose_axes: HilbertSpace or None; default None
+
+        If ``tpose_axes`` is ``None`` a full transpose is performed.
+        Otherwise, ``tpose_axes`` should be a ``HilbertSpace``.  The array will
+        be transposed across all axes which are part of the bra space or ket
+        space of ``tpose_axes``.
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> hb = qubit('b')
+        >>> x = ha.O.array([[1, 2], [3, 4]]); x
+        HilbertArray(|a><a|,
+        array([[ 1.+0.j,  2.+0.j],
+               [ 3.+0.j,  4.+0.j]]))
+        >>> x.transpose()
+        HilbertArray(|a><a|,
+        array([[ 1.+0.j,  3.+0.j],
+               [ 2.+0.j,  4.+0.j]]))
+        >>> x.transpose() == x.T
+        True
+        >>> y = (ha * hb).random_array()
+        >>> y.space
+        |a,b>
+        >>> y.transpose(ha).space
+        |b><a|
+        >>> y.transpose(ha) == y.transpose(ha.H)
+        True
+        """
+
         if tpose_axes is None:
             tpose_axes = self.space
 
@@ -138,6 +279,43 @@ class HilbertArray(object):
         return ret
 
     def relabel(self, from_space, to_space):
+        """
+        Changes the HilbertSpace of this array without changing data.
+
+        :param from_space: the old space
+        :type from_space: HilbertSpace
+        :param to_space: the new space
+        :type to_space: HilbertSpace
+
+        Either ``from_space`` and ``to_space`` should both be bra spaces
+        or both should be ket spaces.
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> hb = qubit('b')
+        >>> hc = qubit('c')
+        >>> x = (ha * hb).random_array()
+        >>> x.space
+        |a,b>
+        >>> x.relabel(hb, hc).space
+        |a,c>
+        >>> np.allclose(x.relabel(hb, hc).nparray, x.nparray)
+        True
+        >>> x.relabel(ha, hc).space
+        |b,c>
+        >>> # underlying nparray is different because axes order changed
+        >>> np.allclose(x.relabel(ha, hc).nparray, x.nparray)
+        False
+        >>> x.relabel(ha * hb, ha.prime * hb.prime).space
+        |a',b'>
+        >>> y = ha.O.array()
+        >>> y.space
+        |a><a|
+        >>> # relabeling is needed because |a,a> is not allowed
+        >>> y.relabel(ha.H, ha.prime.H).transpose(ha.prime).space
+        |a,a'>
+        """
+
         # FIXME - this could be made a lot more efficient by not doing a
         # multiplication operation.
         if len(from_space.ket_set) == 0 and len(to_space.ket_set) == 0:
@@ -161,6 +339,19 @@ class HilbertArray(object):
         return not (self == other)
 
     def lmul(self, other):
+        """
+        Returns other*self.
+
+        This is useful for listing operations in chronoligical order when
+        implementing quantum circuits.
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> state = ha.random_array()
+        >>> ha.X * ha.Y * state == state.lmul(ha.Y).lmul(ha.X)
+        True
+        """
+
         return other * self
 
     def __mul__(self, other):
@@ -192,7 +383,7 @@ class HilbertArray(object):
     def __iadd__(self, other):
         if not isinstance(other, HilbertArray):
             raise TypeError('HilbertArray can only add another HilbertArray')
-        self.assert_same_axes(other)
+        self._assert_same_axes(other)
         self.nparray += other.nparray
         return self
 
@@ -208,7 +399,7 @@ class HilbertArray(object):
         if not isinstance(other, HilbertArray):
             raise TypeError('HilbertArray can only subtract '+
                 'another HilbertArray')
-        self.assert_same_axes(other)
+        self._assert_same_axes(other)
         self.nparray -= other.nparray
         return self
 

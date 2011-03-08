@@ -7,3 +7,4 @@ overview docs
 cannot set slice data e.g. m[0:3] = [1,2,3]
 use singletons for HilbertAtom and HilbertBaseField (and make pickle restore the singletons)
 np.product returns float for empty list
+docs for properties (array.space, atom.is_dual, array.nparray)

@@ -54,7 +54,7 @@ class SageHilbertAtomMixins(object):
 
 class SageHilbertSpaceMixins(object):
     def reshaped_sage_matrix(self, m):
-        sage_ring = self.space.base_field.sage_ring
+        sage_ring = self.base_field.sage_ring
         if m.base_ring() != sage_ring:
             m = m.change_ring(sage_ring)
         return self.reshaped_np_matrix(np.array(m, dtype=self.base_field.dtype))

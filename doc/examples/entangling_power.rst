@@ -1,7 +1,8 @@
 Entangling Power of Bipartite Unitary
 =====================================
 
-    >>> from qitensor import *
+::
+    >>> from qitensor import qubit
     >>> import numpy
     >>> import numpy.linalg
     >>> # operational spaces

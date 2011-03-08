@@ -41,7 +41,7 @@ class HilbertBaseField(object):
     def mat_det(self, m):
         return linalg.det(m.as_np_matrix())
 
-    def mat_norm(self, m, ord=None):
+    def mat_norm(self, m):
         return linalg.norm(m.nparray)
 
     def mat_pinv(self, m, rcond):

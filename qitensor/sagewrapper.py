@@ -34,7 +34,7 @@ class SageHilbertBaseField(HilbertBaseField):
     def mat_det(self, m):
         return matrix(m).det()
 
-    def mat_norm(self, m, ord=None):
+    def mat_norm(self, m):
         return matrix(m).norm()
 
     def mat_conj(self, m):

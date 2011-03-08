@@ -513,6 +513,19 @@ class HilbertArray(object):
         return self._get_set_item(key, True, val)
 
     def as_np_matrix(self):
+        """
+        Returns the underlying data as a numpy.matrix.
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> hb = qubit('b')
+        >>> x = (ha.O * hb).random_array()
+        >>> x.space
+        |a,b><a|
+        >>> x.as_np_matrix().shape
+        (4, 2)
+        """
+
         ket_size = np.product([len(x.indices) \
             for x in self.axes if not x.is_dual])
         bra_size = np.product([len(x.indices) \
@@ -521,6 +534,29 @@ class HilbertArray(object):
         return np.matrix(self.nparray.reshape(ket_size, bra_size))
 
     def np_matrix_transform(self, f, transpose_dims=False):
+        """
+        Performs a matrix operation.
+
+        :param f: operation to perform
+        :type f: lambda function
+        :param transpose_dims: if True, the resultant Hilbert space is
+            transposed
+        :type transpose_dims: bool
+
+        >>> from qitensor import *
+        >>> import numpy.linalg
+        >>> ha = qubit('a')
+        >>> hb = qubit('b')
+        >>> x = (ha * hb.H).random_array()
+        >>> x.space
+        |a><b|
+        >>> y = x.np_matrix_transform(numpy.linalg.inv, transpose_dims=True)
+        >>> y.space
+        |b><a|
+        >>> y == x.I
+        True
+        """
+
         m = self.as_np_matrix()
         m = f(m)
         out_hilb = self.space
@@ -530,43 +566,227 @@ class HilbertArray(object):
 
     @property
     def H(self):
+        """
+        Returns the adjoint (Hermitian conjugate) of this array.
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> x = ha.array([1j, 0]); x
+        HilbertArray(|a>,
+        array([ 0.+1.j,  0.+0.j]))
+        >>> x.H
+        HilbertArray(<a|,
+        array([ 0.-1.j,  0.-0.j]))
+        >>> y = ha.O.array([[1+2j, 3+4j], [5+6j, 7+8j]]); y
+        HilbertArray(|a><a|,
+        array([[ 1.+2.j,  3.+4.j],
+               [ 5.+6.j,  7.+8.j]]))
+        >>> y.H
+        HilbertArray(|a><a|,
+        array([[ 1.-2.j,  5.-6.j],
+               [ 3.-4.j,  7.-8.j]]))
+        """
+
         return self.space.base_field.mat_adjoint(self)
 
     @property
     def I(self):
+        """
+        Returns the matrix inverse of this array.
+
+        It is required that the dimension of the bra space be equal to the
+        dimension of the ket space.
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> x = ha.O.random_array()
+        >>> (x * x.I - ha.eye()).norm() < 1e-13
+        True
+        >>> hb = qubit('b')
+        >>> hc = qudit('c', 4)
+        >>> y = (ha * hb * hc.H).random_array()
+        >>> (y * y.I - (ha * hb).eye()).norm() < 1e-13
+        True
+        >>> (y.I * y - hc.eye()).norm() < 1e-13
+        True
+        """
+
         return self.space.base_field.mat_inverse(self)
 
     @property
     def T(self):
+        """
+        Returns the transpose of this array.
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> x = ha.array([1j, 0]); x
+        HilbertArray(|a>,
+        array([ 0.+1.j,  0.+0.j]))
+        >>> x.T
+        HilbertArray(<a|,
+        array([ 0.+1.j,  0.+0.j]))
+        >>> y = ha.O.array([[1+2j, 3+4j], [5+6j, 7+8j]]); y
+        HilbertArray(|a><a|,
+        array([[ 1.+2.j,  3.+4.j],
+               [ 5.+6.j,  7.+8.j]]))
+        >>> y.T
+        HilbertArray(|a><a|,
+        array([[ 1.+2.j,  5.+6.j],
+               [ 3.+4.j,  7.+8.j]]))
+        """
+
         # transpose should be the same for all base_field's
         return self.np_matrix_transform(lambda x: x.T, transpose_dims=True)
 
     def det(self):
+        """
+        Returns the matrix determinant of this array.
+
+        It is required that the dimension of the bra space be equal to the
+        dimension of the ket space.
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> hb = qubit('b')
+        >>> hc = qudit('c', 4)
+        >>> y = (ha * hb * hc.H).random_array()
+        >>> abs( y.det() - numpy.linalg.det(y.as_np_matrix()) ) < 1e-14
+        True
+        """
+
         return self.space.base_field.mat_det(self)
 
     def fill(self, val):
+        """
+        Fills every entry of this array with a constant value.
+
+        NOTE: the array is modified in-place and is not returned.
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> x = ha.random_array()
+        >>> x.fill(2)
+        >>> x
+        HilbertArray(|a>,
+        array([ 2.+0.j,  2.+0.j]))
+        """
+
         # fill should be the same for all base_field's
         self.nparray.fill(val)
 
-    def norm(self, ord=None):
-        return self.space.base_field.mat_norm(self, ord)
+    def norm(self):
+        """
+        Returns the norm of this array.
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> x = ha.array([3, 4])
+        >>> x.norm()
+        5.0
+        >>> y = ha.O.array([[1, 2], [3, 4]])
+        >>> y.norm() ** 2
+        30.0
+        """
+
+        return self.space.base_field.mat_norm(self)
 
     def normalize(self):
-        """Normalizes array in-place."""
+        """
+        Normalizes array in-place.
+
+        See also: :func:`normalized`
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> x = ha.array([3, 4])
+        >>> x.normalize()
+        >>> x
+        HilbertArray(|a>,
+        array([ 0.6+0.j,  0.8+0.j]))
+        """
+
         self /= self.norm()
-        return self
 
     def normalized(self):
-        """Returns a normalized copy of array."""
+        """
+        Returns a normalized copy of this array.
+
+        See also: :func:`normalize`
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> x = ha.array([3, 4])
+        >>> x.normalized()
+        HilbertArray(|a>,
+        array([ 0.6+0.j,  0.8+0.j]))
+        """
+
         return self / self.norm()
 
     def pinv(self, rcond=1e-15):
+        """
+        Returns the Moore-Penrose pseudoinverse of this array.
+
+        :param rcond: cutoff for small singular values (see numpy.linalg.pinv
+            docs for more info)
+        :type rcond: float; default 1e-15
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> hb = qudit('b', 3)
+        >>> x = (ha * hb.H).random_array()
+        >>> x.as_np_matrix().shape
+        (2, 3)
+        >>> (x * x.pinv() - ha.eye()).norm() < 1e-13
+        True
+        """
+
         return self.space.base_field.mat_pinv(self, rcond)
 
     def conj(self):
+        """
+        Returns the complex conjugate of this array.
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> x = ha.array([1j, 0]); x
+        HilbertArray(|a>,
+        array([ 0.+1.j,  0.+0.j]))
+        >>> x.conj()
+        HilbertArray(|a>,
+        array([ 0.-1.j,  0.-0.j]))
+        >>> y = ha.O.array([[1+2j, 3+4j], [5+6j, 7+8j]]); y
+        HilbertArray(|a><a|,
+        array([[ 1.+2.j,  3.+4.j],
+               [ 5.+6.j,  7.+8.j]]))
+        >>> y.conj()
+        HilbertArray(|a><a|,
+        array([[ 1.-2.j,  3.-4.j],
+               [ 5.-6.j,  7.-8.j]]))
+        """
+
         return self.space.base_field.mat_conj(self)
 
     def expm(self, q=7):
+        """
+        Return the matrix exponential of this array.
+
+        It is required that the dimension of the bra space be equal to the
+        dimension of the ket space.
+
+        :param q: order of the Pade approximation (see the scipy.linalg.expm
+            documentation for details)
+        :type q: integer; default 7
+
+        >>> from qitensor import *
+        >>> ha = qubit('a')
+        >>> (ha.X * numpy.pi * 1j).expm()
+        HilbertArray(|a><a|,
+        array([[-1.+0.j,  0.+0.j],
+               [ 0.+0.j, -1.+0.j]]))
+        """
+
         return self.space.base_field.mat_expm(self, q)
 
     def svd(self, inner_spaces=None, full_matrices=True):

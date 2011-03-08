@@ -13,11 +13,8 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-   basefield
-   atom
-   space
-   array
-   exceptions
+   examples
+   reference
 
 Indices and tables
 ==================

@@ -6,6 +6,7 @@ import numpy as np
 from sage.all import I, exp, pi
 from sage.all import matrix, block_matrix, identity_matrix
 from sage.all import SageObject, CommutativeRing
+from sage.all import latex
 from qitensor import HilbertBaseField, HilbertAtom, HilbertSpace, HilbertArray
 
 class SageHilbertBaseField(HilbertBaseField):

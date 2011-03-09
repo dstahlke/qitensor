@@ -4,6 +4,8 @@ from qitensor.exceptions import *
 from qitensor.space import *
 from qitensor.atom import *
 
+__all__ = ['HilbertArray']
+
 class HilbertArray(object):
     def __init__(self, space, data, noinit_data, reshape):
         """

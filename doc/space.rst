@@ -1,4 +1,4 @@
-Hilbert spaces
+Hilbert Spaces
 ==============
 
 .. automodule:: qitensor.space

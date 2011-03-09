@@ -2,6 +2,7 @@ finish docs
 	overview docs
 	docs for properties (array.space, atom.is_dual, array.nparray)
 	fix sage doctests
+	module descriptions
 features
 	matrix pow
 	trace

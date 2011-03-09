@@ -3,6 +3,8 @@ import numpy as np
 from qitensor.exceptions import *
 from qitensor.space import *
 
+__all__ = ['HilbertAtom']
+
 class HilbertAtom(HilbertSpace):
     def __init__(self, label, latex_label, indices, base_field, dual=None):
         is_dual = not dual is None

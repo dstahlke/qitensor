@@ -2,6 +2,8 @@ import numpy as np
 
 from qitensor.exceptions import *
 
+__all__ = ['HilbertSpace']
+
 class HilbertSpace(object):
     def __init__(self, ket_set, bra_set, base_field):
         """

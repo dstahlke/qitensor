@@ -1,4 +1,4 @@
-Hilbert space atoms
+Hilbert Space Atoms
 ===================
 
 .. automodule:: qitensor.atom

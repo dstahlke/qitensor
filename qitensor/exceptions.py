@@ -1,5 +1,16 @@
 from qitensor import *
 
+__all__ = [
+    'BraKetMixtureError',
+    'DuplicatedSpaceError',
+    'HilbertError',
+    'HilbertIndexError',
+    'HilbertShapeError',
+    'IncompatibleBaseFieldError',
+    'MismatchedIndexSetError',
+    'NotKetSpaceError',
+]
+
 class HilbertError(Exception):
     def __init__(self, msg):
         Exception.__init__(self, msg)

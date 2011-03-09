@@ -6,6 +6,8 @@ from qitensor.exceptions import *
 from qitensor.atom import *
 from qitensor.array import *
 
+__all__ = ['HilbertBaseField']
+
 class HilbertBaseField(object):
     def __init__(self, dtype, unique_id):
         self.dtype = dtype

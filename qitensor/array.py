@@ -1,3 +1,9 @@
+"""
+A HilbertArray is a vector in a HilbertSpace.  Internally, it is backed by a
+numpy.array.  HilbertArray's are to be created using the
+:meth:`HilbertSpace.array` method.
+"""
+
 import numpy as np
 
 from qitensor.exceptions import *

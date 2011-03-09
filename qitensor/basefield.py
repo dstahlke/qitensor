@@ -1,3 +1,15 @@
+"""
+HilbertBaseField defines how the mathematics of HilbertArray works.  Normally
+you don't need to worry about this because usually the default implementation
+is appropriate.  It is not recommened to call the constructor directly.
+Instead, use the interface provided by
+:func:`qitensor.functions.base_field_lookup`, or just use the ``dtype``
+parameter of the factory functions in :mod:`qitensor.functions`.  A subclass,
+:class:`SageHilbertBaseField`, provides the ability to create arrays over Sage
+types (e.g. SR).  This, too, is accessed through ``base_field_lookup`` or by
+passing the ``dtype`` parameter.
+"""
+
 import numpy as np
 import numpy.random
 import numpy.linalg as linalg

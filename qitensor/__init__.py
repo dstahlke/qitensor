@@ -14,7 +14,6 @@ space tensor product structure.
 
 AUTHORS:
 - Dan Stahlke (2011-03-05): initial version
-
 """
 
 __version__ = "0.1"

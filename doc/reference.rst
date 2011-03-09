@@ -10,3 +10,5 @@ Reference
    space
    array
    exceptions
+
+.. sagewrapper can't be here for now because the module only loads from sage

@@ -1,3 +1,9 @@
+"""
+HilbertSpaces are built of HilbertAtom's.  They represent the spaces that
+HilbertArray's live in.  A HilbertSpace is typically created by applying the
+multiplication operator to HilbertAtom's or other HilbertSpace's.
+"""
+
 import numpy as np
 
 from qitensor.exceptions import *
@@ -7,7 +13,7 @@ __all__ = ['HilbertSpace']
 class HilbertSpace(object):
     def __init__(self, ket_set, bra_set, base_field):
         """
-        Constructor should only be called from :func:`HilbertBaseField._space_factory`
+        Constructor should only be called from :meth:`HilbertBaseField._space_factory`
         """
 
         self.base_field = base_field

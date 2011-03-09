@@ -1,3 +1,9 @@
+"""
+This module contains functions for creating HilbertSpace's and
+HilbertBaseField's.  This is the preferred entry point for using the qitensor
+package.
+"""
+
 from qitensor.basefield import HilbertBaseField
 
 __all__ = ['base_field_lookup', 'indexed_space', 'qubit', 'qudit']

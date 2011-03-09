@@ -1,3 +1,7 @@
+"""
+Various exceptions that can be raised by qitensor functions.
+"""
+
 __all__ = [
     'BraKetMixtureError',
     'DuplicatedSpaceError',

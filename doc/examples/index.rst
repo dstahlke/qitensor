@@ -8,3 +8,4 @@ Examples
    entangling_power
    group_indices
    symbolic
+   pickle

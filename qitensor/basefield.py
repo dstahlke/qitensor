@@ -175,10 +175,11 @@ class HilbertBaseField(object):
         :param indices: a sequence defining the index set
         :param latex_label: an optional latex representation of the label
 
-        See also: :func:`qubit`, :func:`qudit`
+        See also: :func:`qitensor.functions.indexed_space`
 
         >>> from qitensor import *
-        >>> ha = indexed_space('a', ['x', 'y', 'z'])
+        >>> field = base_field_lookup(complex)
+        >>> ha = field.indexed_space('a', ['x', 'y', 'z'])
         >>> ha
         |a>
         >>> ha.indices
@@ -195,10 +196,11 @@ class HilbertBaseField(object):
         :param dim: the dimension of the Hilbert space
         :param latex_label: an optional latex representation of the label
 
-        See also: :func:`qubit`, :func:`indexed_space`
+        See also: :func:`qitensor.functions.qudit`
 
         >>> from qitensor import *
-        >>> ha = qudit('a', 3)
+        >>> field = base_field_lookup(complex)
+        >>> ha = field.qudit('a', 3)
         >>> ha
         |a>
         >>> ha.indices
@@ -214,10 +216,11 @@ class HilbertBaseField(object):
         :param label: a unique label for this Hilbert space
         :param latex_label: an optional latex representation of the label
 
-        See also: :func:`qudit`, :func:`indexed_space`
+        See also: :func:`qitensor.functions.qubit`
 
         >>> from qitensor import *
-        >>> ha = qubit('a')
+        >>> field = base_field_lookup(complex)
+        >>> ha = field.qubit('a')
         >>> ha
         |a>
         >>> ha.indices
@@ -225,25 +228,3 @@ class HilbertBaseField(object):
         """
 
         return self.qudit(label, 2, latex_label)
-
-base_field_cache = {}
-
-def base_field_lookup(dtype):
-    if base_field_cache.has_key(dtype):
-        return base_field_cache[dtype]
-
-    have_sage = False
-    try:
-        import qitensor.sagewrapper
-        have_sage = True
-    except:
-        pass
-
-    if have_sage and qitensor.sagewrapper.can_use_type(dtype):
-        base_field_cache[dtype] = qitensor.sagewrapper.create_base_field(dtype)
-    elif isinstance(dtype, type):
-        base_field_cache[dtype] = HilbertBaseField(dtype, repr(dtype))
-    else:
-        raise NotImplementedError("data type not supported")
-
-    return base_field_cache[dtype]

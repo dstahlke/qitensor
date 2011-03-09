@@ -1,10 +1,8 @@
 finish docs
-	groups example
 	views example
 	overview docs
 	docs for properties (array.space, atom.is_dual, array.nparray)
 	fix sage doctests
-	convenience functions in __init__
 features
 	matrix pow
 	trace

@@ -1,14 +1,14 @@
 Sage: Vectors Over the Symbolic Ring
 ====================================
 
-::
-    sage: from qitensor import qubit
-    sage: ha = qubit('a', dtype=SR)
-    sage: hb = qubit('b', dtype=SR)
-    sage: (x, y) = var('x y')
-    sage: s = ha.array([1, x])
-    sage: t = hb.array([1, y])
-    sage: s*t
+    >>> from sage.all import *
+    >>> from qitensor import qubit
+    >>> ha = qubit('a', dtype=SR)
+    >>> hb = qubit('b', dtype=SR)
+    >>> (x, y) = var('x y')
+    >>> s = ha.array([1, x])
+    >>> t = hb.array([1, y])
+    >>> s*t
     |a,b>
     [  1]
     [  y]
@@ -16,10 +16,10 @@ Sage: Vectors Over the Symbolic Ring
     [  x]
     [x*y]
 
-    sage: U = (ha * hb).eye()
-    sage: U[{ ha: 0, ha.H: 0, hb: 0, hb.H: 0 }] = x
-    sage: U[{ ha: 0, ha.H: 0, hb: 0, hb.H: 1 }] = y
-    sage: U
+    >>> U = (ha * hb).eye()
+    >>> U[{ ha: 0, ha.H: 0, hb: 0, hb.H: 0 }] = x
+    >>> U[{ ha: 0, ha.H: 0, hb: 0, hb.H: 1 }] = y
+    >>> U
     |a,b><a,b|
     [x y|0 0]
     [0 1|0 0]
@@ -27,7 +27,7 @@ Sage: Vectors Over the Symbolic Ring
     [0 0|1 0]
     [0 0|0 1]
 
-    sage: U.I
+    >>> U.I
     |a,b><a,b|
     [ 1/x -y/x|   0    0]
     [   0    1|   0    0]
@@ -35,7 +35,7 @@ Sage: Vectors Over the Symbolic Ring
     [   0    0|   1    0]
     [   0    0|   0    1]
 
-    sage: U * U.I
+    >>> U * U.I
     |a,b><a,b|
     [1 0|0 0]
     [0 1|0 0]

@@ -1,5 +1,3 @@
-from qitensor import *
-
 __all__ = [
     'BraKetMixtureError',
     'DuplicatedSpaceError',

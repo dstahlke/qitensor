@@ -3,8 +3,9 @@ import numpy.random
 import numpy.linalg as linalg
 
 from qitensor.exceptions import *
-from qitensor.atom import *
-from qitensor.array import *
+from qitensor.atom import HilbertAtom
+from qitensor.array import HilbertArray
+from qitensor.space import HilbertSpace
 
 __all__ = ['HilbertBaseField']
 
@@ -93,10 +94,10 @@ class HilbertBaseField(object):
 
         :param kets_and_bras: a collection of ``HilbertAtom`` objects
 
-        >>> from qitensor import *
+        >>> from qitensor import qubit
         >>> ha = qubit('a')
         >>> hb = qubit('b')
-        >>> field = base_field_lookup(complex)
+        >>> field = ha.base_field
         >>> ha * hb == field.create_space1([ha, hb])
         True
         >>> ha.H * hb == field.create_space1([ha.H, hb])
@@ -116,10 +117,10 @@ class HilbertBaseField(object):
         :param ket_set: a collection of ``HilbertAtom`` objects for which ``is_dual==False``
         :param bra_set: a collection of ``HilbertAtom`` objects for which ``is_dual==True``
 
-        >>> from qitensor import *
+        >>> from qitensor import qubit
         >>> ha = qubit('a')
         >>> hb = qubit('b')
-        >>> field = base_field_lookup(complex)
+        >>> field = ha.base_field
         >>> ha * hb == field.create_space2(frozenset([ha, hb]), frozenset())
         True
         >>> ha.H * hb == field.create_space2(frozenset([hb]), frozenset([ha.H]))
@@ -179,7 +180,7 @@ class HilbertBaseField(object):
 
         See also: :func:`qitensor.functions.indexed_space`
 
-        >>> from qitensor import *
+        >>> from qitensor import base_field_lookup
         >>> field = base_field_lookup(complex)
         >>> ha = field.indexed_space('a', ['x', 'y', 'z'])
         >>> ha
@@ -200,7 +201,7 @@ class HilbertBaseField(object):
 
         See also: :func:`qitensor.functions.qudit`
 
-        >>> from qitensor import *
+        >>> from qitensor import base_field_lookup
         >>> field = base_field_lookup(complex)
         >>> ha = field.qudit('a', 3)
         >>> ha
@@ -220,7 +221,7 @@ class HilbertBaseField(object):
 
         See also: :func:`qitensor.functions.qubit`
 
-        >>> from qitensor import *
+        >>> from qitensor import base_field_lookup
         >>> field = base_field_lookup(complex)
         >>> ha = field.qubit('a')
         >>> ha

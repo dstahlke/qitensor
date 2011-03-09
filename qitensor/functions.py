@@ -11,7 +11,7 @@ def base_field_lookup(dtype):
     :param dtype: the base field data type
     :type dtype: python type or Sage CommutativeRing; default complex
 
-    >>> from qitensor import *
+    >>> from qitensor import base_field_lookup
     >>> base_field_lookup(complex).__class__
     <class 'qitensor.basefield.HilbertBaseField'>
     """
@@ -50,7 +50,7 @@ def indexed_space(label, indices, dtype=complex, latex_label=None):
 
     See also: :func:`qubit`, :func:`qudit`
 
-    >>> from qitensor import *
+    >>> from qitensor import indexed_space
     >>> ha = indexed_space('a', ['x', 'y', 'z'])
     >>> ha
     |a>
@@ -76,7 +76,7 @@ def qudit(label, dim, dtype=complex, latex_label=None):
 
     See also: :func:`qubit`, :func:`indexed_space`
 
-    >>> from qitensor import *
+    >>> from qitensor import qudit
     >>> ha = qudit('a', 3)
     >>> ha
     |a>
@@ -101,7 +101,7 @@ def qubit(label, dtype=complex, latex_label=None):
 
     See also: :func:`qudit`, :func:`indexed_space`
 
-    >>> from qitensor import *
+    >>> from qitensor import qubit
     >>> ha = qubit('a')
     >>> ha
     |a>

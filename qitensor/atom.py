@@ -1,7 +1,7 @@
 import numpy as np
 
 from qitensor.exceptions import *
-from qitensor.space import *
+from qitensor.space import HilbertSpace
 
 __all__ = ['HilbertAtom']
 
@@ -66,7 +66,7 @@ class HilbertAtom(HilbertSpace):
         Returns a ``HilbertAtom`` just like this one but with an apostrophe
         appended to the label.
 
-        >>> from qitensor import *
+        >>> from qitensor import qubit
         >>> ha = qubit('a')
         >>> ha.prime
         |a'>
@@ -90,7 +90,7 @@ class HilbertAtom(HilbertSpace):
 
         :param idx: a member of this space's index set
 
-        >>> from qitensor import *
+        >>> from qitensor import qubit, indexed_space
         >>> ha = qubit('a')
         >>> hx = indexed_space('x', ['x', 'y', 'z'])
 
@@ -117,7 +117,7 @@ class HilbertAtom(HilbertSpace):
 
         :param idx: a member of this space's index set
 
-        >>> from qitensor import *
+        >>> from qitensor import qubit, indexed_space
         >>> ha = qubit('a')
         >>> hx = indexed_space('x', ['x', 'y', 'z'])
 
@@ -181,7 +181,7 @@ class HilbertAtom(HilbertSpace):
 
         See also: :func:`X`
 
-        >>> from qitensor import *
+        >>> from qitensor import qubit
         >>> ha = qubit('a')
         >>> ha.pauliX()
         HilbertArray(|a><a|,
@@ -202,7 +202,7 @@ class HilbertAtom(HilbertSpace):
 
         See also: :func:`Y`
 
-        >>> from qitensor import *
+        >>> from qitensor import qubit
         >>> ha = qubit('a')
         >>> ha.pauliY()
         HilbertArray(|a><a|,
@@ -226,7 +226,7 @@ class HilbertAtom(HilbertSpace):
 
         See also: :func:`Z`
 
-        >>> from qitensor import *
+        >>> from qitensor import qubit, indexed_space
         >>> ha = qubit('a')
         >>> ha.pauliZ()
         HilbertArray(|a><a|,
@@ -264,7 +264,7 @@ class HilbertAtom(HilbertSpace):
 
         See also: :func:`pauliX`
 
-        >>> from qitensor import *
+        >>> from qitensor import qubit
         >>> ha = qubit('a')
         >>> ha.X
         HilbertArray(|a><a|,
@@ -282,7 +282,7 @@ class HilbertAtom(HilbertSpace):
 
         See also: :func:`pauliY`
 
-        >>> from qitensor import *
+        >>> from qitensor import qubit
         >>> ha = qubit('a')
         >>> ha.Y
         HilbertArray(|a><a|,
@@ -298,7 +298,7 @@ class HilbertAtom(HilbertSpace):
 
         See also: :func:`pauliZ`
 
-        >>> from qitensor import *
+        >>> from qitensor import qubit, indexed_space
         >>> ha = qubit('a')
         >>> ha.Z
         HilbertArray(|a><a|,
@@ -321,7 +321,7 @@ class HilbertAtom(HilbertSpace):
 
         This is only available for qubit spaces.
 
-        >>> from qitensor import *
+        >>> from qitensor import qubit
         >>> ha = qubit('a')
         >>> ha.hadamard()
         HilbertArray(|a><a|,
@@ -340,7 +340,7 @@ class HilbertAtom(HilbertSpace):
 
         This is only available for qubit spaces.
 
-        >>> from qitensor import *
+        >>> from qitensor import qubit
         >>> ha = qubit('a')
         >>> ha.gateS()
         HilbertArray(|a><a|,
@@ -360,7 +360,7 @@ class HilbertAtom(HilbertSpace):
 
         This is only available for qubit spaces.
 
-        >>> from qitensor import *
+        >>> from qitensor import qubit
         >>> ha = qubit('a')
         >>> ha.gateT()
         HilbertArray(|a><a|,

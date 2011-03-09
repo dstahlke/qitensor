@@ -19,12 +19,12 @@ AUTHORS:
 
 __version__ = "0.1"
 
-from exceptions import *
-from basefield import *
-from space import *
-from atom import *
-from array import *
-from functions import *
+from qitensor.exceptions import *
+from qitensor.basefield import *
+from qitensor.space import *
+from qitensor.atom import *
+from qitensor.array import *
+from qitensor.functions import *
 
 __all__ = \
     exceptions.__all__ + \

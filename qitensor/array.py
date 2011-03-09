@@ -1,8 +1,8 @@
 import numpy as np
 
 from qitensor.exceptions import *
-from qitensor.space import *
-from qitensor.atom import *
+from qitensor.space import HilbertSpace
+from qitensor.atom import HilbertAtom
 
 __all__ = ['HilbertArray']
 
@@ -35,7 +35,7 @@ class HilbertArray(object):
         """
         Creates a copy (not a view) of this array.
 
-        >>> from qitensor import *
+        >>> from qitensor import qubit
         >>> ha = qubit('a')
         >>> x = ha.array([1, 2]); x
         HilbertArray(|a>,
@@ -65,7 +65,7 @@ class HilbertArray(object):
 
         This is useful when working with the underlying numpy array.
 
-        >>> from qitensor import *
+        >>> from qitensor import qubit
         >>> ha = qubit('a')
         >>> hb = qubit('b')
         >>> x = (ha * hb).array([[1, 2], [4, 8]])
@@ -92,7 +92,7 @@ class HilbertArray(object):
         :type new_data: HilbertArray or anything that can be made into a
             numpy.array
 
-        >>> from qitensor import *
+        >>> from qitensor import qubit
         >>> ha = qubit('a')
         >>> hb = qubit('b')
         >>> x = (ha*hb).array()
@@ -130,7 +130,7 @@ class HilbertArray(object):
         ``HilbertAtom`` objects which are kets.  If a ``HilbertSpace`` is
         given, it must be a ket space.
 
-        >>> from qitensor import *
+        >>> from qitensor import qubit
         >>> ha = qubit('a')
         >>> hb = qubit('b')
         >>> hc = qubit('c')
@@ -229,7 +229,7 @@ class HilbertArray(object):
         be transposed across all axes which are part of the bra space or ket
         space of ``tpose_axes``.
 
-        >>> from qitensor import *
+        >>> from qitensor import qubit
         >>> ha = qubit('a')
         >>> hb = qubit('b')
         >>> x = ha.O.array([[1, 2], [3, 4]]); x
@@ -292,7 +292,8 @@ class HilbertArray(object):
         Either ``from_space`` and ``to_space`` should both be bra spaces
         or both should be ket spaces.
 
-        >>> from qitensor import *
+        >>> import numpy
+        >>> from qitensor import qubit
         >>> ha = qubit('a')
         >>> hb = qubit('b')
         >>> hc = qubit('c')
@@ -301,12 +302,12 @@ class HilbertArray(object):
         |a,b>
         >>> x.relabel(hb, hc).space
         |a,c>
-        >>> np.allclose(x.relabel(hb, hc).nparray, x.nparray)
+        >>> numpy.allclose(x.relabel(hb, hc).nparray, x.nparray)
         True
         >>> x.relabel(ha, hc).space
         |b,c>
         >>> # underlying nparray is different because axes order changed
-        >>> np.allclose(x.relabel(ha, hc).nparray, x.nparray)
+        >>> numpy.allclose(x.relabel(ha, hc).nparray, x.nparray)
         False
         >>> x.relabel(ha * hb, ha.prime * hb.prime).space
         |a',b'>
@@ -347,7 +348,7 @@ class HilbertArray(object):
         This is useful for listing operations in chronoligical order when
         implementing quantum circuits.
 
-        >>> from qitensor import *
+        >>> from qitensor import qubit
         >>> ha = qubit('a')
         >>> state = ha.random_array()
         >>> ha.X * ha.Y * state == state.lmul(ha.Y).lmul(ha.X)
@@ -518,7 +519,7 @@ class HilbertArray(object):
         """
         Returns the underlying data as a numpy.matrix.
 
-        >>> from qitensor import *
+        >>> from qitensor import qubit
         >>> ha = qubit('a')
         >>> hb = qubit('b')
         >>> x = (ha.O * hb).random_array()
@@ -545,7 +546,7 @@ class HilbertArray(object):
             transposed
         :type transpose_dims: bool
 
-        >>> from qitensor import *
+        >>> from qitensor import qubit
         >>> import numpy.linalg
         >>> ha = qubit('a')
         >>> hb = qubit('b')
@@ -571,7 +572,7 @@ class HilbertArray(object):
         """
         Returns the adjoint (Hermitian conjugate) of this array.
 
-        >>> from qitensor import *
+        >>> from qitensor import qubit
         >>> ha = qubit('a')
         >>> x = ha.array([1j, 0]); x
         HilbertArray(|a>,
@@ -599,7 +600,7 @@ class HilbertArray(object):
         It is required that the dimension of the bra space be equal to the
         dimension of the ket space.
 
-        >>> from qitensor import *
+        >>> from qitensor import qubit, qudit
         >>> ha = qubit('a')
         >>> x = ha.O.random_array()
         >>> (x * x.I - ha.eye()).norm() < 1e-13
@@ -620,7 +621,7 @@ class HilbertArray(object):
         """
         Returns the transpose of this array.
 
-        >>> from qitensor import *
+        >>> from qitensor import qubit
         >>> ha = qubit('a')
         >>> x = ha.array([1j, 0]); x
         HilbertArray(|a>,
@@ -648,7 +649,8 @@ class HilbertArray(object):
         It is required that the dimension of the bra space be equal to the
         dimension of the ket space.
 
-        >>> from qitensor import *
+        >>> import numpy.linalg
+        >>> from qitensor import qubit, qudit
         >>> ha = qubit('a')
         >>> hb = qubit('b')
         >>> hc = qudit('c', 4)
@@ -665,7 +667,7 @@ class HilbertArray(object):
 
         NOTE: the array is modified in-place and is not returned.
 
-        >>> from qitensor import *
+        >>> from qitensor import qubit
         >>> ha = qubit('a')
         >>> x = ha.random_array()
         >>> x.fill(2)
@@ -681,7 +683,7 @@ class HilbertArray(object):
         """
         Returns the norm of this array.
 
-        >>> from qitensor import *
+        >>> from qitensor import qubit
         >>> ha = qubit('a')
         >>> x = ha.array([3, 4])
         >>> x.norm()
@@ -699,7 +701,7 @@ class HilbertArray(object):
 
         See also: :func:`normalized`
 
-        >>> from qitensor import *
+        >>> from qitensor import qubit
         >>> ha = qubit('a')
         >>> x = ha.array([3, 4])
         >>> x.normalize()
@@ -716,7 +718,7 @@ class HilbertArray(object):
 
         See also: :func:`normalize`
 
-        >>> from qitensor import *
+        >>> from qitensor import qubit
         >>> ha = qubit('a')
         >>> x = ha.array([3, 4])
         >>> x.normalized()
@@ -734,7 +736,7 @@ class HilbertArray(object):
             docs for more info)
         :type rcond: float; default 1e-15
 
-        >>> from qitensor import *
+        >>> from qitensor import qubit, qudit
         >>> ha = qubit('a')
         >>> hb = qudit('b', 3)
         >>> x = (ha * hb.H).random_array()
@@ -750,7 +752,7 @@ class HilbertArray(object):
         """
         Returns the complex conjugate of this array.
 
-        >>> from qitensor import *
+        >>> from qitensor import qubit
         >>> ha = qubit('a')
         >>> x = ha.array([1j, 0]); x
         HilbertArray(|a>,
@@ -781,7 +783,8 @@ class HilbertArray(object):
             documentation for details)
         :type q: integer; default 7
 
-        >>> from qitensor import *
+        >>> import numpy
+        >>> from qitensor import qubit
         >>> ha = qubit('a')
         >>> (ha.X * numpy.pi * 1j).expm()
         HilbertArray(|a><a|,
@@ -837,7 +840,7 @@ class HilbertArray(object):
           input.  The given space will be used for both the bra and the ket
           space of S.
 
-        >>> from qitensor import *
+        >>> from qitensor import qubit, qudit
         >>> ha = qubit('a')
         >>> hb = qubit('b')
         >>> hc = qubit('c')

@@ -41,7 +41,7 @@ class HilbertSpace(object):
         Returns a ``HilbertSpace`` consisting of only the bra space of this
         space.
 
-        >>> from qitensor import *
+        >>> from qitensor import qubit
         >>> ha = qubit('a')
         >>> hb = qubit('b')
         >>> hc = qubit('c')
@@ -57,7 +57,7 @@ class HilbertSpace(object):
         Returns a ``HilbertSpace`` consisting of only the ket space of this
         space.
 
-        >>> from qitensor import *
+        >>> from qitensor import qubit
         >>> ha = qubit('a')
         >>> hb = qubit('b')
         >>> hc = qubit('c')
@@ -76,7 +76,7 @@ class HilbertSpace(object):
         A ``HilbertSpace`` is returned which has bras turned into kets and
         kets turned into bras.
 
-        >>> from qitensor import *
+        >>> from qitensor import qubit
         >>> ha = qubit('a')
         >>> hb = qubit('b')
         >>> hc = qubit('c')
@@ -99,7 +99,7 @@ class HilbertSpace(object):
 
         This just returns ``self * self.H``.
 
-        >>> from qitensor import *
+        >>> from qitensor import qubit
         >>> ha = qubit('a')
         >>> hb = qubit('b')
         >>> ha.O
@@ -186,19 +186,20 @@ class HilbertSpace(object):
 
         See also: :func:`array`
 
-        >>> from qitensor import *
+        >>> import numpy
+        >>> from qitensor import qubit
         >>> ha = qubit('a')
         >>> hb = qubit('b')
 
-        >>> ha.reshaped_np_matrix(np.matrix([[1], [2]]))
+        >>> ha.reshaped_np_matrix(numpy.matrix([[1], [2]]))
         HilbertArray(|a>,
         array([ 1.+0.j,  2.+0.j]))
 
-        >>> ha.H.reshaped_np_matrix(np.matrix([1, 2]))
+        >>> ha.H.reshaped_np_matrix(numpy.matrix([1, 2]))
         HilbertArray(<a|,
         array([ 1.+0.j,  2.+0.j]))
 
-        >>> (ha*hb).O.reshaped_np_matrix(np.diag([1, 2, 3, 4]))
+        >>> (ha*hb).O.reshaped_np_matrix(numpy.diag([1, 2, 3, 4]))
         HilbertArray(|a,b><a,b|,
         array([[[[ 1.+0.j,  0.+0.j],
                  [ 0.+0.j,  0.+0.j]],
@@ -254,7 +255,7 @@ class HilbertSpace(object):
             it is not the proper shape.
         :type reshape: bool; default False
 
-        >>> from qitensor import *
+        >>> from qitensor import qubit
         >>> ha = qubit('a')
         >>> ha.array([1,2])
         HilbertArray(|a>,
@@ -281,7 +282,7 @@ class HilbertSpace(object):
         """
         Returns a ``HilbertArray`` with random values.
 
-        >>> from qitensor import *
+        >>> from qitensor import qubit
         >>> ha = qubit('a')
         >>> ha.random_array() # doctest: +SKIP
         HilbertArray(|a>,
@@ -299,7 +300,7 @@ class HilbertSpace(object):
         bra and ket spaces are nonempty, they must be of the same dimension
         since the identity matrix must be square.
 
-        >>> from qitensor import *
+        >>> from qitensor import qubit
         >>> ha = qubit('a')
         >>> hb = qubit('b')
 
@@ -340,7 +341,7 @@ class HilbertSpace(object):
             be a member of that component's index set.  Otherwise, this should
             be a tuple of indices.
 
-        >>> from qitensor import *
+        >>> from qitensor import qubit, indexed_space
         >>> ha = qubit('a')
         >>> hb = qubit('b')
         >>> hc = indexed_space('c', ['x', 'y', 'z'])

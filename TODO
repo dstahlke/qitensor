@@ -1,5 +1,4 @@
 finish docs
-	views example
 	overview docs
 	docs for properties (array.space, atom.is_dual, array.nparray)
 	fix sage doctests

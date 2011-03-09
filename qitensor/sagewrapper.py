@@ -112,7 +112,7 @@ class SageHilbertArray(HilbertArray, SageObject):
 
         blocks = [matrix(x) for x in blocks]
 
-        return block_matrix(blocks, nrows, ncols, True)
+        return block_matrix(blocks, nrows=nrows, ncols=ncols, subdivide=True)
 
     def sage_matrix_transform(self, f, transpose_dims=False):
         m = matrix(self)

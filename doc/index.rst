@@ -19,6 +19,14 @@ the bra spaces of the left array and the ket spaces of the right array.
 Various linear algebra methods are available which are aware of the Hilbert
 space tensor product structure.
 
+* Component Hilbert spaces have string labels (e.g. ``qubit('a') * qubit('b')`` gives ``|a,b>``).
+* Component spaces are finite dimensional and are indexed either by integers or
+  by any sequence (e.g. elements of a group).
+* In Sage, it is possible to create arrays over the Symbolic Ring.
+* Multiplication of arrays automatically contracts over the intersection of the
+  bra space of the left factor and the ket space of the right factor.
+* Linear algebra routines such as SVD are provided which are aware of the Hilbert space labels.
+
 Contents:
 
 .. toctree::

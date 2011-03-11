@@ -4,6 +4,7 @@ Version 0.3:
 	renamed some modules (no API changes)
 	unary negation
 	Pauli states and some circuit operators
+	Input data is cast for Sage base fields
 
 Version 0.2:
 	Fix: tensordot returns scalar instead of 0-d hilbert array

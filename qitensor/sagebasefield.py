@@ -3,9 +3,7 @@
 import qitensor
 import numpy as np
 
-from sage.all import I, exp, pi
-from sage.all import matrix, block_matrix, identity_matrix
-from sage.all import CommutativeRing
+import sage.all
 from qitensor import HilbertBaseField, HilbertAtom, HilbertSpace, HilbertArray
 
 class SageHilbertBaseField(HilbertBaseField):
@@ -15,13 +13,16 @@ class SageHilbertBaseField(HilbertBaseField):
         self.sage_ring = sage_ring
 
     def complex_unit(self):
-        return self.sage_ring(I)
+        return self.sage_ring(sage.all.I)
 
     def fractional_phase(self, a, b):
-        return self.sage_ring(exp(2 * pi * I * a / b))
+        return self.sage_ring(sage.all.exp(2 * sage.all.pi * sage.all.I * a / b))
+
+    def sqrt(self, x):
+        return self.sage_ring(sage.all.sqrt(x))
 
     def eye(self, size):
-        return np.array(identity_matrix(self.sage_ring, size), dtype=self.dtype)
+        return np.array(sage.all.identity_matrix(self.sage_ring, size), dtype=self.dtype)
 
     def mat_adjoint(self, m):
         return m.sage_matrix_transform(
@@ -32,16 +33,16 @@ class SageHilbertBaseField(HilbertBaseField):
             lambda x: x.inverse(), transpose_dims=True)
 
     def mat_det(self, m):
-        return matrix(m).det()
+        return sage.all.matrix(m).det()
 
     def mat_norm(self, m):
-        return matrix(m).norm()
+        return sage.all.matrix(m).norm()
 
     def mat_conj(self, m):
         return m.sage_matrix_transform(lambda x: x.conjugate())
 
 def can_use_type(dtype):
-    return isinstance(dtype, CommutativeRing)
+    return isinstance(dtype, sage.all.CommutativeRing)
 
 def create_base_field(dtype):
     assert can_use_type(dtype)

@@ -38,6 +38,9 @@ class HilbertBaseField(object):
     def fractional_phase(self, a, b):
         return np.exp(2j * np.pi * a / b)
 
+    def sqrt(self, x):
+        return np.sqrt(x)
+
     def random_array(self, shape):
         return numpy.random.random((shape))
 

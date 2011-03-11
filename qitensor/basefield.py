@@ -25,6 +25,7 @@ class HilbertBaseField(object):
     def __init__(self, dtype, unique_id):
         self.dtype = dtype
         self.unique_id = unique_id
+        self.sage_ring = None
 
     def assert_same(self, other):
         if self.unique_id != other.unique_id:

@@ -6,6 +6,7 @@ numpy.array.  HilbertArray's are to be created using the
 
 import numpy as np
 
+from qitensor import have_sage
 from qitensor.exceptions import *
 from qitensor.space import HilbertSpace
 from qitensor.atom import HilbertAtom
@@ -439,11 +440,17 @@ class HilbertArray(object):
         return self
 
     def __str__(self):
-        return str(self.space) + '\n' + str(self.nparray)
+        if have_sage:
+            return str(self.space)+'\n'+str(self.sage_block_matrix())
+        else:
+            return str(self.space) + '\n' + str(self.nparray)
 
     def __repr__(self):
-        return 'HilbertArray('+repr(self.space)+',\n'+ \
-            repr(self.nparray)+')'
+        if have_sage:
+            return repr(self.space)+'\n'+repr(self.sage_block_matrix())
+        else:
+            return 'HilbertArray('+repr(self.space)+',\n'+ \
+                repr(self.nparray)+')'
 
     def _index_key_to_map(self, key):
         index_map = {}
@@ -935,3 +942,76 @@ class HilbertArray(object):
         else:
             inner_space.assert_ket_space()
             return self.space.base_field.mat_svd_partial(self, inner_space)
+
+    ########## stuff that only works in Sage ##########
+
+    def _matrix_(self, R=None):
+        if not have_sage:
+            raise HilbertError('This is only available under Sage')
+
+        import sage.all
+
+        np_mat = np.array(self.as_np_matrix())
+
+        sage_ring = self.space.base_field.sage_ring
+        if sage_ring is None:
+            m = sage.all.matrix(np_mat)
+        else:
+            m = sage.all.matrix(sage_ring, np_mat)
+
+        if R is None:
+            return m
+        else:
+            return m.change_ring(R)
+
+    def _latex_(self):
+        if not have_sage:
+            raise HilbertError('This is only available under Sage')
+
+        import sage.all
+
+        return '\\begin{array}{l}\n'+ \
+            sage.all.latex(self.space)+' \\\\\n'+ \
+            sage.all.latex(self.sage_block_matrix())+ \
+            '\\end{array}'
+
+    def sage_block_matrix(self):
+        if not have_sage:
+            raise HilbertError('This is only available under Sage')
+
+        import sage.all
+
+        hs = self.space
+        
+        blocks = [self]
+        nrows = 1
+        ncols = 1
+
+        if len(hs.sorted_kets) > 1:
+            h = hs.sorted_kets[0]
+            blocks = [m[{h: i}] for m in blocks for i in h.indices]
+            nrows = len(h.indices)
+
+        if len(hs.sorted_bras) > 1:
+            h = hs.sorted_bras[0]
+            blocks = [m[{h: i}] for m in blocks for i in h.indices]
+            ncols = len(h.indices)
+
+        blocks = [sage.all.matrix(x) for x in blocks]
+
+        return sage.all.block_matrix(blocks, nrows=nrows, ncols=ncols, subdivide=True)
+
+    def sage_matrix_transform(self, f, transpose_dims=False):
+        if not have_sage:
+            raise HilbertError('This is only available under Sage')
+
+        import sage.all
+
+        m = sage.all.matrix(self)
+        m = f(m)
+        out_hilb = self.space
+        if transpose_dims:
+            out_hilb = out_hilb.H
+        return out_hilb.reshaped_sage_matrix(m)
+
+    ########## end of stuff that only works in Sage ##########

@@ -25,6 +25,12 @@ space tensor product structure.
 
 __version__ = "0.2"
 
+try:
+    import sage.all
+    have_sage = True
+except:
+    have_sage = False
+
 from qitensor.exceptions import *
 from qitensor.basefield import *
 from qitensor.space import *

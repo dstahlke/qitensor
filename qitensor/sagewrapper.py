@@ -5,8 +5,7 @@ import numpy as np
 
 from sage.all import I, exp, pi
 from sage.all import matrix, block_matrix, identity_matrix
-from sage.all import SageObject, CommutativeRing
-from sage.all import latex
+from sage.all import CommutativeRing
 from qitensor import HilbertBaseField, HilbertAtom, HilbertSpace, HilbertArray
 
 class SageHilbertBaseField(HilbertBaseField):
@@ -40,87 +39,6 @@ class SageHilbertBaseField(HilbertBaseField):
 
     def mat_conj(self, m):
         return m.sage_matrix_transform(lambda x: x.conjugate())
-
-    def _atom_factory(self, label, latex_label, indices):
-        return SageHilbertAtom(label, latex_label, indices, self)
-
-    def _space_factory(self, ket_set, bra_set):
-        return SageHilbertSpace(ket_set, bra_set, self)
-
-    def _array_factory(self, space, data, noinit_data, reshape):
-        return SageHilbertArray(space, data, noinit_data, reshape)
-
-class SageHilbertAtomMixins(object):
-    pass
-
-class SageHilbertSpaceMixins(object):
-    def reshaped_sage_matrix(self, m):
-        sage_ring = self.base_field.sage_ring
-        if m.base_ring() != sage_ring:
-            m = m.change_ring(sage_ring)
-        return self.reshaped_np_matrix(np.array(m, dtype=self.base_field.dtype))
-
-class SageHilbertAtom(SageHilbertAtomMixins, SageHilbertSpaceMixins, HilbertAtom, SageObject):
-    pass
-
-class SageHilbertSpace(SageHilbertSpaceMixins, HilbertSpace, SageObject):
-    pass
-
-class SageHilbertArray(HilbertArray, SageObject):
-    def __init__(self, space, data, noinit_data, reshape):
-        HilbertArray.__init__(self, space, data, noinit_data, reshape)
-
-    def _matrix_(self, R=None):
-        np_mat = np.array(self.as_np_matrix())
-
-        sage_ring = self.space.base_field.sage_ring
-
-        m = matrix(sage_ring, np_mat)
-        if R is None:
-            return m
-        else:
-            return m.change_ring(R)
-
-    def _latex_(self):
-        return '\\begin{array}{l}\n'+ \
-            latex(self.space)+' \\\\\n'+ \
-            latex(self.block_matrix())+ \
-            '\\end{array}'
-
-    def __repr__(self):
-        return repr(self.space)+'\n'+repr(self.block_matrix())
-
-    def __str__(self):
-        return str(self.space)+'\n'+str(self.block_matrix())
-
-    def block_matrix(self):
-        hs = self.space
-        
-        blocks = [self]
-        nrows = 1
-        ncols = 1
-
-        if len(hs.sorted_kets) > 1:
-            h = hs.sorted_kets[0]
-            blocks = [m[{h: i}] for m in blocks for i in h.indices]
-            nrows = len(h.indices)
-
-        if len(hs.sorted_bras) > 1:
-            h = hs.sorted_bras[0]
-            blocks = [m[{h: i}] for m in blocks for i in h.indices]
-            ncols = len(h.indices)
-
-        blocks = [matrix(x) for x in blocks]
-
-        return block_matrix(blocks, nrows=nrows, ncols=ncols, subdivide=True)
-
-    def sage_matrix_transform(self, f, transpose_dims=False):
-        m = matrix(self)
-        m = f(m)
-        out_hilb = self.space
-        if transpose_dims:
-            out_hilb = out_hilb.H
-        return out_hilb.reshaped_sage_matrix(m)
 
 def can_use_type(dtype):
     return isinstance(dtype, CommutativeRing)

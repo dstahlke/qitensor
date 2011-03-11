@@ -12,7 +12,6 @@ features
 * trace
 * eigenvalues
 * quantum circuit operators (cnot, etc.)
-* dtype=complex should still use Sage's rendering when in Sage
 
 fixes
 
@@ -21,4 +20,3 @@ fixes
 * use singletons for HilbertAtom and HilbertBaseField (and make pickle restore the singletons)
 * np.product returns float for empty list, and this is used extensively for computing dimensions
 * array creation in Sage needs to cast input data to type specified by sage_ring
-* list of HilbertArray doesn't render proplerly in Sage jsMath

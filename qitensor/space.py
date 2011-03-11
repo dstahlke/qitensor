@@ -6,6 +6,7 @@ multiplication operator to HilbertAtom's or other HilbertSpace's.
 
 import numpy as np
 
+from qitensor import have_sage
 from qitensor.exceptions import *
 
 __all__ = ['HilbertSpace']
@@ -384,3 +385,16 @@ class HilbertSpace(object):
 
         if self.bra_set:
             raise NotKetSpaceError(repr(self))
+
+    ########## stuff that only works in Sage ##########
+
+    def reshaped_sage_matrix(self, m):
+        if not have_sage:
+            raise HilbertError('This is only available under Sage')
+
+        sage_ring = self.base_field.sage_ring
+        if m.base_ring() != sage_ring:
+            m = m.change_ring(sage_ring)
+        return self.reshaped_np_matrix(np.array(m, dtype=self.base_field.dtype))
+
+    ########## end of stuff that only works in Sage ##########

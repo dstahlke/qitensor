@@ -1,0 +1,6 @@
+Version 0.2:
+	Fix: tensordot returns scalar instead of 0-d hilbert array
+	Fix: catch usage of array slices (which are not allowed)
+
+Version 0.1:
+	Initial version

@@ -464,13 +464,27 @@ class HilbertArray(object):
                 raise HilbertIndexError("Wrong number of indices given "+
                     "(%d for %s)" % (len(key), str(self.space)))
             for (i, k) in enumerate(key):
-                if not isinstance(k, slice):
+                if isinstance(k, slice):
+                    if k == slice(None):
+                        # full slice is the same as not specifying anything for
+                        # this axis
+                        pass
+                    else:
+                        raise HilbertSliceError("Slices are not allowed")
+                else:
                     index_map[self.axes[i]] = k
         else:
             if len(self.axes) != 1:
                 raise HilbertIndexError("Wrong number of indices given "+
                     "(1 for %s)" % str(self.space))
-            if not isinstance(key, slice):
+            if isinstance(key, slice):
+                if key == slice(None):
+                    # full slice is the same as not specifying anything for
+                    # this axis
+                    pass
+                else:
+                    raise HilbertSliceError("Slices are not allowed")
+            else:
                 index_map[self.axes[0]] = key
 
         for (spc, idx) in index_map.iteritems():

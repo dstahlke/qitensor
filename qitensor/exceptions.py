@@ -11,6 +11,7 @@ __all__ = [
     'IncompatibleBaseFieldError',
     'MismatchedIndexSetError',
     'NotKetSpaceError',
+    'HilbertSliceError',
 ]
 
 class HilbertError(Exception):
@@ -49,5 +50,9 @@ class HilbertShapeError(HilbertError, ValueError):
         ValueError.__init__(self, )
 
 class NotKetSpaceError(HilbertError):
+    def __init__(self, msg):
+        HilbertError.__init__(self, msg)
+
+class HilbertSliceError(HilbertError):
     def __init__(self, msg):
         HilbertError.__init__(self, msg)

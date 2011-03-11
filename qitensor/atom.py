@@ -211,19 +211,103 @@ class HilbertAtom(HilbertSpace):
     def x_plus(self):
         """
         Returns a state with 1/sqrt(D) in each slot.
+
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> '%g' % ha.x_plus().norm()
+        '1'
+        >>> ha.X * ha.x_plus() == ha.x_plus()
+        True
         """
 
-        return self.fourier_basis_state(0)
+        if len(self.indices) != 2:
+            return self.fourier_basis_state(0)
+        else:
+            return self.array([1, 1]) / self.base_field.sqrt(2)
 
     def x_minus(self):
         """
-        Returns the state [1, -1], only available for qubits.
+        Returns the state [1, -1]/sqrt(2), only available for qubits.
+
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> '%g' % ha.x_minus().norm()
+        '1'
+        >>> ha.X * ha.x_minus() == ha.x_minus() * -1
+        True
         """
-        N = len(self.indices)
-        if N == 2:
-            return self.fourier_basis_state(1)
-        else:
+
+        if len(self.indices) != 2:
             raise HilbertError('x_minus only available for qubits')
+        return self.array([1, -1]) / self.base_field.sqrt(2)
+
+    def y_plus(self):
+        """
+        Returns the state [1, I]/sqrt(2), only available for qubits.
+
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> '%g' % ha.y_plus().norm()
+        '1'
+        >>> ha.Y * ha.y_plus() == ha.y_plus()
+        True
+        """
+
+        if len(self.indices) != 2:
+            raise HilbertError('y_plus only available for qubits')
+        i = self.base_field.complex_unit()
+        return self.array([1, i]) / self.base_field.sqrt(2)
+
+    def y_minus(self):
+        """
+        Returns the state [1, I]/sqrt(2), only available for qubits.
+
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> '%g' % ha.y_minus().norm()
+        '1'
+        >>> ha.Y * ha.y_minus() == ha.y_minus() * -1
+        True
+        """
+
+        if len(self.indices) != 2:
+            raise HilbertError('y_minus only available for qubits')
+        i = self.base_field.complex_unit()
+        return self.array([1, -i]) / self.base_field.sqrt(2)
+
+    def z_plus(self):
+        """
+        Returns the state [1, 0], only available for qubits.
+
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> '%g' % ha.z_plus().norm()
+        '1'
+        >>> ha.Z * ha.z_plus() == ha.z_plus()
+        True
+        """
+
+        if len(self.indices) != 2:
+            raise HilbertError('z_plus only available for qubits')
+        i = self.base_field.complex_unit()
+        return self.array([1, 0])
+
+    def z_minus(self):
+        """
+        Returns the state [0, 1], only available for qubits.
+
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> '%g' % ha.z_minus().norm()
+        '1'
+        >>> ha.Z * ha.z_minus() == ha.z_minus() * -1
+        True
+        """
+
+        if len(self.indices) != 2:
+            raise HilbertError('z_minus only available for qubits')
+        i = self.base_field.complex_unit()
+        return self.array([0, 1])
 
     # Special operators
 
@@ -303,11 +387,14 @@ class HilbertAtom(HilbertSpace):
                [ 0.+0.j,  0.+0.j,  0.+0.j, -1.+0.j]]))
         """
 
-        ret = self.O.array()
-        N = len(self.indices)
-        for (i, k) in enumerate(self.indices):
-            ret[k, k] = self.base_field.fractional_phase(i*order, N)
-        return ret
+        if len(self.indices) == 2 and order == 1:
+            return self.O.array([[1, 0], [0, -1]])
+        else:
+            ret = self.O.array()
+            N = len(self.indices)
+            for (i, k) in enumerate(self.indices):
+                ret[k, k] = self.base_field.fractional_phase(i*order, N)
+            return ret
 
     @property
     def X(self):

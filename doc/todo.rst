@@ -12,6 +12,7 @@ features
 * trace
 * eigenvalues
 * quantum circuit operators (cnot, etc.)
+* unary negation
 
 fixes
 

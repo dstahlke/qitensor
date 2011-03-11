@@ -25,11 +25,11 @@ Sage: Hilbert Space Indexed by Group Elements
     >>> # X_h := sum_g{ |g><h*g| }
     >>> pauliX = lambda space, h: numpy.sum([space.ket(g) * space.bra(h*g) for g in G]) # doctest: +SKIP
     >>> # This function we just made is actually the same as a built-in method:
-    >>> [pauliX(hb, g) == hb.pauliX(g) for g in G]
+    >>> [pauliX(hb, g) == hb.pauliX(g) for g in G]  # doctest: +SKIP
     [True, True, True, True, True, True]
     >>> # G is not abelian, so we may choose right multiplication instead
     >>> # (i.e. X_h := sum_g{ |g><g*h| })
-    >>> [hb.pauliX(g) == hb.pauliX(g, left=False) for g in G]
+    >>> [hb.pauliX(g) == hb.pauliX(g, left=False) for g in G]  # doctest: +SKIP
     [True, False, False, False, False, False]
 
     >>> hb.pauliX(G[2]) # doctest: +SKIP

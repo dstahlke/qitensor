@@ -1,7 +1,7 @@
 Entangling Power of Bipartite Unitary
 =====================================
 
-    >>> from qitensor import qubit
+    >>> from qitensor import qubit, max_entangled
     >>> import numpy
     >>> import numpy.linalg
     >>> # operational spaces
@@ -12,14 +12,12 @@ Entangling Power of Bipartite Unitary
     >>> hb = qubit('b')
 
     >>> # create two maximally entangled states
-    >>> state_A = (hA * ha).array(numpy.diag([1, 1]))
+    >>> state_A = max_entangled(hA, ha)
     >>> state_A
     HilbertArray(|A,a>,
-    array([[ 1.+0.j,  0.+0.j],
-           [ 0.+0.j,  1.+0.j]]))
-    >>> state_A.normalize()
-    >>> state_B = (hB * hb).array(numpy.diag([1, 1]))
-    >>> state_B.normalize()
+    array([[ 0.707107+0.j,  0.000000+0.j],
+           [ 0.000000+0.j,  0.707107+0.j]]))
+    >>> state_B = max_entangled(hB, hb)
     >>> state = state_A * state_B
     >>> state.space
     |A,B,a,b>

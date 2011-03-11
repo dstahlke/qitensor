@@ -22,10 +22,17 @@ Sage: Hilbert Space Indexed by Group Elements
     [0 1 0 0 0 0]
 
     >>> # Create group generalized Pauli X operator defined by
-    >>> # X_h := sum_g{ |h*g><g| }
-    >>> pauliX = lambda space, h: numpy.sum([space.ket(h*g) * space.bra(g) for g in G]) # doctest: +SKIP
+    >>> # X_h := sum_g{ |g><h*g| }
+    >>> pauliX = lambda space, h: numpy.sum([space.ket(g) * space.bra(h*g) for g in G]) # doctest: +SKIP
+    >>> # This function we just made is actually the same as a built-in method:
+    >>> [pauliX(hb, g) == hb.pauliX(g) for g in G]
+    [True, True, True, True, True, True]
+    >>> # G is not abelian, so we may choose right multiplication instead
+    >>> # (i.e. X_h := sum_g{ |g><g*h| })
+    >>> [hb.pauliX(g) == hb.pauliX(g, left=False) for g in G]
+    [True, False, False, False, False, False]
 
-    >>> pauliX(hb, G[2]) # doctest: +SKIP
+    >>> hb.pauliX(G[2]) # doctest: +SKIP
     |b><b|
     [0 0 1 0 0 0]
     [0 0 0 0 1 0]
@@ -33,7 +40,7 @@ Sage: Hilbert Space Indexed by Group Elements
     [0 0 0 0 0 1]
     [0 1 0 0 0 0]
     [0 0 0 1 0 0]
-    >>> pauliX(ha, G[2]) * ha.ket(G[3]) == ha.ket(G[2] * G[3]) # doctest: +SKIP
+    >>> ha.pauliX(G[2]) * ha.ket(G[3]) == ha.ket(G[2] * G[3]) # doctest: +SKIP
     True
 
     >>> # Create controlled-group operator (an extension of CNOT).

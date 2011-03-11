@@ -15,6 +15,9 @@ class SageHilbertBaseField(HilbertBaseField):
     def complex_unit(self):
         return self.sage_ring(sage.all.I)
 
+    def input_cast_function(self):
+        return lambda x: self.sage_ring(x)
+
     def fractional_phase(self, a, b):
         return self.sage_ring(sage.all.exp(2 * sage.all.pi * sage.all.I * a / b))
 

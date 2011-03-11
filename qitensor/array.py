@@ -36,6 +36,11 @@ class HilbertArray(object):
             if self.nparray.shape != hs.shape:
                 raise HilbertShapeError(self.nparray.shape, hs.shape)
 
+        if self.nparray is not None:
+            cast_fn = space.base_field.input_cast_function()
+            if cast_fn is not None:
+                self.nparray = np.vectorize(cast_fn)(self.nparray)
+
         self.axes = hs.sorted_kets + hs.sorted_bras
 
     def copy(self):

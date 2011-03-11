@@ -46,6 +46,9 @@ class HilbertBaseField(object):
             raise IncompatibleBaseFieldError('Different base_fields: '+
                 repr(self)+' vs. '+repr(other))
 
+    def input_cast_function(self):
+        return None
+
     def complex_unit(self):
         return 1j
 

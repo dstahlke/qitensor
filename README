@@ -40,4 +40,5 @@ Testing:
 	./build-sage-package.sh
 	sage -f qitensor-*.spkg
 	cd ../doc/examples
-	./sage-tests.sh
+	# This takes a while (almost a minute)
+	./run-all-sage-tests.sh

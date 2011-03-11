@@ -1,4 +1,4 @@
-Version 0.3:
+Version 0.3 (2011-03-11):
 	Python type arrays can use Sage rendering in Sage
 	Sage support without mixins
 	renamed some modules (no API changes)
@@ -6,9 +6,9 @@ Version 0.3:
 	Pauli states and some circuit operators
 	Input data is cast for Sage base fields
 
-Version 0.2:
+Version 0.2 (2011-03-10):
 	Fix: tensordot returns scalar instead of 0-d hilbert array
 	Fix: catch usage of array slices (which are not allowed)
 
-Version 0.1:
+Version 0.1 (2011-03-08):
 	Initial version

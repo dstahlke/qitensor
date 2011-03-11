@@ -320,10 +320,8 @@ class HilbertAtom(HilbertSpace):
         error is thrown if this is not a qubit space).
 
         If `h` is given, then the group Pauli X operator is returned.
-        If ``left`` is True, the return value is
-            :math:`\sum_g |g><h*g|`.
-        If ``left`` is False, the return value is
-            :math:`\sum_g |g><g*h|`.
+        If ``left`` is True, the return value is :math:`\sum_g |g><h*g|`.
+        If ``left`` is False, the return value is :math:`\sum_g |g><g*h|`.
         For qudit spaces, the default group operation is modular addition.  For
         indexed_space spaces the default operation is multiplication, and an
         error is thrown if the index set is not closed under this operation.

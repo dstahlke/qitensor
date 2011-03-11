@@ -154,6 +154,10 @@ class HilbertArray(object):
         |a,c><a,b,c|
         >>> x.tensordot(y, hc).space
         |a><a,b|
+        >>> (ha.bra(0) * hb.bra(0)) * (ha.ket(0) * hb.ket(0))
+        (1+0j)
+        >>> (ha.bra(0) * hb.bra(0)) * (ha.ket(0) * hb.ket(1))
+        0j
         """
 
         hs = self.space
@@ -215,13 +219,17 @@ class HilbertArray(object):
         #print td.shape
         assert len(td_axes) == len(td.shape)
 
-        ret = ret_space.array(noinit_data=True)
-        #print "ret", ret.axes
-        permute = tuple([td_axes.index(x) for x in ret.axes])
-        #print permute
-        ret.nparray = td.transpose(permute)
+        if len(td_axes) == 0:
+            # convert 0-d array to scalar
+            return td[()]
+        else:
+            ret = ret_space.array(noinit_data=True)
+            #print "ret", ret.axes
+            permute = tuple([td_axes.index(x) for x in ret.axes])
+            #print permute
+            ret.nparray = td.transpose(permute)
 
-        return ret
+            return ret
 
     def transpose(self, tpose_axes=None):
         """

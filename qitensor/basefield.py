@@ -21,6 +21,20 @@ from qitensor.space import HilbertSpace
 
 __all__ = ['HilbertBaseField']
 
+class GroupOpCyclic(object):
+    def __init__(self, D):
+        self.D = D
+
+    def op(self, x, y):
+        return (x+y) % self.D
+
+class GroupOpTimes(object):
+    def __init__(self):
+        pass
+
+    def op(self, x, y):
+        return x*y
+
 class HilbertBaseField(object):
     def __init__(self, dtype, unique_id):
         self.dtype = dtype
@@ -159,14 +173,14 @@ class HilbertBaseField(object):
         else:
             return self._space_factory(ket_set, bra_set)
 
-    def _atom_factory(self, label, latex_label, indices):
+    def _atom_factory(self, label, latex_label, indices, group_op):
         r"""
         Factory method for creating ``HilbertAtom`` objects.
 
         Subclasses can override this method in order to return custom
         subclasses of ``HilbertAtom``.
         """
-        return HilbertAtom(label, latex_label, indices, self)
+        return HilbertAtom(label, latex_label, indices, group_op, self)
 
     def _space_factory(self, ket_set, bra_set):
         r"""
@@ -186,13 +200,19 @@ class HilbertBaseField(object):
         """
         return HilbertArray(space, data, noinit_data, reshape)
 
-    def indexed_space(self, label, indices, latex_label=None):
+    def indexed_space(self, label, indices, latex_label=None, group_op=None):
         r"""
         Returns a finite-dimensional Hilbert space with an arbitrary index set.
 
         :param label: a unique label for this Hilbert space
         :param indices: a sequence defining the index set
         :param latex_label: an optional latex representation of the label
+        :param group_op: group operation
+
+        ``group_op``, if given, should be a class that defines an
+        ``op(self, x, y)`` method.  This supports things like the generalized
+        pauliX operator.  The default is ``op(self, x, y) = x*y``.  The
+        ``qubit`` and ``qudit`` constructors use ``op(self, x, y) = (x+y)%D``.
 
         See also: :func:`qitensor.factory.indexed_space`
 
@@ -205,7 +225,10 @@ class HilbertBaseField(object):
         ['x', 'y', 'z']
         """
 
-        return self._atom_factory(label, latex_label, indices)
+        if group_op is None:
+            group_op = GroupOpTimes()
+
+        return self._atom_factory(label, latex_label, indices, group_op)
 
     def qudit(self, label, dim, latex_label=None):
         r"""
@@ -226,7 +249,10 @@ class HilbertBaseField(object):
         [0, 1, 2]
         """
 
-        return self.indexed_space(label, range(dim), latex_label)
+        group_op = GroupOpCyclic(dim)
+
+        return self.indexed_space(label, range(dim),
+            group_op=group_op, latex_label=latex_label)
 
     def qubit(self, label, latex_label=None):
         r"""

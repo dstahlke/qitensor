@@ -41,7 +41,7 @@ def base_field_lookup(dtype):
 
     return base_field_cache[dtype]
 
-def indexed_space(label, indices, dtype=complex, latex_label=None):
+def indexed_space(label, indices, dtype=complex, latex_label=None, group_op=None):
     r"""
     Returns a finite-dimensional Hilbert space with an arbitrary index set.
 
@@ -50,6 +50,12 @@ def indexed_space(label, indices, dtype=complex, latex_label=None):
     :param dtype: the base field data type
     :type dtype: python type or Sage CommutativeRing; default complex
     :param latex_label: an optional latex representation of the label
+    :param group_op: group operation
+
+    ``group_op``, if given, should be a class that defines an
+    ``op(self, x, y)`` method.  This supports things like the generalized
+    pauliX operator.  The default is ``op(self, x, y) = x*y``.  The
+    ``qubit`` and ``qudit`` constructors use ``op(self, x, y) = (x+y)%D``.
 
     This is really just a shortcut for 
         ``base_field_lookup(dtype).indexed_space( ... )``
@@ -65,7 +71,8 @@ def indexed_space(label, indices, dtype=complex, latex_label=None):
     """
 
     field = base_field_lookup(dtype)
-    return field.indexed_space(label, indices, latex_label)
+    return field.indexed_space(label, indices, \
+        latex_label=latex_label, group_op=group_op)
 
 def qudit(label, dim, dtype=complex, latex_label=None):
     r"""

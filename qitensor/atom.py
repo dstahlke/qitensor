@@ -13,10 +13,11 @@ from qitensor.space import HilbertSpace
 __all__ = ['HilbertAtom']
 
 class HilbertAtom(HilbertSpace):
-    def __init__(self, label, latex_label, indices, base_field, dual=None):
+    def __init__(self, label, latex_label, indices, group_op, base_field, dual=None):
         is_dual = not dual is None
 
         self.indices = indices
+        self.group_op = group_op
         self.label = label
         if latex_label is None:
             latex_label = label
@@ -39,7 +40,7 @@ class HilbertAtom(HilbertSpace):
             self._H = dual
         else:
             self._H = HilbertAtom(label, latex_label,
-                indices, base_field, self)
+                indices, group_op, base_field, self)
 
     def __cmp__(self, other):
         if not isinstance(other, HilbertAtom):
@@ -311,11 +312,21 @@ class HilbertAtom(HilbertSpace):
 
     # Special operators
 
-    def pauliX(self):
+    def pauliX(self, h=None, left=True):
         """
         Returns the Pauli X operator.
 
-        This is only available for qubit spaces.
+        If `h` is not given, then the operator [[0, 1], [1, 0]] is returned (an
+        error is thrown if this is not a qubit space).
+
+        If `h` is given, then the group Pauli X operator is returned.
+        If ``left`` is True, the return value is
+            :math:`\sum_g |g><h*g|`.
+        If ``left`` is False, the return value is
+            :math:`\sum_g |g><g*h|`.
+        For qudit spaces, the default group operation is modular addition.  For
+        indexed_space spaces the default operation is multiplication, and an
+        error is thrown if the index set is not closed under this operation.
 
         See also: :func:`X`
 
@@ -325,12 +336,26 @@ class HilbertAtom(HilbertSpace):
         HilbertArray(|a><a|,
         array([[ 0.+0.j,  1.+0.j],
                [ 1.+0.j,  0.+0.j]]))
+        >>> hb = qudit('b', 3)
+        >>> hb.pauliX(1)
+        HilbertArray(|b><b|,
+        array([[ 0.+0.j,  1.+0.j,  0.+0.j],
+               [ 0.+0.j,  0.+0.j,  1.+0.j],
+               [ 1.+0.j,  0.+0.j,  0.+0.j]]))
         """
 
-        if len(self.indices) != 2:
-            raise NotImplementedError("pauliX is only implemented for qubits")
+        if h is None:
+            if len(self.indices) != 2:
+                raise NotImplementedError("h param is required except for qubits")
+            else:
+                return self.O.array([[0, 1], [1, 0]])
         else:
-            return self.O.array([[0, 1], [1, 0]])
+            ret = self.O.array()
+            gop = self.group_op
+            for g in self.indices:
+                bra = gop.op(h, g) if left else gop.op(g, h)
+                ret[{ self: g, self.H: bra }] = 1
+            return ret
 
     def pauliY(self):
         """

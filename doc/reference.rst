@@ -11,4 +11,4 @@ Reference
    array
    exceptions
 
-.. sagewrapper can't be here for now because the module only loads from sage
+.. sagebasefield can't be here for now because the module only loads from sage

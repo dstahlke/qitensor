@@ -233,7 +233,7 @@ class HilbertAtom(HilbertSpace):
         >>> ha = qubit('a')
         >>> '%g' % ha.x_minus().norm()
         '1'
-        >>> ha.X * ha.x_minus() == ha.x_minus() * -1
+        >>> ha.X * ha.x_minus() == -ha.x_minus()
         True
         """
 
@@ -266,7 +266,7 @@ class HilbertAtom(HilbertSpace):
         >>> ha = qubit('a')
         >>> '%g' % ha.y_minus().norm()
         '1'
-        >>> ha.Y * ha.y_minus() == ha.y_minus() * -1
+        >>> ha.Y * ha.y_minus() == -ha.y_minus()
         True
         """
 
@@ -300,7 +300,7 @@ class HilbertAtom(HilbertSpace):
         >>> ha = qubit('a')
         >>> '%g' % ha.z_minus().norm()
         '1'
-        >>> ha.Z * ha.z_minus() == ha.z_minus() * -1
+        >>> ha.Z * ha.z_minus() == -ha.z_minus()
         True
         """
 

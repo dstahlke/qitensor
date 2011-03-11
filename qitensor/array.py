@@ -413,6 +413,9 @@ class HilbertArray(object):
         ret -= other
         return ret
 
+    def __neg__(self):
+        return self * -1
+
     def __isub__(self, other):
         if not isinstance(other, HilbertArray):
             raise TypeError('HilbertArray can only subtract '+

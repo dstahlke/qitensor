@@ -1,0 +1,43 @@
+Quantum Hilbert Space Tensors
+
+Author: Dan Stahlke
+License: BSD
+
+Installation:
+	./setup.py test
+	sudo ./setup.py install
+
+	# If you have Sage:
+	cd sage_package
+	rm -f qitensor-*.spkg
+	./build-sage-package.sh
+	sage -f qitensor-*.spkg
+
+Web page: http://www.stahlke.org/dan/qitensor
+
+Documentation:
+	View documentation online at:
+		http://www.stahlke.org/dan/qitensor/doc/index.html
+	
+	If you have the full source from git, you can build your own
+	set of documentation:
+		cd doc
+		make html
+		firefox _build/html/index.html
+
+Testing:
+	This assumes you have the full source code from git.
+
+	./setup.py test
+
+	cd doc
+	make clean
+	make doctest
+	cd ..
+
+	cd sage_package
+	rm -f qitensor-*.spkg
+	./build-sage-package.sh
+	sage -f qitensor-*.spkg
+	cd ../doc/examples
+	./sage-tests.sh

@@ -5,6 +5,7 @@ Reference
    :maxdepth: 2
 
    factory
+   circuit
    basefield
    atom
    space

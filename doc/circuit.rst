@@ -1,7 +1,7 @@
-Factory Functions
+Circuit Functions
 =================
 
-.. automodule:: qitensor.factory
+.. automodule:: qitensor.circuit
    :members:
    :undoc-members:
    :show-inheritance:

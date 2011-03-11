@@ -37,6 +37,7 @@ from qitensor.space import *
 from qitensor.atom import *
 from qitensor.array import *
 from qitensor.factory import *
+from qitensor.circuit import *
 
 __all__ = \
     exceptions.__all__ + \

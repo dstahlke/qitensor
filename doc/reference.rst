@@ -4,7 +4,7 @@ Reference
 .. toctree::
    :maxdepth: 2
 
-   functions
+   factory
    basefield
    atom
    space

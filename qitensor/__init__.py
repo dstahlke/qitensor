@@ -36,7 +36,7 @@ from qitensor.basefield import *
 from qitensor.space import *
 from qitensor.atom import *
 from qitensor.array import *
-from qitensor.functions import *
+from qitensor.factory import *
 
 __all__ = \
     exceptions.__all__ + \
@@ -44,4 +44,4 @@ __all__ = \
     space.__all__ + \
     atom.__all__ + \
     array.__all__ + \
-    functions.__all__
+    factory.__all__

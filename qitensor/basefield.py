@@ -3,8 +3,8 @@ HilbertBaseField defines how the mathematics of HilbertArray works.  Normally
 you don't need to worry about this because usually the default implementation
 is appropriate.  It is not recommened to call the constructor directly.
 Instead, use the interface provided by
-:func:`qitensor.functions.base_field_lookup`, or just use the ``dtype``
-parameter of the factory functions in :mod:`qitensor.functions`.  A subclass,
+:func:`qitensor.factory.base_field_lookup`, or just use the ``dtype``
+parameter of the factory functions in :mod:`qitensor.factory`.  A subclass,
 :class:`SageHilbertBaseField`, provides the ability to create arrays over Sage
 types (e.g. SR).  This, too, is accessed through ``base_field_lookup`` or by
 passing the ``dtype`` parameter.
@@ -194,7 +194,7 @@ class HilbertBaseField(object):
         :param indices: a sequence defining the index set
         :param latex_label: an optional latex representation of the label
 
-        See also: :func:`qitensor.functions.indexed_space`
+        See also: :func:`qitensor.factory.indexed_space`
 
         >>> from qitensor import base_field_lookup
         >>> field = base_field_lookup(complex)
@@ -215,7 +215,7 @@ class HilbertBaseField(object):
         :param dim: the dimension of the Hilbert space
         :param latex_label: an optional latex representation of the label
 
-        See also: :func:`qitensor.functions.qudit`
+        See also: :func:`qitensor.factory.qudit`
 
         >>> from qitensor import base_field_lookup
         >>> field = base_field_lookup(complex)
@@ -235,7 +235,7 @@ class HilbertBaseField(object):
         :param label: a unique label for this Hilbert space
         :param latex_label: an optional latex representation of the label
 
-        See also: :func:`qitensor.functions.qubit`
+        See also: :func:`qitensor.factory.qubit`
 
         >>> from qitensor import base_field_lookup
         >>> field = base_field_lookup(complex)

@@ -1,7 +1,7 @@
 Functions
 =========
 
-.. automodule:: qitensor.functions
+.. automodule:: qitensor.factory
    :members:
    :undoc-members:
    :show-inheritance:

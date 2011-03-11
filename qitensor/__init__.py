@@ -45,4 +45,5 @@ __all__ = \
     space.__all__ + \
     atom.__all__ + \
     array.__all__ + \
-    factory.__all__
+    factory.__all__ + \
+    circuit.__all__

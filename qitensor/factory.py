@@ -4,6 +4,7 @@ HilbertBaseField's.  This is the preferred entry point for using the qitensor
 package.
 """
 
+from qitensor import have_sage
 from qitensor.basefield import HilbertBaseField
 
 __all__ = ['base_field_lookup', 'indexed_space', 'qubit', 'qudit']
@@ -25,12 +26,8 @@ def base_field_lookup(dtype):
     if base_field_cache.has_key(dtype):
         return base_field_cache[dtype]
 
-    have_sage = False
-    try:
+    if have_sage:
         import qitensor.sagebasefield
-        have_sage = True
-    except:
-        pass
 
     if have_sage and qitensor.sagebasefield.can_use_type(dtype):
         base_field_cache[dtype] = qitensor.sagebasefield.create_base_field(dtype)

@@ -23,7 +23,7 @@ space tensor product structure.
   Hilbert space labels.
 """
 
-__version__ = "0.3"
+__version__ = "0.4"
 
 try:
     import sage.all

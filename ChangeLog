@@ -1,5 +1,6 @@
 Version 0.4 (ongoing):
 	Don't test for Sage on every base_field_lookup call
+	Custom matrix norm that works on Sage's SR
 
 Version 0.3 (2011-03-11):
 	Python type arrays can use Sage rendering in Sage

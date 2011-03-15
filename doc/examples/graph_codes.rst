@@ -58,6 +58,7 @@ Phys. Rev. A 78, 042303 (2008).
     >>> # Compute the Pauli distance between graph basis states.
     >>> # Because of Eq. 17 this could be made a lot faster.  But for
     >>> # simplicity this is not taken advantage of.
+    >>> # Also, using the X-Z rule should give an exponential speedup.
     >>> cv_Q_list = [cv_arr.H * Q for Q in Q_list] # doctest: +SKIP
     >>> delta_matrix = np.zeros((nS, nS), dtype=int) # doctest: +SKIP
     >>> delta_matrix[:] = 3 # doctest: +SKIP

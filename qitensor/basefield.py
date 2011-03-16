@@ -44,7 +44,7 @@ class HilbertBaseField(object):
     def assert_same(self, other):
         if self.unique_id != other.unique_id:
             raise IncompatibleBaseFieldError('Different base_fields: '+
-                repr(self)+' vs. '+repr(other))
+                repr(self.unique_id)+' vs. '+repr(other.unique_id))
 
     def input_cast_function(self):
         return None
@@ -164,9 +164,7 @@ class HilbertBaseField(object):
         assert isinstance(bra_set, frozenset)
 
         for x in ket_set | bra_set:
-            if x.base_field != self:
-                raise IncompatibleBaseFieldError('Different base_fields: '+
-                    repr(self)+' vs. '+repr(x.base_field))
+            self.assert_same(x.base_field)
 
         # Just return the atoms if possible:
         if len(ket_set) == 1 and len(bra_set) == 0:

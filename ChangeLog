@@ -1,3 +1,6 @@
+Version 0.5 (ongoing):
+	Fixed base_field equality check
+
 Version 0.4 (2011-03-13):
 	Don't test for Sage on every base_field_lookup call
 	Custom matrix norm that works on Sage's SR

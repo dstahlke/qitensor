@@ -815,6 +815,94 @@ class HilbertArray(object):
 
         return self.space.base_field.mat_conj(self)
 
+    def trace(self, axes=None):
+        """
+        Returns the (full or partial) trace of this array.
+
+        :param axes: axes to trace over, all axes if None (in which case the bra
+            space must be the same as the ket space)
+        :type axes: HilbertSpace; default None
+
+        >>> from qitensor import qubit, qudit
+        >>> ha = qubit('a')
+        >>> hb = qudit('b', 3)
+        >>> hc = qubit('c')
+        >>> x = ha.O.random_array()
+        >>> y = hb.O.random_array()
+        >>> z = hc.random_array()
+        >>> abs(x.trace() - (x[0, 0] + x[1, 1])) < 1e-14
+        True
+        >>> abs(y.trace() - (y[0, 0] + y[1, 1] + y[2, 2])) < 1e-14
+        True
+        >>> abs(x.trace() * y.trace() - (x*y).trace()) < 1e-14
+        True
+        >>> n = hb.random_array().normalized()
+        >>> # trace of a projector
+        >>> abs( (n*n.H).trace() - 1 ) < 1e-14
+        True
+        >>> ( (x*y).trace(ha) - x.trace() * y ).norm() < 1e-14
+        True
+        >>> ( (x*y).trace(hb) - x * y.trace() ).norm() < 1e-14
+        True
+        >>> abs( (x*y).trace(ha*hb) - (x*y).trace() ) < 1e-14
+        True
+        >>> abs( (x*y).trace(ha).trace(hb) - (x*y).trace() ) < 1e-14
+        True
+        >>> abs( x.trace(ha) - x.trace(ha.H) ) < 1e-14
+        True
+        >>> abs( x.trace(ha) - x.trace(ha.O) ) < 1e-14
+        True
+        >>> ( (x*z).trace(ha) - x.trace() * z ).norm() < 1e-14
+        True
+        >>> ( (x*z.H).trace(ha) - x.trace() * z.H ).norm() < 1e-14
+        True
+        """
+
+        if axes is None:
+            if self.space != self.space.H:
+                raise HilbertError('bra space does not equal ket space; '+
+                    'please specify axes')
+            space_set = self.space.ket_set
+        else:
+            if not isinstance(axes, HilbertSpace):
+                raise TypeError('axes must be a HilbertSpace')
+            # union of ket space and bra space (converted to kets)
+            space_set = axes.ket_set | axes.H.ket_set
+
+        # The full trace is handled specially here, for efficiency.
+        if space_set == self.space.ket_set and space_set == self.space.H.bra_set:
+            return np.trace( self.as_np_matrix() )
+
+        space_list = list(space_set)
+
+        for s in space_list:
+            if not s in self.space.ket_set:
+                raise HilbertIndexError('not in ket set: '+repr(s))
+            if not s.H in self.space.bra_set:
+                raise HilbertIndexError('not in bra set: '+repr(s.H))
+
+        s = space_list.pop()
+        axis1 = self.get_dim(s)
+        axis2 = self.get_dim(s.H)
+
+        arr = np.trace( self.nparray, axis1=axis1, axis2=axis2 )
+
+        out_ket = self.space.ket_set - frozenset([s])
+        out_bra = self.space.bra_set - frozenset([s.H])
+
+        if len(out_bra) + len(out_ket) == 0:
+            assert len(space_list) == 0
+            # arr should be a scalar
+            return arr
+
+        out_space = self.space.base_field.create_space2(out_ket, out_bra)
+        out = out_space.array(arr)
+
+        if len(space_list):
+            out = out.trace( np.product(space_list) )
+
+        return out
+
     def expm(self, q=7):
         """
         Return the matrix exponential of this array.
@@ -942,7 +1030,7 @@ class HilbertArray(object):
                         'use for the singular values of this square matrix')
 
         if not isinstance(inner_space, HilbertSpace):
-            raise TypeError('inner_space must be HilbertSpace')
+            raise TypeError('inner_space must be a HilbertSpace')
 
         if full_matrices:
             return self.space.base_field.mat_svd_full(

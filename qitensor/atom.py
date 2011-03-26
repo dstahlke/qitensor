@@ -496,7 +496,7 @@ class HilbertAtom(HilbertSpace):
         if len(self.indices) != 2:
             raise NotImplementedError("hadamard is only implemented for qubits")
         else:
-            return self.O.array([[1, 1], [1, -1]]) / np.sqrt(2)
+            return self.O.array([[1, 1], [1, -1]]) / self.base_field.sqrt(2)
 
     def gateS(self):
         """

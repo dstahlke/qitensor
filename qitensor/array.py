@@ -447,6 +447,16 @@ class HilbertArray(object):
         self.nparray.__itruediv__(other)
         return self
 
+    def __pow__(self, other):
+        if self.space != self.space.H:
+            raise HilbertError('bra space must be the same as ket space '+
+                '(space was '+repr(self.space)+')')
+        return self.space.base_field.mat_pow(self, other)
+
+    def __ipow__(self, other):
+        self.nparray[:] = self.__pow__(other).nparray
+        return self
+
     def __str__(self):
         if have_sage:
             return str(self.space)+'\n'+str(self.sage_block_matrix())

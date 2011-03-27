@@ -46,6 +46,9 @@ class SageHilbertBaseField(HilbertBaseField):
     def mat_conj(self, m):
         return m.sage_matrix_transform(lambda x: x.conjugate())
 
+    def mat_pow(self, m, n):
+        return m.sage_matrix_transform(lambda x: x**n)
+
 def can_use_type(dtype):
     return isinstance(dtype, sage.all.CommutativeRing)
 

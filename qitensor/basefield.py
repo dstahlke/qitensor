@@ -94,6 +94,9 @@ class HilbertBaseField(object):
         import scipy.linalg
         return m.np_matrix_transform(lambda x: scipy.linalg.expm(x, q))
 
+    def mat_pow(self, m, n):
+        return m.np_matrix_transform(lambda x: x**n)
+
     def mat_svd_full(self, m, s_space):
         (u, s, v) = np.linalg.svd(m.as_np_matrix())
         u_space = m.space.ket_space() * s_space.ket_space().H

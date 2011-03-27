@@ -38,8 +38,8 @@ setup(
     author_email = 'dstahlke@gmail.com',
     url = 'http://www.stahlke.org/dan/qitensor',
     license = 'BSD',
-    keywords = ['quantum', 'tensor', 'numpy'],
-    description = 'Quantum Tensors',
+    keywords = ['quantum', 'tensor', 'numpy', 'sage'],
+    description = 'Quantum Hilbert Space Tensors in Python and Sage',
     long_description = '''
 This module is essentially a wrapper for numpy that uses semantics useful for
 finite dimensional quantum mechanics of many particles.  In particular, this

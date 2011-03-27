@@ -25,11 +25,16 @@ space tensor product structure.
 
 __version__ = "0.5"
 
+import numpy as np
+
 try:
     import sage.all
     have_sage = True
 except:
     have_sage = False
+
+def shape_product(l):
+    return np.prod(l, dtype=int)
 
 from qitensor.exceptions import *
 from qitensor.basefield import *

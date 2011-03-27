@@ -14,6 +14,7 @@ import numpy as np
 import numpy.random
 import numpy.linalg
 
+from qitensor import shape_product
 from qitensor.exceptions import *
 from qitensor.atom import HilbertAtom
 from qitensor.array import HilbertArray
@@ -100,8 +101,8 @@ class HilbertBaseField(object):
         U = u_space.reshaped_np_matrix(u)
         V = v_space.reshaped_np_matrix(v)
 
-        dim1 = np.product(s_space.ket_space().shape)
-        dim2 = np.product(s_space.bra_space().shape)
+        dim1 = shape_product(s_space.ket_space().shape)
+        dim2 = shape_product(s_space.bra_space().shape)
         min_dim = np.min([dim1, dim2])
         Sm = np.zeros((dim1, dim2), dtype=self.dtype)
         Sm[:min_dim, :min_dim] = np.diag(s)

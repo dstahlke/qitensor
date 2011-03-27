@@ -5,6 +5,7 @@ Version 0.5 (ongoing):
 	Eigenvectors function
 	Diagonal matrix factory function
 	random_array gives complex values
+	0-d arrays always have int size (not 1.0)
 
 Version 0.4 (2011-03-13):
 	Don't test for Sage on every base_field_lookup call

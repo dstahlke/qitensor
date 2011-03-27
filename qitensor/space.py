@@ -6,7 +6,7 @@ multiplication operator to HilbertAtom's or other HilbertSpace's.
 
 import numpy as np
 
-from qitensor import have_sage
+from qitensor import have_sage, shape_product
 from qitensor.exceptions import *
 
 __all__ = ['HilbertSpace']
@@ -259,8 +259,8 @@ class HilbertSpace(object):
                  [ 0.+0.j,  4.+0.j]]]]))
         """
 
-        ket_size = np.product([len(x.indices) for x in self.ket_set])
-        bra_size = np.product([len(x.indices) for x in self.bra_set])
+        ket_size = shape_product([len(x.indices) for x in self.ket_set])
+        bra_size = shape_product([len(x.indices) for x in self.bra_set])
 
         if len(m.shape) != 2 or m.shape[0] != ket_size or m.shape[1] != bra_size:
             raise HilbertShapeError(m.shape, (ket_size, bra_size))
@@ -370,8 +370,8 @@ class HilbertSpace(object):
         if len(self.ket_set) == 0 or len(self.bra_set) == 0:
             return (self * self.H).eye()
 
-        ket_size = np.product([len(x.indices) for x in self.ket_set])
-        bra_size = np.product([len(x.indices) for x in self.bra_set])
+        ket_size = shape_product([len(x.indices) for x in self.ket_set])
+        bra_size = shape_product([len(x.indices) for x in self.bra_set])
         if bra_size != ket_size:
             raise HilbertShapeError(bra_size, ket_size)
 

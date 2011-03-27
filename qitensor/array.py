@@ -6,7 +6,7 @@ numpy.array.  HilbertArray's are to be created using the
 
 import numpy as np
 
-from qitensor import have_sage
+from qitensor import have_sage, shape_product
 from qitensor.exceptions import *
 from qitensor.space import HilbertSpace
 from qitensor.atom import HilbertAtom
@@ -29,9 +29,9 @@ class HilbertArray(object):
         else:
             self.nparray = np.array(data, dtype=hs.base_field.dtype)
             if reshape:
-                if np.product(self.nparray.shape) != np.product(hs.shape):
-                    raise HilbertShapeError(np.product(data.shape), 
-                        np.product(hs.shape))
+                if shape_product(self.nparray.shape) != shape_product(hs.shape):
+                    raise HilbertShapeError(shape_product(data.shape), 
+                        shape_product(hs.shape))
                 self.nparray = self.nparray.reshape(hs.shape)
             if self.nparray.shape != hs.shape:
                 raise HilbertShapeError(self.nparray.shape, hs.shape)
@@ -572,11 +572,11 @@ class HilbertArray(object):
         (4, 2)
         """
 
-        ket_size = np.product([len(x.indices) \
+        ket_size = shape_product([len(x.indices) \
             for x in self.axes if not x.is_dual])
-        bra_size = np.product([len(x.indices) \
+        bra_size = shape_product([len(x.indices) \
             for x in self.axes if x.is_dual])
-        assert ket_size * bra_size == np.product(self.nparray.shape)
+        assert ket_size * bra_size == shape_product(self.nparray.shape)
         return np.matrix(self.nparray.reshape(ket_size, bra_size))
 
     def np_matrix_transform(self, f, transpose_dims=False):
@@ -898,7 +898,7 @@ class HilbertArray(object):
         out_space = self.space.base_field.create_space2(out_ket, out_bra)
         out = out_space.array(arr)
 
-        if len(space_list):
+        if len(space_list) > 0:
             out = out.trace( np.product(space_list) )
 
         return out
@@ -1015,8 +1015,8 @@ class HilbertArray(object):
             else:
                 bs = hs.bra_space()
                 ks = hs.ket_space()
-                bra_size = np.product(bs.shape)
-                ket_size = np.product(ks.shape)
+                bra_size = shape_product(bs.shape)
+                ket_size = shape_product(ks.shape)
                 if ks == bs:
                     inner_space = ks
                 elif bra_size < ket_size:

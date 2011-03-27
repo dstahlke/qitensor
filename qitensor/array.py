@@ -1039,6 +1039,68 @@ class HilbertArray(object):
             inner_space.assert_ket_space()
             return self.space.base_field.mat_svd_partial(self, inner_space)
 
+    def eig(self, w_space=None):
+        """
+        Return the eigenvalues and right eigenvectors of this array.
+
+        :param w_space: space for the diagonal matrix, if None the space of the
+            input array is used.
+        :type w_space: HilbertSpace; default None
+
+        >>> from qitensor import qubit, qudit
+        >>> ha = qubit('a')
+        >>> hb = qudit('b', 3)
+        >>> hc = qudit('c', 6)
+
+        >>> op = (ha*hb).O.random_array()
+        >>> # make a normal operator
+        >>> op = op.H * op
+        >>> (W, V) = op.eig()
+        >>> V.space
+        |a,b><a,b|
+        >>> W.space
+        |a,b><a,b|
+        >>> (V.H * V - (ha*hb).eye()).norm() < 1e-13
+        True
+        >>> (V.H * op * V - W).norm() < 1e-13
+        True
+        >>> (op * V - V * W).norm() < 1e-13
+        True
+
+        >>> # NOTE: this is not a normal operator, so V won't be unitary.
+        >>> op = (ha*hb).O.random_array()
+        >>> (W, V) = op.eig(w_space=hc)
+        >>> V.space
+        |a,b><c|
+        >>> W.space
+        |c><c|
+        >>> (op * V - V * W).norm() < 1e-13
+        True
+
+        >>> vec = hb.random_array().normalized()
+        >>> dyad = vec * vec.H
+        >>> (W, V) = dyad.eig()
+        >>> (W - hb.diag([1, 0, 0])).norm() < 1e-13
+        True
+        >>> # FIXME: this fails because numpy doesn't always give unitary
+        >>> # matrices for degenerate eigenvalues.
+        >>> (V.H * V - hb.eye()).norm() < 1e-13
+        True
+        >>> (V[:, 0] - vec).norm() < 1e-13
+        True
+        """
+
+        if self.space != self.space.H:
+            raise HilbertError('bra space must be the same as ket space '+
+                '(space was '+repr(self.space)+')')
+
+        if w_space is None:
+            w_space = self.space.ket_space()
+
+        w_space.assert_ket_space()
+
+        return self.space.base_field.mat_eig(self, w_space)
+
     ########## stuff that only works in Sage ##########
 
     def _matrix_(self, R=None):

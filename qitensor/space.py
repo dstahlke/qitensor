@@ -181,6 +181,40 @@ class HilbertSpace(object):
     def __rmul__(self, other):
         return self.__mul__(other)
 
+    def diag(self, v):
+        """
+        Create a diagonal operator from the given 1-d list.
+
+        >>> from qitensor import qubit, qudit
+        >>> ha = qubit('a')
+        >>> hb = qudit('b', 3)
+
+        >>> ha.diag([1, 2])
+        HilbertArray(|a><a|,
+        array([[ 1.+0.j,  0.+0.j],
+               [ 0.+0.j,  2.+0.j]]))
+        >>> ha.diag([1, 2]) == ha.H.diag([1, 2])
+        True
+        >>> ha.diag([1, 2]) == ha.O.diag([1, 2])
+        True
+
+        >>> op =  (ha*hb).diag([1, 2, 3, 4, 5, 6])
+        >>> # NOTE: spaces are ordered lexicographically
+        >>> op == (hb*ha).diag([1, 2, 3, 4, 5, 6])
+        True
+        >>> op.space
+        |a,b><a,b|
+        >>> import numpy
+        >>> numpy.diag( op.as_np_matrix() )     
+        array([ 1.+0.j,  2.+0.j,  3.+0.j,  4.+0.j,  5.+0.j,  6.+0.j])
+        """
+
+        if len(self.ket_set) == 0 or len(self.bra_set) == 0:
+            return self.O.diag(v)
+
+        diag = np.diagflat(v)
+        return self.reshaped_np_matrix(diag)
+
     def reshaped_np_matrix(self, m):
         """
         Returns a ``HilbertArray`` created from a given numpy matrix.
@@ -206,7 +240,10 @@ class HilbertSpace(object):
         HilbertArray(<a|,
         array([ 1.+0.j,  2.+0.j]))
 
-        >>> (ha*hb).O.reshaped_np_matrix(numpy.diag([1, 2, 3, 4]))
+        >>> d = (ha*hb).O.reshaped_np_matrix(numpy.diag([1, 2, 3, 4]))
+        >>> d == (ha*hb).diag([1, 2, 3, 4])
+        True
+        >>> d
         HilbertArray(|a,b><a,b|,
         array([[[[ 1.+0.j,  0.+0.j],
                  [ 0.+0.j,  0.+0.j]],

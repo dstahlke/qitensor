@@ -114,9 +114,22 @@ class HilbertBaseField(object):
         v_space = s_space * m.space.bra_space()
         U = u_space.reshaped_np_matrix(u)
         V = v_space.reshaped_np_matrix(v)
-        S = s_mat_space.reshaped_np_matrix(np.diag(s))
+        S = s_mat_space.diag(s)
 
         return (U, S, V)
+
+    def mat_eig(self, m, w_space):
+        w_space.assert_ket_space()
+        (w, v) = np.linalg.eig(m.as_np_matrix())
+
+        # sort eigenvalues in ascending order of real component
+        srt = np.argsort(-w)
+        w = w[srt]
+        v = v[:, srt]
+
+        W = (w_space * w_space.H).diag(w)
+        V = (m.space.ket_space() * w_space.H).reshaped_np_matrix(v)
+        return (W, V)
 
     def create_space1(self, kets_and_bras):
         r"""

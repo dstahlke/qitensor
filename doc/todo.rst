@@ -9,7 +9,6 @@ finish docs
 features
 
 * matrix pow
-* eigenvalues
 
 fixes
 

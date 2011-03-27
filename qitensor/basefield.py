@@ -59,7 +59,9 @@ class HilbertBaseField(object):
         return np.sqrt(x)
 
     def random_array(self, shape):
-        return numpy.random.random((shape))
+        real = numpy.random.random((shape)) * 2.0 - 1.0
+        imag = numpy.random.random((shape)) * 2.0 - 1.0
+        return real + 1j*imag
 
     def eye(self, size):
         return np.eye(size)

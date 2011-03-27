@@ -4,6 +4,7 @@ Version 0.5 (ongoing):
 	Full/partial trace function
 	Eigenvectors function
 	Diagonal matrix factory function
+	random_array gives complex values
 
 Version 0.4 (2011-03-13):
 	Don't test for Sage on every base_field_lookup call

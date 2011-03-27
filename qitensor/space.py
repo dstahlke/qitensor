@@ -326,11 +326,14 @@ class HilbertSpace(object):
         """
         Returns a ``HilbertArray`` with random values.
 
+        The real and complex components each have uniform distribution in the
+        ``[-1, 1]`` range.
+
         >>> from qitensor import qubit
         >>> ha = qubit('a')
         >>> ha.random_array() # doctest: +SKIP
         HilbertArray(|a>,
-        array([ 0.633571+0.j,  0.673767+0.j]))
+        array([-0.484410+0.426767j,  0.000693+0.912554j]))
 
         """
         return self.array(self.base_field.random_array(self.shape))

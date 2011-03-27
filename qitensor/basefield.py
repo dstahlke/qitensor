@@ -12,7 +12,7 @@ passing the ``dtype`` parameter.
 
 import numpy as np
 import numpy.random
-import numpy.linalg as linalg
+import numpy.linalg
 
 from qitensor.exceptions import *
 from qitensor.atom import HilbertAtom
@@ -75,10 +75,10 @@ class HilbertBaseField(object):
         return m.np_matrix_transform(np.linalg.inv, transpose_dims=True)
 
     def mat_det(self, m):
-        return linalg.det(m.as_np_matrix())
+        return np.linalg.det(m.as_np_matrix())
 
     def mat_norm(self, m):
-        return linalg.norm(m.nparray)
+        return np.linalg.norm(m.nparray)
 
     def mat_pinv(self, m, rcond):
         return m.np_matrix_transform(
@@ -92,7 +92,7 @@ class HilbertBaseField(object):
         return m.np_matrix_transform(lambda x: scipy.linalg.expm(x, q))
 
     def mat_svd_full(self, m, s_space):
-        (u, s, v) = linalg.svd(m.as_np_matrix())
+        (u, s, v) = np.linalg.svd(m.as_np_matrix())
         u_space = m.space.ket_space() * s_space.ket_space().H
         v_space = m.space.bra_space() * s_space.bra_space().H
         U = u_space.reshaped_np_matrix(u)
@@ -108,7 +108,7 @@ class HilbertBaseField(object):
         return (U, S, V)
 
     def mat_svd_partial(self, m, s_space):
-        (u, s, v) = linalg.svd(m.as_np_matrix(), full_matrices=False)
+        (u, s, v) = np.linalg.svd(m.as_np_matrix(), full_matrices=False)
         u_space = m.space.ket_space() * s_space.H
         s_mat_space = s_space * s_space.H
         v_space = s_space * m.space.bra_space()
@@ -118,9 +118,10 @@ class HilbertBaseField(object):
 
         return (U, S, V)
 
-    def mat_eig(self, m, w_space):
+    def mat_eig(self, m, w_space, hermit):
         w_space.assert_ket_space()
-        (w, v) = np.linalg.eig(m.as_np_matrix())
+        eig_fn = np.linalg.eigh if hermit else np.linalg.eig
+        (w, v) = eig_fn(m.as_np_matrix())
 
         # sort eigenvalues in ascending order of real component
         srt = np.argsort(-w)

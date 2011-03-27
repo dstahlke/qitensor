@@ -1039,18 +1039,25 @@ class HilbertArray(object):
             inner_space.assert_ket_space()
             return self.space.base_field.mat_svd_partial(self, inner_space)
 
-    def eig(self, w_space=None):
+    def eig(self, w_space=None, hermit=False):
         """
         Return the eigenvalues and right eigenvectors of this array.
 
         :param w_space: space for the diagonal matrix, if None the space of the
             input array is used.
         :type w_space: HilbertSpace; default None
+        :param hermit: set this to True if the input is Hermitian
+        :type hermit: bool; default False
+
+        NOTE: in the case of degenerate eigenvalues, with hermit=False, it may
+        be the case that the returned eigenvectors array is not full rank.  See
+        the documentation for numpy.linalg.eig for details.
 
         >>> from qitensor import qubit, qudit
         >>> ha = qubit('a')
         >>> hb = qudit('b', 3)
         >>> hc = qudit('c', 6)
+        >>> epsilon = 1e-13
 
         >>> op = (ha*hb).O.random_array()
         >>> # make a normal operator
@@ -1060,11 +1067,11 @@ class HilbertArray(object):
         |a,b><a,b|
         >>> W.space
         |a,b><a,b|
-        >>> (V.H * V - (ha*hb).eye()).norm() < 1e-13
+        >>> (V.H * V - (ha*hb).eye()).norm() < epsilon
         True
-        >>> (V.H * op * V - W).norm() < 1e-13
+        >>> (V.H * op * V - W).norm() < epsilon
         True
-        >>> (op * V - V * W).norm() < 1e-13
+        >>> (op * V - V * W).norm() < epsilon
         True
 
         >>> # NOTE: this is not a normal operator, so V won't be unitary.
@@ -1074,19 +1081,20 @@ class HilbertArray(object):
         |a,b><c|
         >>> W.space
         |c><c|
-        >>> (op * V - V * W).norm() < 1e-13
+        >>> (op * V - V * W).norm() < epsilon
         True
 
         >>> vec = hb.random_array().normalized()
         >>> dyad = vec * vec.H
-        >>> (W, V) = dyad.eig()
-        >>> (W - hb.diag([1, 0, 0])).norm() < 1e-13
+        >>> (W, V) = dyad.eig(hermit=True)
+        >>> (W - hb.diag([1, 0, 0])).norm() < epsilon
         True
-        >>> # FIXME: this fails because numpy doesn't always give unitary
-        >>> # matrices for degenerate eigenvalues.
-        >>> (V.H * V - hb.eye()).norm() < 1e-13
+        >>> (V.H * V - hb.eye()).norm() < epsilon
         True
-        >>> (V[:, 0] - vec).norm() < 1e-13
+        >>> vec2 = V[:, 0]
+        >>> # Correct for phase ambiguity
+        >>> vec2 *= (vec[0]/vec2[0]) / abs(vec[0]/vec2[0])
+        >>> (vec - vec2).norm() < epsilon
         True
         """
 
@@ -1099,7 +1107,7 @@ class HilbertArray(object):
 
         w_space.assert_ket_space()
 
-        return self.space.base_field.mat_eig(self, w_space)
+        return self.space.base_field.mat_eig(self, w_space, hermit)
 
     ########## stuff that only works in Sage ##########
 

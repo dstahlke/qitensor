@@ -1,5 +1,5 @@
 r"""
-Quantum Hilbert Space Tensors
+Quantum Hilbert Space Tensors in Python and Sage
 
 This module is essentially a wrapper for numpy that uses semantics useful for
 finite dimensional quantum mechanics of many particles.  In particular, this

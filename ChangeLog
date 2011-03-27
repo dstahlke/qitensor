@@ -1,17 +1,18 @@
 Version 0.5 (ongoing):
-	Fixed base_field equality check
-	Fixed Hadamard gate for Sage's SR
-	Full/partial trace function
-	Eigenvectors function
-	Diagonal matrix factory function
+	fixed base_field equality check
+	fixed Hadamard gate for Sage's SR
+	full/partial trace function
+	eigenvectors function
+	diagonal matrix factory function
 	random_array gives complex values
 	0-d arrays always have int size (not 1.0)
-	Matrix pow operator
+	matrix pow operator
+	apply_map function
 
 Version 0.4 (2011-03-13):
-	Don't test for Sage on every base_field_lookup call
-	Custom matrix norm that works on Sage's SR
-	More package metadata
+	don't test for Sage on every base_field_lookup call
+	custom matrix norm that works on Sage's SR
+	more package metadata
 
 Version 0.3 (2011-03-11):
 	Python type arrays can use Sage rendering in Sage
@@ -19,11 +20,11 @@ Version 0.3 (2011-03-11):
 	renamed some modules (no API changes)
 	unary negation
 	Pauli states and some circuit operators
-	Input data is cast for Sage base fields
+	input data is cast for Sage base fields
 
 Version 0.2 (2011-03-10):
-	Fix: tensordot returns scalar instead of 0-d hilbert array
-	Fix: catch usage of array slices (which are not allowed)
+	fix: tensordot returns scalar instead of 0-d hilbert array
+	fix: catch usage of array slices (which are not allowed)
 
 Version 0.1 (2011-03-08):
-	Initial version
+	initial version

@@ -42,3 +42,11 @@ Sage: Vectors Over the Symbolic Ring
     [---+---]
     [0 0|1 0]
     [0 0|0 1]
+
+    >>> ((U ** 3) * (U ** -3)).apply_map(lambda x: x.simplify_full()) # doctest: +SKIP
+    |a,b><a,b|
+    [1 0|0 0]
+    [0 1|0 0]
+    [---+---]
+    [0 0|1 0]
+    [0 0|0 1]

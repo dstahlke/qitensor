@@ -352,6 +352,22 @@ class HilbertArray(object):
             raise BraKetMixtureError('from_space and to_space must both be '+
                 'bras or both be kets')
 
+    def apply_map(self, fn):
+        """
+        Apply the given function to each element of the array.
+
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> v = ha.array([1, -2])
+        >>> v.apply_map(lambda x: abs(x))
+        HilbertArray(|a>,
+        array([ 1.+0.j,  2.+0.j]))
+        """
+
+        dtype = self.space.base_field.dtype
+        arr = np.vectorize(fn, otypes=[dtype])(self.nparray)
+        return self.space.array(arr)
+
     def __eq__(self, other):
         if self.space != other.space:
             return False

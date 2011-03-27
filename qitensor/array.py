@@ -881,27 +881,25 @@ class HilbertArray(object):
             if not s.H in self.space.bra_set:
                 raise HilbertIndexError('not in bra set: '+repr(s.H))
 
-        s = space_list.pop()
-        axis1 = self.get_dim(s)
-        axis2 = self.get_dim(s.H)
+        working = self
 
-        arr = np.trace( self.nparray, axis1=axis1, axis2=axis2 )
+        for s in space_list:
+            axis1 = working.get_dim(s)
+            axis2 = working.get_dim(s.H)
 
-        out_ket = self.space.ket_set - frozenset([s])
-        out_bra = self.space.bra_set - frozenset([s.H])
+            arr = np.trace( working.nparray, axis1=axis1, axis2=axis2 )
 
-        if len(out_bra) + len(out_ket) == 0:
-            assert len(space_list) == 0
-            # arr should be a scalar
-            return arr
+            out_ket = working.space.ket_set - frozenset([s])
+            out_bra = working.space.bra_set - frozenset([s.H])
 
-        out_space = self.space.base_field.create_space2(out_ket, out_bra)
-        out = out_space.array(arr)
+            if len(out_bra) + len(out_ket) == 0:
+                # arr should be a scalar
+                working = arr
+            else:
+                out_space = self.space.base_field.create_space2(out_ket, out_bra)
+                working = out_space.array(arr)
 
-        if len(space_list) > 0:
-            out = out.trace( np.product(space_list) )
-
-        return out
+        return working
 
     def expm(self, q=7):
         """

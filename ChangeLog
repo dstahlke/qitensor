@@ -1,4 +1,7 @@
-Version 0.5 (ongoing):
+Version 0.6 (ongoing):
+	no changes
+
+Version 0.5 (2011-03-28):
 	fixed base_field equality check
 	fixed Hadamard gate for Sage's SR
 	full/partial trace function

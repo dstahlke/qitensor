@@ -4,11 +4,11 @@ This module contains functions related to quantum circuits.
 
 from qitensor import HilbertAtom
 
-__all__ = ['cnot', 'max_entangled']
+__all__ = ['cphase', 'max_entangled']
 
-def cnot(h1, h2):
+def cphase(h1, h2):
     """
-    Returns the C-not or generalized C-not gate.
+    Returns the controlled-phase or generalized controlled-phase gate.
 
     The given spaces must be HilbertAtom spaces (i.e. not tensor products).
 
@@ -21,10 +21,10 @@ def cnot(h1, h2):
     where `j` and `k` are taken to be integer indices, regardless of the actual
     contents of the space's index set.
 
-    >>> from qitensor import qubit, cnot
+    >>> from qitensor import qubit, cphase
     >>> ha = qubit('a')
     >>> hb = qubit('b')
-    >>> cnot(ha, hb)
+    >>> cphase(ha, hb)
     HilbertArray(|a,b><a,b|,
     array([[[[ 1.+0.j,  0.+0.j],
              [ 0.+0.j,  0.+0.j]],

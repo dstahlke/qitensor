@@ -25,7 +25,7 @@ Phys. Rev. A 78, 042303 (2008).
     >>> hilb = [ qudit('H_%d' % i, D, dtype=complex) for i in range(n) ] # doctest: +SKIP
     >>> c0 = np.product([h.x_plus() for h in hilb]) # doctest: +SKIP
     >>> for (l, m, _label) in graph.edges(): # doctest: +SKIP
-    ...       c0 = cnot(hilb[l], hilb[m]) * c0
+    ...       c0 = cphase(hilb[l], hilb[m]) * c0
     ...
     >>> c0.space # doctest: +SKIP
     |H_0,H_1,H_2,H_3,H_4,H_5,H_6,H_7>

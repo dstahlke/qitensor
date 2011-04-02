@@ -1,5 +1,5 @@
 Version 0.6 (ongoing):
-	no changes
+	cphase was erroneously called cnot
 
 Version 0.5 (2011-03-28):
 	fixed base_field equality check
@@ -26,7 +26,7 @@ Version 0.3 (2011-03-11):
 	input data is cast for Sage base fields
 
 Version 0.2 (2011-03-10):
-	fix: tensordot returns scalar instead of 0-d hilbert array
+	fix: tensordot returns scalar instead of 0-d Hilbert array
 	fix: catch usage of array slices (which are not allowed)
 
 Version 0.1 (2011-03-08):

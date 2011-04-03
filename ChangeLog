@@ -1,3 +1,6 @@
+Version 0.5.2 (ongoing):
+	no changes yet
+
 Version 0.5.1 (2011-04-03):
 	cphase was erroneously called cnot
 	added correct cnot gate

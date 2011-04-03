@@ -4,7 +4,7 @@ This module contains functions related to quantum circuits.
 
 from qitensor import HilbertAtom
 
-__all__ = ['cphase', 'max_entangled']
+__all__ = ['cphase', 'cnot', 'max_entangled']
 
 def cphase(h1, h2):
     """
@@ -24,20 +24,11 @@ def cphase(h1, h2):
     >>> from qitensor import qubit, cphase
     >>> ha = qubit('a')
     >>> hb = qubit('b')
-    >>> cphase(ha, hb)
-    HilbertArray(|a,b><a,b|,
-    array([[[[ 1.+0.j,  0.+0.j],
-             [ 0.+0.j,  0.+0.j]],
-    <BLANKLINE>
-            [[ 0.+0.j,  1.+0.j],
-             [ 0.+0.j,  0.+0.j]]],
-    <BLANKLINE>
-    <BLANKLINE>
-           [[[ 0.+0.j,  0.+0.j],
-             [ 1.+0.j,  0.+0.j]],
-    <BLANKLINE>
-            [[ 0.+0.j,  0.+0.j],
-             [ 0.+0.j, -1.+0.j]]]]))
+    >>> cphase(ha, hb).as_np_matrix()
+    matrix([[ 1.+0.j,  0.+0.j,  0.+0.j,  0.+0.j],
+            [ 0.+0.j,  1.+0.j,  0.+0.j,  0.+0.j],
+            [ 0.+0.j,  0.+0.j,  1.+0.j,  0.+0.j],
+            [ 0.+0.j,  0.+0.j,  0.+0.j, -1.+0.j]])
     """
 
     for h in (h1, h2):
@@ -55,6 +46,40 @@ def cphase(h1, h2):
     for j in range(len(h1.indices)):
         for k in range(len(h2.indices)):
             ret[j, k, j, k] = field.fractional_phase(j*k, D1)
+
+    return ret
+
+def cnot(h1, h2):
+    """
+    Returns the controlled-not (controlled-X) gate.
+
+    The given spaces must be HilbertAtom spaces (i.e. not tensor products), and
+    must be qubits.
+
+    >>> from qitensor import qubit, cnot
+    >>> ha = qubit('a')
+    >>> hb = qubit('b')
+    >>> cnot(ha, hb).as_np_matrix()
+    matrix([[ 1.+0.j,  0.+0.j,  0.+0.j,  0.+0.j],
+            [ 0.+0.j,  1.+0.j,  0.+0.j,  0.+0.j],
+            [ 0.+0.j,  0.+0.j,  0.+0.j,  1.+0.j],
+            [ 0.+0.j,  0.+0.j,  1.+0.j,  0.+0.j]])
+    >>> cnot(hb, ha).as_np_matrix()
+    matrix([[ 1.+0.j,  0.+0.j,  0.+0.j,  0.+0.j],
+            [ 0.+0.j,  0.+0.j,  0.+0.j,  1.+0.j],
+            [ 0.+0.j,  0.+0.j,  1.+0.j,  0.+0.j],
+            [ 0.+0.j,  1.+0.j,  0.+0.j,  0.+0.j]])
+    """
+
+    for h in (h1, h2):
+        if not isinstance(h, HilbertAtom):
+            raise TypeError('spaces must be instance of HilbertAtom')
+
+    if len(h1.indices) != 2 or len(h2.indices) != 2:
+        raise NotImplementedError("cnot is only implemented for qubits")
+
+    ret = (h1*h2).eye()
+    ret[{ h1: h1.indices[1], h1.H: h1.indices[1] }] = [[0, 1], [1, 0]]
 
     return ret
 

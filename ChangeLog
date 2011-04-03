@@ -1,5 +1,6 @@
 Version 0.6 (ongoing):
 	cphase was erroneously called cnot
+	added correct cnot gate
 
 Version 0.5 (2011-03-28):
 	fixed base_field equality check

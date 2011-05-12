@@ -98,7 +98,7 @@ class HilbertBaseField(object):
         return m.np_matrix_transform(lambda x: x**n)
 
     def mat_svd_full(self, m, s_space):
-        (u, s, v) = np.linalg.svd(m.as_np_matrix())
+        (u, s, v) = np.linalg.svd(m.as_np_matrix(dtype=complex))
         u_space = m.space.ket_space() * s_space.ket_space().H
         v_space = m.space.bra_space() * s_space.bra_space().H
         U = u_space.reshaped_np_matrix(u)
@@ -114,7 +114,7 @@ class HilbertBaseField(object):
         return (U, S, V)
 
     def mat_svd_partial(self, m, s_space):
-        (u, s, v) = np.linalg.svd(m.as_np_matrix(), full_matrices=False)
+        (u, s, v) = np.linalg.svd(m.as_np_matrix(dtype=complex), full_matrices=False)
         u_space = m.space.ket_space() * s_space.H
         s_mat_space = s_space * s_space.H
         v_space = s_space * m.space.bra_space()
@@ -127,7 +127,7 @@ class HilbertBaseField(object):
     def mat_eig(self, m, w_space, hermit):
         w_space.assert_ket_space()
         eig_fn = np.linalg.eigh if hermit else np.linalg.eig
-        (w, v) = eig_fn(m.as_np_matrix())
+        (w, v) = eig_fn(m.as_np_matrix(dtype=complex))
 
         # sort eigenvalues in ascending order of real component
         srt = np.argsort(-w)

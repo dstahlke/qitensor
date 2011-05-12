@@ -75,6 +75,23 @@ class HilbertSpace(object):
         """
         return self.base_field.create_space2(self.ket_set, frozenset())
 
+    def is_symmetric(self):
+        """
+        Check whether the bra and ket spaces are the same.
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> hb = qubit('b')
+        >>> ha.is_symmetric()
+        False
+        >>> ha.O.is_symmetric()
+        True
+        >>> (ha * hb.H).is_symmetric()
+        False
+        >>> (ha * hb.H * ha.H * hb).is_symmetric()
+        True
+        """
+        return self.ket_space() == self.bra_space().H
+
     @property
     def H(self):
         """

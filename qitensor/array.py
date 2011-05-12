@@ -586,7 +586,7 @@ class HilbertArray(object):
     def __setitem__(self, key, val):
         return self._get_set_item(key, True, val)
 
-    def as_np_matrix(self):
+    def as_np_matrix(self, dtype=None):
         """
         Returns the underlying data as a numpy.matrix.
 
@@ -605,7 +605,8 @@ class HilbertArray(object):
         bra_size = shape_product([len(x.indices) \
             for x in self.axes if x.is_dual])
         assert ket_size * bra_size == shape_product(self.nparray.shape)
-        return np.matrix(self.nparray.reshape(ket_size, bra_size))
+
+        return np.matrix(self.nparray.reshape(ket_size, bra_size), dtype=dtype)
 
     def np_matrix_transform(self, f, transpose_dims=False):
         """
@@ -1157,6 +1158,20 @@ class HilbertArray(object):
         w_space.assert_ket_space()
 
         return self.space.base_field.mat_eig(self, w_space, hermit)
+
+    def entropy(self, normalize=False): # FIXME
+        if not self.space.is_symmetric():
+            return HilbertError("bra and ket spaces must be the same")
+
+        schmidt = self.svd()[1]
+        schmidt = np.diagonal(m.as_np_matrix(schmidt))
+
+        norm = sum(state)
+        if normalize:
+            state = state / norm
+        elif abs(norm-1) > 1e-9:
+            raise Exception('state was not normalized: norm='+str(norm))
+        return sum([0 if x==0 else -x*np.log(x)/np.log(2) for x in state])
 
     ########## stuff that only works in Sage ##########
 

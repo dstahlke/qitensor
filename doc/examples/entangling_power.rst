@@ -41,6 +41,10 @@ Entangling Power of Bipartite Unitary
              [ 0.+0.j,  0.+1.j]]]]))
 
     >>> state = U * state
+    >>> # the easy way to find entanglement across a*A-b*B cut
+    >>> "%.6g" % state.O.trace(ha*hA).entropy()
+    '0.600876'
+    >>> # the hard way to find entanglement across a*A-b*B cut
     >>> cross = state.transpose(ha * hA)
     >>> cross.space
     |B,b><A,a|

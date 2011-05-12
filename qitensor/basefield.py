@@ -59,6 +59,9 @@ class HilbertBaseField(object):
     def sqrt(self, x):
         return np.sqrt(x)
 
+    def xlog2x(self, x):
+        return 0 if x<=0 else x*np.log2(x)
+
     def random_array(self, shape):
         real = numpy.random.random((shape)) * 2.0 - 1.0
         imag = numpy.random.random((shape)) * 2.0 - 1.0

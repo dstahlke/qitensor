@@ -24,6 +24,9 @@ class SageHilbertBaseField(HilbertBaseField):
     def sqrt(self, x):
         return self.sage_ring(sage.all.sqrt(x))
 
+    def xlog2x(self, x):
+        return self.sage_ring(0 if x<=0 else x*sage.all.log(x)/sage.all.log2)
+
     def eye(self, size):
         return np.array(sage.all.identity_matrix(self.sage_ring, size), dtype=self.dtype)
 
@@ -48,6 +51,18 @@ class SageHilbertBaseField(HilbertBaseField):
 
     def mat_pow(self, m, n):
         return m.sage_matrix_transform(lambda x: x**n)
+
+    def mat_eigvals(self, m, hermit):
+        w = sage.all.matrix(m).eigenvalues()
+
+        # sort eigenvalues in ascending order of real component
+        w = -np.sort(-np.array(w))
+
+        if hermit:
+            assert np.all(np.imag(w) == 0)
+            w = np.real(w)
+
+        return w
 
 def can_use_type(dtype):
     return isinstance(dtype, sage.all.CommutativeRing)

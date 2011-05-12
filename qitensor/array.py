@@ -1188,7 +1188,7 @@ class HilbertArray(object):
 
         return self.space.base_field.mat_eigvals(self, hermit)
 
-    def entropy(self, normalize=False):
+    def entropy(self, normalize=False, checks=True):
         """
         Returns the von Neumann entropy of a density operator, in bits.
 
@@ -1196,6 +1196,9 @@ class HilbertArray(object):
             trace one.  If false, an exception is raised if the trace is not
             one.
         :type normalize: bool; default False
+        :param checks: if False, don't check that the input is a valid density
+            matrix.  This is sometimes needed for symbolic computations.
+        :type checks: bool; default True
 
         >>> import numpy as np
         >>> from qitensor import qubit, qudit
@@ -1235,18 +1238,20 @@ class HilbertArray(object):
         if normalize:
             densmat = self / norm
         else:
-            if abs(norm-1) > 1e-9:
+            if checks and abs(norm-1) > 1e-9:
                 raise HilbertError('density matrix was not normalized: norm='+str(norm))
             densmat = self
 
         schmidt = densmat.eigvals(hermit=True)
 
-        assert abs(sum(schmidt)-1) < 1e-9
+        if checks:
+            # should have been taken care of by normalization above
+            assert abs(sum(schmidt)-1) < 1e-9
 
-        if not np.all(schmidt >= -1e-9):
-            raise HilbertError('density matrix was not positive: '+str(schmidt))
+            if not np.all(schmidt >= -1e-9):
+                raise HilbertError('density matrix was not positive: '+str(schmidt))
 
-        return sum([0 if x<=0 else -x*np.log(x)/np.log(2) for x in schmidt])
+        return sum([-self.space.base_field.xlog2x(x) for x in schmidt])
 
     ########## stuff that only works in Sage ##########
 

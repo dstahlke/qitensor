@@ -713,6 +713,29 @@ class HilbertArray(object):
         # transpose should be the same for all base_field's
         return self.np_matrix_transform(lambda x: x.T, transpose_dims=True)
 
+    @property
+    def O(self):
+        """
+        Makes a density operator from a pure state.
+
+        The input must be a ket vector.  The output is ``self * self.H``.
+
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> x = ha.array([1j, 2]); x
+        HilbertArray(|a>,
+        array([ 0.+1.j,  2.+0.j]))
+        >>> x.O
+        HilbertArray(|a><a|,
+        array([[ 1.+0.j,  0.+2.j],
+               [ 0.-2.j,  4.+0.j]]))
+        """
+
+        if self.space.bra_set:
+            raise NotKetSpaceError()
+        else:
+            return self * self.H
+
     def det(self):
         """
         Returns the matrix determinant of this array.

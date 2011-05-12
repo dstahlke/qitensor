@@ -116,17 +116,39 @@ class HilbertSpace(object):
         """
         return self * self.H
 
-    def __cmp__(self, other):
-        if self.sorted_kets < other.sorted_kets:
-            return -1
-        elif self.sorted_kets > other.sorted_kets:
-            return 1
-        if self.sorted_bras < other.sorted_bras:
-            return -1
-        elif self.sorted_bras > other.sorted_bras:
-            return 1
+    def __eq__(self, other):
+        if not isinstance(other, HilbertSpace):
+            return False
         else:
-            return 0
+            return (self.sorted_kets == other.sorted_kets) and \
+                (self.sorted_bras == other.sorted_bras)
+
+    def __ne__(self, other):
+        return not (self == other)
+
+    def __lt__(self, other):
+        assert isinstance(other, HilbertSpace)
+
+        if self.sorted_kets < other.sorted_kets:
+            return True
+        elif self.sorted_kets > other.sorted_kets:
+            return False
+        if self.sorted_bras < other.sorted_bras:
+            return True
+        else:
+            return False
+
+    def __gt__(self, other):
+        assert isinstance(other, HilbertSpace)
+        return other < self
+
+    def __ge__(self, other):
+        assert isinstance(other, HilbertSpace)
+        return not self < other
+
+    def __le__(self, other):
+        assert isinstance(other, HilbertSpace)
+        return not other < self
 
     def __hash__(self):
         if len(self.ket_set) + len(self.bra_set) == 1:

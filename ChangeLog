@@ -1,5 +1,5 @@
 Version 0.5.2 (ongoing):
-	no changes yet
+	implement rich comparison rather than cmp (fixes HilbertSpace() == None)
 
 Version 0.5.1 (2011-04-03):
 	cphase was erroneously called cnot

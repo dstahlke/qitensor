@@ -42,28 +42,60 @@ class HilbertAtom(HilbertSpace):
             self._H = HilbertAtom(label, latex_label,
                 indices, group_op, base_field, self)
 
-    def __cmp__(self, other):
-        if not isinstance(other, HilbertAtom):
-            return HilbertSpace.__cmp__(self, other)
+    def _mycmp(self, other):
+        assert isinstance(other, HilbertAtom)
+
+        if self.label < other.label:
+            return -1
+        elif self.label > other.label:
+            return 1
+
+        # It is not allowed for HilbertAtom's to have the same name but
+        # different index set
+        if self.indices != other.indices:
+            raise MismatchedIndexSetError('Two instances of HilbertSpace '+
+                'with label "'+repr(self.label)+'" but with different '+
+                'indices: '+repr(self.indices)+' vs. '+repr(other.indices))
+
+        if self.is_dual < other.is_dual:
+            return -1
+        elif self.is_dual > other.is_dual:
+            return 1
         else:
-            if self.label < other.label:
-                return -1
-            elif self.label > other.label:
-                return 1
+            return 0
 
-            # It is not allowed for HilbertAtom's to have the same name but
-            # different index set
-            if self.indices != other.indices:
-                raise MismatchedIndexSetError('Two instances of HilbertSpace '+
-                    'with label "'+repr(self.label)+'" but with different '+
-                    'indices: '+repr(self.indices)+' vs. '+repr(other.indices))
+    def __eq__(self, other):
+        if not isinstance(other, HilbertAtom):
+            return HilbertSpace.__eq__(self, other)
+        else:
+            return 0 == self._mycmp(other)
 
-            if self.is_dual < other.is_dual:
-                return -1
-            elif self.is_dual > other.is_dual:
-                return 1
-            else:
-                return 0
+    def __ne__(self, other):
+        return not (self == other)
+
+    def __lt__(self, other):
+        if not isinstance(other, HilbertAtom):
+            return HilbertSpace.__lt__(self, other)
+        else:
+            return self._mycmp(other) < 0
+
+    def __gt__(self, other):
+        if not isinstance(other, HilbertAtom):
+            return HilbertSpace.__gt__(self, other)
+        else:
+            return self._mycmp(other) > 0
+
+    def __ge__(self, other):
+        if not isinstance(other, HilbertAtom):
+            return HilbertSpace.__ge__(self, other)
+        else:
+            return self._mycmp(other) >= 0
+
+    def __le__(self, other):
+        if not isinstance(other, HilbertAtom):
+            return HilbertSpace.__le__(self, other)
+        else:
+            return self._mycmp(other) <= 0
 
     def __hash__(self):
         return self._hashval

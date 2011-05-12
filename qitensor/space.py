@@ -90,7 +90,7 @@ class HilbertSpace(object):
         >>> (ha * hb.H * ha.H * hb).is_symmetric()
         True
         """
-        return self.ket_space() == self.bra_space().H
+        return self == self.H
 
     @property
     def H(self):

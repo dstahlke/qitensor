@@ -733,7 +733,7 @@ class HilbertArray(object):
         """
 
         if self.space.bra_set:
-            raise NotKetSpaceError()
+            raise NotKetSpaceError('self.O only applies to ket spaces')
         else:
             return self * self.H
 
@@ -1148,7 +1148,7 @@ class HilbertArray(object):
         True
         """
 
-        if self.space != self.space.H:
+        if not self.space.is_symmetric():
             raise HilbertError('bra space must be the same as ket space '+
                 '(space was '+repr(self.space)+')')
 
@@ -1159,19 +1159,90 @@ class HilbertArray(object):
 
         return self.space.base_field.mat_eig(self, w_space, hermit)
 
-    def entropy(self, normalize=False): # FIXME
+    def eigvals(self, hermit=False):
+        """
+        Return the eigenvalues of this array.
+
+        :param hermit: set this to True if the input is Hermitian
+        :type hermit: bool; default False
+
+        >>> from qitensor import qubit, qudit
+        >>> ha = qubit('a')
+        >>> hb = qudit('b', 3)
+        >>> hc = qudit('c', 6)
+        >>> epsilon = 1e-13
+
+        >>> op = (ha*hb).O.random_array()
+        >>> # make a normal operator
+        >>> op = op.H * op
+        >>> (W1, V1) = op.eig()
+        >>> W2 = op.eigvals()
+        >>> (ha*hb).diag(W2) == W1
+        True
+        """
+
+        (ew, ev) = self.eig(hermit=hermit)
+        # FIXME - return real for hermit
+        return np.diagonal(ew.as_np_matrix())
+
+    def entropy(self, normalize=False):
+        """
+        Returns the von Neumann entropy of a density operator, in bits.
+
+        :param normalize: if True, the input is automatically normalized to
+            trace one.  If false, an exception is raised if the trace is not
+            one.
+        :type normalize: bool; default False
+
+        >>> from qitensor import qubit, qudit
+        >>> ha = qubit('a')
+        >>> hb = qudit('b', 3)
+        >>> # entropy of a pure state is zero
+        >>> ha.ket(0).O.entropy()
+        0
+        >>> # a fully mixed state of dimension 2
+        >>> (ha.ket(0).O/2 + ha.ket(1).O/2).entropy()
+        1
+        >>> # a fully mixed state of dimension 3
+        >>> abs( (hb.eye()/3).entropy() - log(3)/log(2) ) < 1e-10
+        True
+        >>> # automatic normalization
+        >>> abs( hb.eye().entropy(normalize=True) - log(3)/log(2) ) < 1e-10
+        True
+        >>> # a bipartite pure state
+        >>> s = (ha.ket(0) * hb.array([1/sqrt(2),0,0]) + ha.ket(1) * hb.array([0,0.5,0.5]))
+        >>> s.O.entropy()
+        0
+        >>> # entanglement across the a-b cut
+        >>> (s.O.trace(hb)).entropy()
+        1
+        >>> # entanglement across the a-b cut is the same as across b-a cut
+        >>> s = (ha*hb).random_array().normalized().O
+        >>> abs(s.trace(ha).entropy() - s.trace(hb).entropy()) < 1e-10
+        True
+        """
+
         if not self.space.is_symmetric():
             return HilbertError("bra and ket spaces must be the same")
+        if not self == self.H:
+            return HilbertError("density matrix must be Hermitian")
 
-        schmidt = self.svd()[1]
-        schmidt = np.diagonal(m.as_np_matrix(schmidt))
-
-        norm = sum(state)
+        norm = self.trace()
         if normalize:
-            state = state / norm
-        elif abs(norm-1) > 1e-9:
-            raise Exception('state was not normalized: norm='+str(norm))
-        return sum([0 if x==0 else -x*np.log(x)/np.log(2) for x in state])
+            densmat = self / norm
+        else:
+            if abs(norm-1) > 1e-9:
+                raise HilbertError('density matrix was not normalized: norm='+str(norm))
+            densmat = self
+
+        schmidt = densmat.eigvals(hermit=True)
+
+        assert abs(sum(schmidt)-1) < 1e-9
+
+        if not np.all(schmidt >= -1e-9):
+            raise HilbertError('density matrix was not positive: '+str(schmidt))
+
+        return sum([0 if x<=0 else -x*np.log(x)/np.log(2) for x in schmidt])
 
     ########## stuff that only works in Sage ##########
 

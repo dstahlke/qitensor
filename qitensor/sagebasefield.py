@@ -34,6 +34,12 @@ class SageHilbertBaseField(HilbertBaseField):
         return m.sage_matrix_transform(
             lambda x: x.n(prec=prec, digits=digits))
 
+    def mat_simplify(self, m, full=False):
+        if full:
+            return m.apply_map(lambda x: x.simplify_full())
+        else:
+            return m.apply_map(lambda x: x.simplify())
+
     def mat_adjoint(self, m):
         return m.sage_matrix_transform(
             lambda x: x.conjugate().transpose(), transpose_dims=True)

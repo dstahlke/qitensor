@@ -70,7 +70,7 @@ Sage: Vectors Over the Symbolic Ring
     [0 0|1 0]
     [0 0|0 1]
 
-    >>> ((U ** 3) * (U ** -3)).apply_map(lambda x: x.simplify_full()) # doctest: +SKIP
+    >>> ((U ** 3) * (U ** -3)).simplify_full() # doctest: +SKIP
     |a,b><a,b|
     [1 0|0 0]
     [0 1|0 0]
@@ -88,11 +88,11 @@ Sage: Vectors Over the Symbolic Ring
     |a><a|
     [                                1/sqrt(1/4*(x + sqrt(x^2 - 2*x + 5) - 1)^2 + 1)                                 1/sqrt(1/4*(x - sqrt(x^2 - 2*x + 5) - 1)^2 + 1)]
     [1/2*(x + sqrt(x^2 - 2*x + 5) - 1)/sqrt(1/4*(x + sqrt(x^2 - 2*x + 5) - 1)^2 + 1) 1/2*(x - sqrt(x^2 - 2*x + 5) - 1)/sqrt(1/4*(x - sqrt(x^2 - 2*x + 5) - 1)^2 + 1)]
-    >>> (V.H * M * V - W).apply_map(lambda s: s.subs({x: 123}).simplify_full()) # doctest: +SKIP
+    >>> (V.H * M * V - W).apply_map(lambda s: s.subs({x: 123})).simplify_full() # doctest: +SKIP
     |a><a|
     [0 0]
     [0 0]
-    >>> (V.H * V).apply_map(lambda s: s.subs({x: 123}).simplify_full()) # doctest: +SKIP
+    >>> (V.H * V).apply_map(lambda s: s.subs({x: 123})).simplify_full() # doctest: +SKIP
     |a><a|
     [1 0]
     [0 1]

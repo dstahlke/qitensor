@@ -2,12 +2,12 @@ Version 0.5.2 (ongoing):
 	implement rich comparison rather than cmp (fixes HilbertSpace() == None)
 	check ininstance in HilbertArray.__eq__
 	HilbertArray.O method (density operator)
-	convert symbolic to complex for eig/svd
-	entropy method
-	eigvals method (symbolic for Sage)
-	entropy can return a symbolic expression
+	convert symbolic to complex for svd()
+	entropy() method (symbolic for Sage)
+	eigvals() method (symbolic for Sage)
+	eig() gives symbolic for sage
 	n() method for sage
-	eig gives symbolic for sage
+	simplify()/simplify_full() methods
 
 Version 0.5.1 (2011-04-03):
 	cphase was erroneously called cnot

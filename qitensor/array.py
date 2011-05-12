@@ -737,6 +737,13 @@ class HilbertArray(object):
         else:
             return self * self.H
 
+    def n(self, prec=None, digits=None):
+        """
+        Converts symbolic values to numeric values (only useful in Sage).
+        """
+
+        return self.space.base_field.mat_n(self)
+
     def det(self):
         """
         Returns the matrix determinant of this array.

@@ -30,6 +30,10 @@ class SageHilbertBaseField(HilbertBaseField):
     def eye(self, size):
         return np.array(sage.all.identity_matrix(self.sage_ring, size), dtype=self.dtype)
 
+    def mat_n(self, m, prec=None, digits=None):
+        return m.sage_matrix_transform(
+            lambda x: x.n(prec=prec, digits=digits))
+
     def mat_adjoint(self, m):
         return m.sage_matrix_transform(
             lambda x: x.conjugate().transpose(), transpose_dims=True)

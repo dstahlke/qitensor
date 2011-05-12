@@ -93,6 +93,10 @@ class HilbertBaseField(object):
     def mat_conj(self, m):
         return m.np_matrix_transform(lambda x: x.conj())
 
+    def mat_n(self, m, prec=None, digits=None):
+        # arrays in this base field are already numeric
+        return m
+
     def mat_expm(self, m, q):
         import scipy.linalg
         return m.np_matrix_transform(lambda x: scipy.linalg.expm(x, q))

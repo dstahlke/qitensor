@@ -6,6 +6,7 @@ Version 0.5.2 (ongoing):
 	entropy method
 	eigvals method (symbolic for Sage)
 	entropy can return a symbolic expression
+	n() method for sage
 
 Version 0.5.1 (2011-04-03):
 	cphase was erroneously called cnot

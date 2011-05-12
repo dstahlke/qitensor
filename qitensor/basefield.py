@@ -138,6 +138,19 @@ class HilbertBaseField(object):
         V = (m.space.ket_space() * w_space.H).reshaped_np_matrix(v)
         return (W, V)
 
+    def mat_eigvals(self, m, hermit):
+        eig_fn = np.linalg.eigvalsh if hermit else np.linalg.eigvals
+        w = eig_fn(m.as_np_matrix(dtype=complex))
+
+        # sort eigenvalues in ascending order of real component
+        w = -np.sort(-w)
+
+        if hermit:
+            assert np.all(np.imag(w) == 0)
+            w = np.real(w)
+
+        return w
+
     def create_space1(self, kets_and_bras):
         r"""
         Creates a ``HilbertSpace`` from a collection of ``HilbertAtom`` objects.

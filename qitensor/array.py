@@ -1161,15 +1161,16 @@ class HilbertArray(object):
 
     def eigvals(self, hermit=False):
         """
-        Return the eigenvalues of this array.
+        Return the eigenvalues of this array, sorted in order of decreasing
+        real component.
 
-        :param hermit: set this to True if the input is Hermitian
+        :param hermit: set this to True if the input is Hermitian.  In this
+            case, the returned eigenvalues will be real.
         :type hermit: bool; default False
 
         >>> from qitensor import qubit, qudit
         >>> ha = qubit('a')
         >>> hb = qudit('b', 3)
-        >>> hc = qudit('c', 6)
         >>> epsilon = 1e-13
 
         >>> op = (ha*hb).O.random_array()
@@ -1181,9 +1182,11 @@ class HilbertArray(object):
         True
         """
 
-        (ew, ev) = self.eig(hermit=hermit)
-        # FIXME - return real for hermit
-        return np.diagonal(ew.as_np_matrix())
+        if not self.space.is_symmetric():
+            raise HilbertError('bra space must be the same as ket space '+
+                '(space was '+repr(self.space)+')')
+
+        return self.space.base_field.mat_eigvals(self, hermit)
 
     def entropy(self, normalize=False):
         """
@@ -1194,28 +1197,29 @@ class HilbertArray(object):
             one.
         :type normalize: bool; default False
 
+        >>> import numpy as np
         >>> from qitensor import qubit, qudit
         >>> ha = qubit('a')
         >>> hb = qudit('b', 3)
         >>> # entropy of a pure state is zero
         >>> ha.ket(0).O.entropy()
-        0
+        0.0
         >>> # a fully mixed state of dimension 2
         >>> (ha.ket(0).O/2 + ha.ket(1).O/2).entropy()
-        1
+        1.0
         >>> # a fully mixed state of dimension 3
-        >>> abs( (hb.eye()/3).entropy() - log(3)/log(2) ) < 1e-10
+        >>> abs( (hb.eye()/3).entropy() - np.log2(3) ) < 1e-10
         True
         >>> # automatic normalization
-        >>> abs( hb.eye().entropy(normalize=True) - log(3)/log(2) ) < 1e-10
+        >>> abs( hb.eye().entropy(normalize=True) - np.log2(3) ) < 1e-10
         True
         >>> # a bipartite pure state
-        >>> s = (ha.ket(0) * hb.array([1/sqrt(2),0,0]) + ha.ket(1) * hb.array([0,0.5,0.5]))
-        >>> s.O.entropy()
-        0
+        >>> s = (ha.ket(0) * hb.array([1/np.sqrt(2),0,0]) + ha.ket(1) * hb.array([0,0.5,0.5]))
+        >>> np.round(s.O.entropy(), 10)
+        0.0
         >>> # entanglement across the a-b cut
         >>> (s.O.trace(hb)).entropy()
-        1
+        1.0
         >>> # entanglement across the a-b cut is the same as across b-a cut
         >>> s = (ha*hb).random_array().normalized().O
         >>> abs(s.trace(ha).entropy() - s.trace(hb).entropy()) < 1e-10

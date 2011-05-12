@@ -369,7 +369,9 @@ class HilbertArray(object):
         return self.space.array(arr)
 
     def __eq__(self, other):
-        if self.space != other.space:
+        if not isinstance(other, HilbertArray):
+            return False
+        elif self.space != other.space:
             return False
         else:
             return np.all(self.nparray == other.nparray)

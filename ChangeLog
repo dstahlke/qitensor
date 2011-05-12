@@ -1,5 +1,6 @@
 Version 0.5.2 (ongoing):
 	implement rich comparison rather than cmp (fixes HilbertSpace() == None)
+	check ininstance in HilbertArray.__eq__
 
 Version 0.5.1 (2011-04-03):
 	cphase was erroneously called cnot

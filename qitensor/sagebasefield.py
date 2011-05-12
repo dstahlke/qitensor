@@ -56,6 +56,27 @@ class SageHilbertBaseField(HilbertBaseField):
     def mat_pow(self, m, n):
         return m.sage_matrix_transform(lambda x: x**n)
 
+    def mat_eig(self, m, w_space, hermit):
+        w_space.assert_ket_space()
+        (w, v) = sage.all.matrix(m).eigenmatrix_right()
+
+        # convert to numpy to allow sorting
+        w = np.array(w.diagonal())
+        v = np.array(v)
+
+        # sort eigenvalues in ascending order of real component
+        srt = np.argsort(-w)
+        w = w[srt]
+        v = v[:, srt]
+
+        # Sage doesn't normalize the columns for symbolic expressions, so do it
+        # here.
+        v = np.array([c / sage.all.sqrt(np.sum(c**2)) for c in v.T]).T
+
+        W = (w_space * w_space.H).diag(w)
+        V = (m.space.ket_space() * w_space.H).reshaped_np_matrix(v)
+        return (W, V)
+
     def mat_eigvals(self, m, hermit):
         w = sage.all.matrix(m).eigenvalues()
 

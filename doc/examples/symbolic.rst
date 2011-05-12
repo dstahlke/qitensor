@@ -77,3 +77,22 @@ Sage: Vectors Over the Symbolic Ring
     [---+---]
     [0 0|1 0]
     [0 0|0 1]
+
+    >>> M = ha.O.array([[1,1],[1,x]]) # doctest: +SKIP
+    >>> (W, V) = M.eig() # doctest: +SKIP
+    >>> W # doctest: +SKIP
+    |a><a|
+    [1/2*x + 1/2*sqrt(x^2 - 2*x + 5) + 1/2                                     0]
+    [                                    0 1/2*x - 1/2*sqrt(x^2 - 2*x + 5) + 1/2]
+    >>> V # doctest: +SKIP
+    |a><a|
+    [                                1/sqrt(1/4*(x + sqrt(x^2 - 2*x + 5) - 1)^2 + 1)                                 1/sqrt(1/4*(x - sqrt(x^2 - 2*x + 5) - 1)^2 + 1)]
+    [1/2*(x + sqrt(x^2 - 2*x + 5) - 1)/sqrt(1/4*(x + sqrt(x^2 - 2*x + 5) - 1)^2 + 1) 1/2*(x - sqrt(x^2 - 2*x + 5) - 1)/sqrt(1/4*(x - sqrt(x^2 - 2*x + 5) - 1)^2 + 1)]
+    >>> (V.H * M * V - W).apply_map(lambda s: s.subs({x: 123}).simplify_full()) # doctest: +SKIP
+    |a><a|
+    [0 0]
+    [0 0]
+    >>> (V.H * V).apply_map(lambda s: s.subs({x: 123}).simplify_full()) # doctest: +SKIP
+    |a><a|
+    [1 0]
+    [0 1]

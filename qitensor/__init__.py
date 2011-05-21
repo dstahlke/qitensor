@@ -23,7 +23,7 @@ space tensor product structure.
   Hilbert space labels.
 """
 
-__version__ = "0.6"
+__version__ = "0.6.1"
 
 import numpy as np
 

@@ -1,4 +1,4 @@
-Version 0.5.2 (ongoing):
+Version 0.6 (2011-05-21):
 	implement rich comparison rather than cmp (fixes HilbertSpace() == None)
 	check ininstance in HilbertArray.__eq__
 	HilbertArray.O method (density operator)

@@ -377,6 +377,44 @@ class HilbertSpace(object):
         """
         return self.array(self.base_field.random_array(self.shape))
 
+    def random_unitary(self):
+        """
+        Returns a random unitary.
+
+        If the bra space or ket space is empty, then the nonempty of those two
+        is used to form an operator space (i.e. ``self.O``).  If both the
+        bra and ket spaces are nonempty, they must be of the same dimension
+        since a unitary matrix must be square.
+
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> hb = qubit('b')
+        >>> m = ha.random_unitary()
+        >>> (m.H * m - ha.eye()).norm() < 1e-14
+        True
+        >>> (m * m.H - ha.eye()).norm() < 1e-14
+        True
+        >>> (ha.random_unitary() - ha.random_unitary()).norm() < 1e-14
+        False
+        >>> m = (ha.H * hb).random_unitary()
+        >>> m.space
+        |b><a|
+        >>> (m.H * m - ha.eye()).norm() < 1e-14
+        True
+        >>> (m * m.H - hb.eye()).norm() < 1e-14
+        True
+        """
+
+        if len(self.ket_set) == 0 or len(self.bra_set) == 0:
+            return (self * self.H).random_unitary()
+
+        ket_size = shape_product([len(x.indices) for x in self.ket_set])
+        bra_size = shape_product([len(x.indices) for x in self.bra_set])
+        if bra_size != ket_size:
+            raise HilbertShapeError(bra_size, ket_size)
+
+        return self.random_array().QR()[0]
+
     def eye(self):
         """
         Returns a ``HilbertArray`` corresponding to the identity matrix.

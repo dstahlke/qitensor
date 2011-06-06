@@ -588,7 +588,7 @@ class HilbertArray(object):
 
     def as_np_matrix(self, dtype=None):
         """
-        Returns the underlying data as a numpy.matrix.
+        Returns the underlying data as a numpy.matrix.  Returns a copy, not a view.
 
         >>> from qitensor import qubit
         >>> ha = qubit('a')
@@ -598,6 +598,8 @@ class HilbertArray(object):
         |a,b><a|
         >>> x.as_np_matrix().shape
         (4, 2)
+        >>> x.as_np_matrix().fill(0); x.norm() == 0
+        False
         """
 
         ket_size = shape_product([len(x.indices) \
@@ -1252,6 +1254,35 @@ class HilbertArray(object):
                 raise HilbertError('density matrix was not positive: '+str(schmidt))
 
         return sum([-self.space.base_field.xlog2x(x) for x in schmidt])
+
+    def QR(self, inner_space=None):
+        """
+        Returns operators Q and R such that Q is an isometry, R is upper triangular, and self=Q*R.
+
+        The bra space of Q (and the ket space of R) is the smaller of the bra or ket spaces of
+        the input.  This can be overridden using the inner_space parameter.
+
+        :param inner_space: bra space of Q (and the ket space of R)
+        :type inner_space: HilbertSpace
+
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> hb = qubit('b')
+        >>> hc = qubit('c')
+        >>> m = (hb*hc*ha.H).random_array()
+        >>> (q, r) = m.QR()
+        >>> (q.space, r.space)
+        (|b,c><a|, |a><a|)
+        >>> (q.H * q - ha.eye()).norm() < 1e-14
+        True
+        >>> (q*r - m).norm() < 1e-14
+        True
+        >>> (q, r) = ha.O.random_array().QR(inner_space=hb)
+        >>> (q.space, r.space)
+        (|a><b|, |b><a|)
+        """
+
+        return self.space.base_field.mat_qr(self, inner_space)
 
     ########## stuff that only works in Sage ##########
 

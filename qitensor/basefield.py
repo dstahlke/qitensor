@@ -161,6 +161,23 @@ class HilbertBaseField(object):
 
         return w
 
+    def mat_qr(self, m, inner_space):
+        m_mat = m.as_np_matrix(dtype=complex)
+        (q, r) = np.linalg.qr(m_mat)
+
+        if inner_space is None:
+            if m_mat.shape[0] < m_mat.shape[1]:
+                inner_space = m.space.ket_space()
+            else:
+                inner_space = m.space.bra_space().H
+
+        inner_space.assert_ket_space()
+        
+        Q = (m.space.ket_space() * inner_space.H).reshaped_np_matrix(q)
+        R = (inner_space * m.space.bra_space()).reshaped_np_matrix(r)
+
+        return (Q, R)
+
     def create_space1(self, kets_and_bras):
         r"""
         Creates a ``HilbertSpace`` from a collection of ``HilbertAtom`` objects.

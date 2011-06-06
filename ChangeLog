@@ -1,5 +1,5 @@
 Version 0.6.1 (development):
-	no changes yet
+	added QR and random_unitary methods
 
 Version 0.6 (2011-05-21):
 	implement rich comparison rather than cmp (fixes HilbertSpace() == None)

@@ -54,7 +54,7 @@ class SageHilbertBaseField(HilbertBaseField):
     def mat_norm(self, m):
         # Sage's matrix norm doesn't work for SR (it casts to CDF)
         #return sage.all.matrix(m).norm()
-        return self.sqrt(np.sum(m.nparray ** 2))
+        return self.sqrt(np.sum(m.nparray * np.conj(m.nparray)))
 
     def mat_conj(self, m):
         return m.sage_matrix_transform(lambda x: x.conjugate())

@@ -6,6 +6,7 @@ import unittest
 
 import qitensor
 import qitensor.tests.hilbert
+import qitensor.tests.experimental
 
 # Adapted from sympy
 class test_qitensor(Command):
@@ -28,6 +29,7 @@ class test_qitensor(Command):
     def run(self):
         suite = unittest.TestSuite([
             qitensor.tests.hilbert.suite(),
+            qitensor.tests.experimental.suite(),
         ])
         unittest.TextTestRunner().run(suite)
 

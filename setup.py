@@ -74,6 +74,7 @@ space tensor product structure.
         ],
     packages = [
         'qitensor',
+        'qitensor.experimental',
         'qitensor.tests',
     ],
     cmdclass = {'test': test_qitensor },

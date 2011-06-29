@@ -11,5 +11,6 @@ Reference
    space
    array
    exceptions
+   experimental
 
 .. sagebasefield can't be here for now because the module only loads from sage

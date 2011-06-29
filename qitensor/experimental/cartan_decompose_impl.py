@@ -1,3 +1,5 @@
+# The qitensor frontend for this module is in cartan_decompose.py
+
 # If I remember correctly, this was based on
 # PHYSICAL REVIEW A, VOLUME 63, 062309
 # Optimal creation of entanglement using a two-qubit gate
@@ -136,6 +138,7 @@ def unitary_to_cartan(U):
 
     # make sure input is a complex numpy matrix
     U = np.matrix(U, dtype=complex)
+    assert U.shape == (4, 4)
 
     mb = MAGIC_BASIS
     UT = mb.H * (mb * U * mb.H).T * mb
@@ -207,6 +210,9 @@ def unitary_to_cartan(U):
     return (UA, UB, VA, VB, alpha)
 
 def unitary_from_cartan(alpha):
+    """
+    Returns $e^{-i \alpha_i \sigma_{Ai} \otimes \sigma_{Bi}}$.
+    """
     assert len(alpha) == 3
 
     (Ux, Uy, Uz) = [np.matrix(

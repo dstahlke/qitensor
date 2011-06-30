@@ -55,6 +55,21 @@ def decompose_dyad(dyad):
     bra = np.matrix(VT[0, :])
     return (ket, bra)
 
+def branch_cut(lam):
+    # Attempt at implementing branch cut choice described in
+    # http://pra.aps.org/abstract/PRA/v68/i5/e052311
+
+    tol = 1e-10
+    # Wrap lam into the (-pi/4, 3pi/4] range.
+    for i in range(4):
+        lam[i] %= np.pi
+        if lam[i] > 3*np.pi/4:
+            lam[i] -= np.pi
+    nn = np.sum(lam) / np.pi
+    assert abs(nn - int(round(nn))) < tol
+    for i in range(int(round(nn))):
+        lam[3-i] -= np.pi
+
 def locally_transform_to_magic_basis(psi):
     """Find local unitaries and phases that transform a maximally
     entangled basis psi to the magic basis"""
@@ -70,11 +85,16 @@ def locally_transform_to_magic_basis(psi):
         assert np.allclose(schmidt, [1/np.sqrt(2), 1/np.sqrt(2)])
 
     # make coeffs real in magic basis
-    gamma = np.array([0, 0, 0, 0], dtype=complex)
+    phases = np.zeros(4, dtype=complex)
     for i in range(4):
         psi_in_magic = MAGIC_BASIS * psi
         j = np.argmax(abs(psi_in_magic[:, i]))
-        gamma[i] = -np.angle(psi_in_magic[j, i])
+        v = psi_in_magic[j, i]
+        phases[i] = v / abs(v)
+    total_phase = np.product(phases) ** (1.0/4.0)
+    phases /= total_phase
+    gamma = -np.angle(phases)
+    branch_cut(gamma)
     psi_bar = psi * np.diag(np.exp(1j * gamma))
 
     separable = []
@@ -110,6 +130,7 @@ def locally_transform_to_magic_basis(psi):
     sign3 = psi_bar[argmax3, 2] / (1/np.sqrt(2)* \
         (np.exp(1j*delta)*e_fperp[argmax3, 0] - \
         np.exp(-1j*delta)*eperp_f[argmax3, 0]))
+    print "s3", sign3
     if abs(sign3-1) < tol:
         pass
     elif abs(sign3+1) < tol:
@@ -142,9 +163,15 @@ def unitary_to_cartan(U):
     Five values are returned from this function: (UA, UB, VA, VB, alpha).
     """
 
+    print "---"
     # make sure input is a complex numpy matrix
     U = np.matrix(U, dtype=complex)
     assert U.shape == (4, 4)
+
+    tol = 1e-10
+
+    total_phase_sq = linalg.det(U) ** (1.0/2.0)
+    assert abs(abs(total_phase_sq) - 1) < tol
 
     mb = MAGIC_BASIS
     UT = mb.H * (mb * U * mb.H).T * mb
@@ -178,8 +205,11 @@ def unitary_to_cartan(U):
     # Change back to computational basis
     psi = mb.H * psi
 
+    ew /= total_phase_sq
     assert np.allclose(np.abs(ew), 1)
     epsilon = np.angle(ew) / 2.0
+
+    branch_cut(epsilon)
 
     (VA, VB, xi) = locally_transform_to_magic_basis(psi)
 
@@ -189,6 +219,11 @@ def unitary_to_cartan(U):
     lam = zeta - xi - epsilon
     assert np.allclose(lam.imag, 0)
     lam = lam.real
+
+    print "epsilon", epsilon/np.pi, "sum", np.sum(epsilon)/np.pi
+    print "xi", xi/np.pi, "sum", np.sum(xi)/np.pi
+    print "zeta", zeta/np.pi, "sum", np.sum(zeta)/np.pi
+    print "lam", lam/np.pi, "sum", np.sum(lam)/np.pi
 
     UA *= np.exp(1j*sum(lam)/4)
     lam -= sum(lam)/4
@@ -200,6 +235,8 @@ def unitary_to_cartan(U):
         (lam[1]+lam[3])/2,
         (lam[0]+lam[1])/2,
     ])
+
+    print "alpha", alpha / np.pi
 
     # transform alpha to (-pi/4, pi/4] range
     for i in range(3):

@@ -102,7 +102,7 @@ def locally_transform_to_magic_basis(psi):
     e_fperp = bipartite_state_tensor_product(e, f_perp)
     eperp_fperp = bipartite_state_tensor_product(e_perp, f_perp)
 
-    delta = np.log(e_fperp.H * psi_bar[:,3] * 1j * np.sqrt(2)).imag
+    delta = np.angle(e_fperp.H * psi_bar[:,3] * 1j * np.sqrt(2))
     # convert to scalar
     delta = delta[0,0]
 
@@ -148,10 +148,11 @@ def unitary_to_cartan(U):
 
     mb = MAGIC_BASIS
     UT = mb.H * (mb * U * mb.H).T * mb
+    UTU = UT * U
 
     # FIXME: running eig in magic basis hopefully ensures that degenerate
     # eigenvectors are fully entangled basis states
-    UTU = mb * UT * U * mb.H
+    UTU = mb * UTU * mb.H
     (ew, psi) = linalg.eig(UTU)
     # Make eigenvectors orthonormal.  This is needed in cases where there are
     # degenerate eigenvalues.
@@ -164,12 +165,21 @@ def unitary_to_cartan(U):
             dp = (psi[:, j].H * psi[:, i])[0, 0]
             psi[:, i] -= dp * psi[:, j]
         psi[:, i] /= linalg.norm(psi[:, i])
+
+    # Make sure eigenvectors are real.
+    for i in [1,2,3]:
+        j = np.argmax(abs(psi[:, i]))
+        assert abs(psi[j, i]) > 0
+        phase = psi[j, i] / abs(psi[j, i])
+        psi[:, i] /= phase
+    assert np.allclose(psi.imag, 0)
+
     #print "after:", psi
     # Change back to computational basis
     psi = mb.H * psi
 
-    assert np.allclose(np.log(ew).real, 0)
-    epsilon = np.log(ew).imag / 2.0
+    assert np.allclose(np.abs(ew), 1)
+    epsilon = np.angle(ew) / 2.0
 
     (VA, VB, xi) = locally_transform_to_magic_basis(psi)
 
@@ -179,6 +189,7 @@ def unitary_to_cartan(U):
     lam = zeta - xi - epsilon
     assert np.allclose(lam.imag, 0)
     lam = lam.real
+
     UA *= np.exp(1j*sum(lam)/4)
     lam -= sum(lam)/4
     UA = UA.H

@@ -6,6 +6,12 @@
 # B. Kraus and J. I. Cirac
 # http://pra.aps.org/abstract/PRA/v63/i6/e062309
 
+# A simpler way of finding alpha (but not {UV}{AB}?) is given in
+# http://pra.aps.org/abstract/PRA/v68/i5/e052311
+# which also discusses how to take the right branch of the logarithm
+# so that pi/4 >= alpha_x >= alpha_y >= |alpha_z|.
+# FIXME - this should be implemented
+
 # A much more complicated treatment, applicable to multiple qubits, is given in
 # http://arxiv.org/abs/quant-ph/0010100
 

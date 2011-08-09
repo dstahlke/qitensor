@@ -130,7 +130,7 @@ def locally_transform_to_magic_basis(psi):
     sign3 = psi_bar[argmax3, 2] / (1/np.sqrt(2)* \
         (np.exp(1j*delta)*e_fperp[argmax3, 0] - \
         np.exp(-1j*delta)*eperp_f[argmax3, 0]))
-    print "s3", sign3
+    #print "s3", sign3
     if abs(sign3-1) < tol:
         pass
     elif abs(sign3+1) < tol:
@@ -163,7 +163,7 @@ def unitary_to_cartan(U):
     Five values are returned from this function: (UA, UB, VA, VB, alpha).
     """
 
-    print "---"
+    #print "---"
     # make sure input is a complex numpy matrix
     U = np.matrix(U, dtype=complex)
     assert U.shape == (4, 4)
@@ -220,10 +220,10 @@ def unitary_to_cartan(U):
     assert np.allclose(lam.imag, 0)
     lam = lam.real
 
-    print "epsilon", epsilon/np.pi, "sum", np.sum(epsilon)/np.pi
-    print "xi", xi/np.pi, "sum", np.sum(xi)/np.pi
-    print "zeta", zeta/np.pi, "sum", np.sum(zeta)/np.pi
-    print "lam", lam/np.pi, "sum", np.sum(lam)/np.pi
+    #print "epsilon", epsilon/np.pi, "sum", np.sum(epsilon)/np.pi
+    #print "xi", xi/np.pi, "sum", np.sum(xi)/np.pi
+    #print "zeta", zeta/np.pi, "sum", np.sum(zeta)/np.pi
+    #print "lam", lam/np.pi, "sum", np.sum(lam)/np.pi
 
     UA *= np.exp(1j*sum(lam)/4)
     lam -= sum(lam)/4
@@ -236,7 +236,7 @@ def unitary_to_cartan(U):
         (lam[0]+lam[1])/2,
     ])
 
-    print "alpha", alpha / np.pi
+    #print "alpha", alpha / np.pi
 
     # transform alpha to (-pi/4, pi/4] range
     for i in range(3):

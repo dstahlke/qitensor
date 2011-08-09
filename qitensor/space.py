@@ -496,21 +496,53 @@ class HilbertSpace(object):
         ret[idx] = 1
         return ret
 
+    def basis(self):
+        """
+        Returns an orthonormal basis (the computational basis) for this space.
+
+        >>> from qitensor import qubit, qudit, indexed_space
+        >>> import numpy
+        >>> ha = qubit('a')
+        >>> hb = qudit('b', 5)
+        >>> hc = indexed_space('c', ['x', 'y', 'z'])
+
+        >>> spc = ha*hb*hc.H
+        >>> b = spc.basis()
+        >>> w = [[(x.H*y).trace() for y in b] for x in b]
+        >>> numpy.allclose(w, numpy.eye(spc.dim()))
+        True
+        """
+
+        return [ self.basis_vec(idx) for idx in self.index_iter() ]
+
+    def dim(self):
+        """
+        Returns the dimension of this space.
+
+        >>> from qitensor import qubit, qudit, indexed_space
+        >>> ha = qubit('a')
+        >>> hb = qudit('b', 5)
+        >>> hc = indexed_space('c', ['x', 'y', 'z'])
+        
+        >>> (ha*hb*hc.H).dim()
+        30
+        """
+
+        return np.product([len(s.indices) for s in self.bra_ket_set])
+
     def index_iter(self):
         """
         Returns an iterator over the indices of a space.
 
         See also: :func:`indices`
 
-        >>> from qitensor import qubit, indexed_space
+        >>> from qitensor import qubit, qudit, indexed_space
         >>> ha = qubit('a')
-        >>> hb = qudit('b', 3)
+        >>> hb = qudit('b', 5)
         >>> hc = indexed_space('c', ['x', 'y', 'z'])
 
-        >>> product( len(s.indices) for s in (ha, hb, hc) )
-        18
-        >>> len(list( (ha*hb*hc).index_iter() ))
-        18
+        >>> len(list( (ha*hb*hc).index_iter() )) == (ha*hb*hc).dim()
+        True
 
         >>> x = (ha * hb * hc.H).random_array()
         >>> sum(abs(x[idx])**2 for idx in x.space.index_iter()) - x.norm()**2 < 1e-12

@@ -5,6 +5,7 @@ multiplication operator to HilbertAtom's or other HilbertSpace's.
 """
 
 import numpy as np
+import itertools
 
 from qitensor import have_sage, shape_product
 from qitensor.exceptions import *
@@ -494,6 +495,30 @@ class HilbertSpace(object):
             raise HilbertIndexError('not enough indices given')
         ret[idx] = 1
         return ret
+
+    def index_iter(self):
+        """
+        Returns an iterator over the indices of a space.
+
+        See also: :func:`indices`
+
+        >>> from qitensor import qubit, indexed_space
+        >>> ha = qubit('a')
+        >>> hb = qudit('b', 3)
+        >>> hc = indexed_space('c', ['x', 'y', 'z'])
+
+        >>> product( len(s.indices) for s in (ha, hb, hc) )
+        18
+        >>> len(list( (ha*hb*hc).index_iter() ))
+        18
+
+        >>> x = (ha * hb * hc.H).random_array()
+        >>> sum(abs(x[idx])**2 for idx in x.space.index_iter()) - x.norm()**2 < 1e-12
+        True
+        """
+
+        axes = self.sorted_kets + self.sorted_bras
+        return itertools.product(*[s.indices for s in axes])
 
     def assert_ket_space(self):
         """

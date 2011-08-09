@@ -2,6 +2,7 @@ Version 0.6.1 (development):
 	added QR and random_unitary methods
 	fixed bug in norm() under sage
 	added Cartan decomposition as experimental module
+	HilbertSpace.index_iter method
 
 Version 0.6 (2011-05-21):
 	implement rich comparison rather than cmp (fixes HilbertSpace() == None)

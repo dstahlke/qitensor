@@ -549,6 +549,59 @@ class HilbertSpace(object):
 
         return [ self.basis_vec(idx) for idx in self.index_iter() ]
 
+    def hermitian_basis(self, normalize=False):
+        """
+        Returns an orthogonal basis (optionally normalized) of Hermitian
+        operators.  It is required that the dimension of the bra space be equal
+        to that of the ket space.  Real linear combinations of these basis
+        operators will be Hermitian.
+
+        >>> from qitensor import qubit, qudit, indexed_space
+        >>> import numpy
+        >>> import numpy.random
+
+        >>> ha = qudit('a', 3)
+        >>> spc = ha.O
+        >>> b = spc.hermitian_basis(normalize=True)
+        >>> numpy.allclose([[(x.H*y).trace() for y in b] for x in b], numpy.eye(spc.dim()))
+        True
+        >>> numpy.all((x-x.H).norm() < 1e-12 for x in b)
+        True
+        >>> y = numpy.sum([x * numpy.random.rand() for x in b])
+        >>> (y - y.H).norm() < 1e-12
+        True
+
+        >>> hb = indexed_space('b', ['x', 'y', 'z'])
+        >>> spc = ha * hb.H
+        >>> b = spc.hermitian_basis(normalize=True)
+        >>> numpy.allclose([[(x.H*y).trace() for y in b] for x in b], numpy.eye(spc.dim()))
+        True
+        """
+
+        dim = self.assert_square()
+        bra_indices = list(self.bra_space().index_iter())
+        ket_indices = list(self.ket_space().index_iter())
+        assert dim == len(bra_indices) == len(ket_indices)
+        basis = []
+        for i in range(dim):
+            for j in range(i, dim):
+                v = self.array()
+                v[ ket_indices[i] + bra_indices[j] ] = 1
+                v[ ket_indices[j] + bra_indices[i] ] = 1
+                basis.append(v)
+        for i in range(dim):
+            for j in range(i+1, dim):
+                v = self.array()
+                v[ ket_indices[i] + bra_indices[j] ] = 1j
+                v[ ket_indices[j] + bra_indices[i] ] = -1j
+                basis.append(v)
+
+        if normalize:
+            for x in basis:
+                x.normalize()
+
+        return basis
+
     def dim(self):
         """
         Returns the dimension of this space.

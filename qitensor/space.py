@@ -93,6 +93,46 @@ class HilbertSpace(object):
         """
         return self == self.H
 
+    def is_square(self):
+        """
+        If the dimension of the bra and ket spaces are equal, returns this
+        common dimension.  Otherwise returns zero.
+
+        >>> from qitensor import qubit, qudit
+        >>> ha = qubit('a')
+        >>> hb = qudit('b', 3)
+        >>> ha.is_square()
+        0
+        >>> ha.O.is_square()
+        2
+        >>> (ha*hb.H).is_square()
+        0
+        >>> (ha*hb).O.is_square()
+        6
+        """
+
+        ket_size = shape_product([len(x.indices) for x in self.ket_set])
+        bra_size = shape_product([len(x.indices) for x in self.bra_set])
+
+        if bra_size == ket_size:
+            return bra_size
+        else:
+            return 0
+
+    def assert_square(self):
+        """
+        If the dimension of the bra and ket spaces are equal, returns this
+        common dimension.  Otherwise throws a HilbertShapeError.
+        """
+
+        ket_size = shape_product([len(x.indices) for x in self.ket_set])
+        bra_size = shape_product([len(x.indices) for x in self.bra_set])
+
+        if bra_size == ket_size:
+            return bra_size
+        else:
+            raise HilbertShapeError(ket_size, bra_size)
+
     @property
     def H(self):
         """
@@ -409,10 +449,7 @@ class HilbertSpace(object):
         if len(self.ket_set) == 0 or len(self.bra_set) == 0:
             return (self * self.H).random_unitary()
 
-        ket_size = shape_product([len(x.indices) for x in self.ket_set])
-        bra_size = shape_product([len(x.indices) for x in self.bra_set])
-        if bra_size != ket_size:
-            raise HilbertShapeError(bra_size, ket_size)
+        self.assert_square()
 
         return self.random_array().QR()[0]
 
@@ -448,10 +485,7 @@ class HilbertSpace(object):
         if len(self.ket_set) == 0 or len(self.bra_set) == 0:
             return (self * self.H).eye()
 
-        ket_size = shape_product([len(x.indices) for x in self.ket_set])
-        bra_size = shape_product([len(x.indices) for x in self.bra_set])
-        if bra_size != ket_size:
-            raise HilbertShapeError(bra_size, ket_size)
+        bra_size = self.assert_square()
 
         return self.array(self.base_field.eye(bra_size), reshape=True)
 

@@ -1,8 +1,8 @@
-Version 0.6.1 (development):
+Version 0.7 (2011-08-09):
 	added QR and random_unitary methods
 	fixed bug in norm() under sage
 	added Cartan decomposition as experimental module
-	new HilbertSpace methods:
+	added HilbertSpace methods:
 		dim
 		index_iter
 		is_square

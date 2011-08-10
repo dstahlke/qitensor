@@ -134,6 +134,10 @@ class HilbertBaseField(object):
 
         return (U, S, V)
 
+    def mat_svd_vals(self, m):
+        (u, s, v) = np.linalg.svd(m.as_np_matrix(dtype=complex), full_matrices=False)
+        return s
+
     def mat_eig(self, m, w_space, hermit):
         w_space.assert_ket_space()
         eig_fn = np.linalg.eigh if hermit else np.linalg.eig

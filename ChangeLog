@@ -9,6 +9,7 @@ Version 0.6.1 (development):
 		assert_square
 		basis
 		hermitian_basis
+		singular_vals
 
 Version 0.6 (2011-05-21):
 	implement rich comparison rather than cmp (fixes HilbertSpace() == None)

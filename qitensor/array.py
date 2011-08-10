@@ -1023,6 +1023,8 @@ class HilbertArray(object):
           input.  The given space will be used for both the bra and the ket
           space of S.
 
+        See also: :func:`singular_vals`
+
         >>> from qitensor import qubit, qudit
         >>> ha = qubit('a')
         >>> hb = qubit('b')
@@ -1090,6 +1092,24 @@ class HilbertArray(object):
         else:
             inner_space.assert_ket_space()
             return self.space.base_field.mat_svd_partial(self, inner_space)
+
+    def singular_vals(self):
+        """
+        Returns the singular values of this array.
+
+        See also: :func:`svd`
+
+        >>> from qitensor import qubit, qudit
+        >>> import numpy
+        >>> ha = qubit('a')
+        >>> hb = qubit('b')
+        >>> hc = qubit('c')
+        >>> x = (ha * hb.H * hc.H).random_array()
+        >>> numpy.allclose(numpy.diag(x.svd()[1].as_np_matrix()), x.singular_vals())
+        True
+        """
+
+        return self.space.base_field.mat_svd_vals(self)
 
     def eig(self, w_space=None, hermit=False):
         """

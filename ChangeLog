@@ -1,3 +1,6 @@
+Version 0.7.1 (ongoing):
+	no changes
+
 Version 0.7 (2011-08-09):
 	added QR and random_unitary methods
 	fixed bug in norm() under sage

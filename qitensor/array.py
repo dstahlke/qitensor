@@ -1219,7 +1219,8 @@ class HilbertArray(object):
             one.
         :type normalize: bool; default False
         :param checks: if False, don't check that the input is a valid density
-            matrix.  This is sometimes needed for symbolic computations.
+            matrix or Hermitian.  This is sometimes needed for symbolic
+            computations.
         :type checks: bool; default True
 
         >>> import numpy as np
@@ -1252,9 +1253,10 @@ class HilbertArray(object):
         """
 
         if not self.space.is_symmetric():
-            return HilbertError("bra and ket spaces must be the same")
-        if not self == self.H:
-            return HilbertError("density matrix must be Hermitian")
+            raise HilbertError("bra and ket spaces must be the same")
+
+        if checks and not (self == self.H or np.allclose(self.nparray, self.H.nparray)):
+            raise HilbertError("density matrix must be Hermitian")
 
         norm = self.trace()
         if normalize:

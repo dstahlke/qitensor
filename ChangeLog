@@ -10,6 +10,7 @@ Version 0.7 (2011-08-09):
 		basis
 		hermitian_basis
 		singular_vals
+	fixed Sage doctest
 
 Version 0.6 (2011-05-21):
 	implement rich comparison rather than cmp (fixes HilbertSpace() == None)

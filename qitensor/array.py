@@ -633,6 +633,8 @@ class HilbertArray(object):
         col_set = frozenset(col_space)
         row_set = frozenset(row_space)
         assert col_set.isdisjoint(row_set)
+        assert row_set <= self.space.bra_ket_set
+        assert col_set <= self.space.bra_ket_set
         assert col_set | row_set == self.space.bra_ket_set
 
         col_size = shape_product([x.dim() for x in col_space])

@@ -611,8 +611,6 @@ class HilbertArray(object):
         True
         """
 
-        print "r", row_space, "c", col_space
-
         def parse_space(s):
             if s is None:
                 return None
@@ -641,7 +639,7 @@ class HilbertArray(object):
         row_size = shape_product([x.dim() for x in row_space])
         axes = [self.get_dim(x) for x in col_space + row_space]
 
-        print col_size, row_size, axes
+        #print col_size, row_size, axes
 
         v = self.nparray.transpose(axes).reshape(col_size, row_size)
         return np.matrix(v, dtype=dtype)

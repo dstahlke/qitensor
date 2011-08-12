@@ -586,29 +586,65 @@ class HilbertArray(object):
     def __setitem__(self, key, val):
         return self._get_set_item(key, True, val)
 
-    def as_np_matrix(self, dtype=None):
+    def as_np_matrix(self, dtype=None, col_space=None, row_space=None):
+        # FIXME - docs for col_space and row_space params
         """
         Returns the underlying data as a numpy.matrix.  Returns a copy, not a view.
 
-        >>> from qitensor import qubit
+        >>> import numpy
+        >>> from qitensor import qubit, qudit
         >>> ha = qubit('a')
-        >>> hb = qubit('b')
+        >>> hb = qudit('b', 3)
         >>> x = (ha.O * hb).random_array()
         >>> x.space
         |a,b><a|
         >>> x.as_np_matrix().shape
-        (4, 2)
+        (6, 2)
+        >>> # returns a copy, not a view
         >>> x.as_np_matrix().fill(0); x.norm() == 0
         False
+        >>> x.as_np_matrix(col_space=ha.O).shape
+        (4, 3)
+        >>> x.as_np_matrix(row_space=ha.O).shape
+        (3, 4)
+        >>> numpy.allclose(x.as_np_matrix(col_space=ha.O), x.as_np_matrix(row_space=ha.O).T)
+        True
         """
 
-        ket_size = shape_product([len(x.indices) \
-            for x in self.axes if not x.is_dual])
-        bra_size = shape_product([len(x.indices) \
-            for x in self.axes if x.is_dual])
-        assert ket_size * bra_size == shape_product(self.nparray.shape)
+        print "r", row_space, "c", col_space
 
-        return np.matrix(self.nparray.reshape(ket_size, bra_size), dtype=dtype)
+        def parse_space(s):
+            if s is None:
+                return None
+            elif isinstance(s, HilbertSpace):
+                return s.sorted_kets + s.sorted_bras
+            else:
+                return sum((parse_space(x) for x in s), [])
+
+        col_space = parse_space(col_space)
+        row_space = parse_space(row_space)
+
+        if col_space is None and row_space is None:
+            col_space = self.space.sorted_kets
+            row_space = self.space.sorted_bras
+        elif row_space is None:
+            row_space = [x for x in self.axes if not x in col_space]
+        elif col_space is None:
+            col_space = [x for x in self.axes if not x in row_space]
+
+        col_set = frozenset(col_space)
+        row_set = frozenset(row_space)
+        assert col_set.isdisjoint(row_set)
+        assert col_set | row_set == self.space.bra_ket_set
+
+        col_size = shape_product([x.dim() for x in col_space])
+        row_size = shape_product([x.dim() for x in row_space])
+        axes = [self.get_dim(x) for x in col_space + row_space]
+
+        print col_size, row_size, axes
+
+        v = self.nparray.transpose(axes).reshape(col_size, row_size)
+        return np.matrix(v, dtype=dtype)
 
     def np_matrix_transform(self, f, transpose_dims=False):
         """
@@ -1093,7 +1129,7 @@ class HilbertArray(object):
             inner_space.assert_ket_space()
             return self.space.base_field.mat_svd_partial(self, inner_space)
 
-    def singular_vals(self):
+    def singular_vals(self, col_space=None, row_space=None):
         """
         Returns the singular values of this array.
 
@@ -1109,7 +1145,10 @@ class HilbertArray(object):
         True
         """
 
-        return self.space.base_field.mat_svd_vals(self)
+        mat_kw = { 'col_space': col_space, 'row_space': row_space }
+        m = self.as_np_matrix(**mat_kw)
+
+        return self.space.base_field.mat_svd_vals(m)
 
     def eig(self, w_space=None, hermit=False):
         """

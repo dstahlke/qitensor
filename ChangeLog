@@ -1,5 +1,5 @@
 Version 0.7.1 (ongoing):
-	no changes
+	as_np_matrix take {row,col}_space args
 
 Version 0.7 (2011-08-09):
 	added QR and random_unitary methods

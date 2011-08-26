@@ -31,6 +31,9 @@ class SageHilbertBaseField(HilbertBaseField):
         np_mat = np.matrix(sage_mat, dtype=self.dtype)
         return np_mat
 
+    def sage_mat_xform(self, m, f):
+        return self.matrix_sage_to_np(f(self.matrix_np_to_sage(m)))
+
     def complex_unit(self):
         return self.sage_ring(sage.all.I)
 
@@ -50,7 +53,7 @@ class SageHilbertBaseField(HilbertBaseField):
         return np.array(sage.all.identity_matrix(self.sage_ring, size), dtype=self.dtype)
 
     def mat_n(self, m, prec=None, digits=None):
-        return m.sage_matrix_transform(
+        return self.sage_mat_xform(m, \
             lambda x: x.n(prec=prec, digits=digits))
 
     def mat_simplify(self, m, full=False):
@@ -60,26 +63,22 @@ class SageHilbertBaseField(HilbertBaseField):
             return m.apply_map(lambda x: x.simplify())
 
     def mat_adjoint(self, m):
-        return m.sage_matrix_transform(
-            lambda x: x.conjugate().transpose(), transpose_dims=True)
+        return self.sage_mat_xform(m, lambda x: x.conjugate().transpose())
 
     def mat_inverse(self, m):
-        return m.sage_matrix_transform(
-            lambda x: x.inverse(), transpose_dims=True)
+        return self.sage_mat_xform(m, lambda x: x.inverse())
 
     def mat_det(self, m):
-        return sage.all.matrix(m).det()
+        return self.matrix_np_to_sage(m).det()
 
-    def mat_norm(self, m):
-        # Sage's matrix norm doesn't work for SR (it casts to CDF)
-        #return sage.all.matrix(m).norm()
-        return self.sqrt(np.sum(m.nparray * np.conj(m.nparray)))
+    def mat_norm(self, arr):
+        return self.sqrt(np.sum(arr * np.conj(arr)))
 
     def mat_conj(self, m):
-        return m.sage_matrix_transform(lambda x: x.conjugate())
+        return self.sage_mat_xform(m, lambda x: x.conjugate())
 
     def mat_pow(self, m, n):
-        return m.sage_matrix_transform(lambda x: x**n)
+        return self.sage_mat_xform(m, lambda x: x**n)
 
     def mat_eig(self, m, hermit):
         (w, v) = self.matrix_np_to_sage(m).eigenmatrix_right()

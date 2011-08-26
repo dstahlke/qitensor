@@ -483,7 +483,8 @@ class HilbertArray(object):
         if self.space != self.space.H:
             raise HilbertError('bra space must be the same as ket space '+
                 '(space was '+repr(self.space)+')')
-        return self.space.base_field.mat_pow(self, other)
+        return self.np_matrix_transform( \
+            lambda x: self.space.base_field.mat_pow(x, other))
 
     def __ipow__(self, other):
         self.nparray[:] = self.__pow__(other).nparray
@@ -724,7 +725,9 @@ class HilbertArray(object):
                [ 3.-4.j,  7.-8.j]]))
         """
 
-        return self.space.base_field.mat_adjoint(self)
+        return self.np_matrix_transform( \
+            lambda x: self.space.base_field.mat_adjoint(x), \
+            transpose_dims=True)
 
     @property
     def I(self):
@@ -748,7 +751,9 @@ class HilbertArray(object):
         True
         """
 
-        return self.space.base_field.mat_inverse(self)
+        return self.np_matrix_transform( \
+            lambda x: self.space.base_field.mat_inverse(x), \
+            transpose_dims=True)
 
     @property
     def T(self):
@@ -816,7 +821,7 @@ class HilbertArray(object):
         True
         """
 
-        return self.space.base_field.mat_det(self)
+        return self.space.base_field.mat_det(self.as_np_matrix())
 
     def fill(self, val):
         """
@@ -850,7 +855,7 @@ class HilbertArray(object):
         30.0
         """
 
-        return self.space.base_field.mat_norm(self)
+        return self.space.base_field.mat_norm(self.nparray)
 
     def normalize(self):
         """
@@ -903,7 +908,9 @@ class HilbertArray(object):
         True
         """
 
-        return self.space.base_field.mat_pinv(self, rcond)
+        return self.np_matrix_transform( \
+            lambda x: self.space.base_field.mat_pinv(x, rcond), \
+            transpose_dims=True)
 
     def conj(self):
         """
@@ -927,7 +934,8 @@ class HilbertArray(object):
                [ 5.-6.j,  7.-8.j]]))
         """
 
-        return self.space.base_field.mat_conj(self)
+        return self.np_matrix_transform( \
+            lambda x: self.space.base_field.mat_conj(x))
 
     def trace(self, axes=None):
         """
@@ -1035,7 +1043,8 @@ class HilbertArray(object):
                [ 0.+0.j, -1.+0.j]]))
         """
 
-        return self.space.base_field.mat_expm(self, q)
+        return self.np_matrix_transform( \
+            lambda x: self.space.base_field.mat_expm(x, q))
 
     def svd(self, full_matrices=True, inner_space=None):
         """
@@ -1475,7 +1484,23 @@ class HilbertArray(object):
         (|a><b|, |b><a|)
         """
 
-        return self.space.base_field.mat_qr(self, inner_space)
+        hs = self.space
+        mat = self.as_np_matrix()
+
+        (q, r) = self.space.base_field.mat_qr(mat)
+
+        if inner_space is None:
+            if mat.shape[0] < mat.shape[1]:
+                inner_space = hs.ket_space()
+            else:
+                inner_space = hs.bra_space().H
+
+        inner_space.assert_ket_space()
+        
+        Q = (hs.ket_space() * inner_space.H).reshaped_np_matrix(q)
+        R = (inner_space * hs.bra_space()).reshaped_np_matrix(r)
+
+        return (Q, R)
 
     ########## stuff that only works in Sage ##########
 
@@ -1484,7 +1509,8 @@ class HilbertArray(object):
         Converts symbolic values to numeric values (only useful in Sage).
         """
 
-        return self.space.base_field.mat_n(self)
+        return self.np_matrix_transform( \
+            lambda x: self.space.base_field.mat_n(x, prec, digits))
 
     def simplify(self):
         """

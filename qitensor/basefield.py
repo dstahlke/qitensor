@@ -70,84 +70,69 @@ class HilbertBaseField(object):
     def eye(self, size):
         return np.eye(size)
 
-    def mat_adjoint(self, m):
-        return m.np_matrix_transform(
-            lambda x: x.H, transpose_dims=True)
+    def mat_adjoint(self, mat):
+        return mat.H
 
-    def mat_inverse(self, m):
-        # linalg.inv is used instead of m.I because the latter automatically
+    def mat_inverse(self, mat):
+        # linalg.inv is used instead of mat.I because the latter automatically
         # does pinv for non-square matrices, which is not really an inverse.
         # If you need pinv, just call the pinv method.
-        return m.np_matrix_transform(np.linalg.inv, transpose_dims=True)
+        return np.linalg.inv(mat)
 
-    def mat_det(self, m):
-        return np.linalg.det(m.as_np_matrix())
+    def mat_det(self, mat):
+        return np.linalg.det(mat)
 
-    def mat_norm(self, m):
-        return np.linalg.norm(m.nparray)
+    def mat_norm(self, arr):
+        return np.linalg.norm(arr)
 
-    def mat_pinv(self, m, rcond):
-        return m.np_matrix_transform(
-            lambda x: np.linalg.pinv(x, rcond), transpose_dims=True)
+    def mat_pinv(self, mat, rcond):
+        return np.linalg.pinv(mat, rcond)
 
-    def mat_conj(self, m):
-        return m.np_matrix_transform(lambda x: x.conj())
+    def mat_conj(self, mat):
+        return mat.conj()
 
-    def mat_n(self, m, prec=None, digits=None):
+    def mat_n(self, mat, prec=None, digits=None):
         # arrays in this base field are already numeric
-        return m
+        return mat
 
-    def mat_simplify(self, m, full=False):
-        return m
+    def mat_simplify(self, mat, full=False):
+        return mat
 
-    def mat_expm(self, m, q):
+    def mat_expm(self, mat, q):
         import scipy.linalg
-        return m.np_matrix_transform(lambda x: scipy.linalg.expm(x, q))
+        return scipy.linalg.expm(mat, q)
 
-    def mat_pow(self, m, n):
-        return m.np_matrix_transform(lambda x: x**n)
+    def mat_pow(self, mat, n):
+        return mat**n
 
-    def mat_svd(self, m, full_matrices):
+    def mat_svd(self, mat, full_matrices):
         # cast to complex in case we have symbolic vals from Sage
-        (u, s, v) = np.linalg.svd(np.matrix(m, dtype=complex), \
+        (u, s, v) = np.linalg.svd(np.matrix(mat, dtype=complex), \
             full_matrices=full_matrices)
         return (u, s, v)
 
-    def mat_svd_vals(self, m):
+    def mat_svd_vals(self, mat):
         # cast to complex in case we have symbolic vals from Sage
-        (u, s, v) = np.linalg.svd(np.matrix(m, dtype=complex), \
+        (u, s, v) = np.linalg.svd(np.matrix(mat, dtype=complex), \
             full_matrices=False)
         return s
 
-    def mat_eig(self, m, hermit):
+    def mat_eig(self, mat, hermit):
         eig_fn = np.linalg.eigh if hermit else np.linalg.eig
         # cast to complex in case we have symbolic vals from Sage
-        (w, v) = eig_fn(np.matrix(m, dtype=complex))
+        (w, v) = eig_fn(np.matrix(mat, dtype=complex))
         return (w, v)
 
-    def mat_eigvals(self, m, hermit):
+    def mat_eigvals(self, mat, hermit):
         eig_fn = np.linalg.eigvalsh if hermit else np.linalg.eigvals
         # cast to complex in case we have symbolic vals from Sage
-        w = eig_fn(np.matrix(m, dtype=complex))
+        w = eig_fn(np.matrix(mat, dtype=complex))
         return w
 
-    def mat_qr(self, m, inner_space):
+    def mat_qr(self, mat):
         # cast to complex in case we have symbolic vals from Sage
-        m_mat = m.as_np_matrix(dtype=complex)
-        (q, r) = np.linalg.qr(m_mat)
-
-        if inner_space is None:
-            if m_mat.shape[0] < m_mat.shape[1]:
-                inner_space = m.space.ket_space()
-            else:
-                inner_space = m.space.bra_space().H
-
-        inner_space.assert_ket_space()
-        
-        Q = (m.space.ket_space() * inner_space.H).reshaped_np_matrix(q)
-        R = (inner_space * m.space.bra_space()).reshaped_np_matrix(r)
-
-        return (Q, R)
+        (q, r) = np.linalg.qr(np.matrix(mat, dtype=complex))
+        return (q, r)
 
     def create_space1(self, kets_and_bras):
         r"""

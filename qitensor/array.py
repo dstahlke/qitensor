@@ -586,8 +586,37 @@ class HilbertArray(object):
     def __setitem__(self, key, val):
         return self._get_set_item(key, True, val)
 
-    def as_np_matrix(self, dtype=None, col_space=None, row_space=None):
-        # FIXME - docs for col_space and row_space params
+    def _get_row_col_spaces(self, row_space=None, col_space=None):
+        def parse_space(s):
+            if s is None:
+                return None
+            elif isinstance(s, HilbertSpace):
+                return s.sorted_kets + s.sorted_bras
+            else:
+                return sum((parse_space(x) for x in s), [])
+
+        col_space = parse_space(col_space)
+        row_space = parse_space(row_space)
+
+        if row_space is None and col_space is None:
+            col_space = self.space.sorted_kets
+            row_space = self.space.sorted_bras
+        elif row_space is None:
+            row_space = [x for x in self.axes if not x in col_space]
+        elif col_space is None:
+            col_space = [x for x in self.axes if not x in row_space]
+
+        col_set = frozenset(col_space)
+        row_set = frozenset(row_space)
+        assert col_set.isdisjoint(row_set)
+        assert row_set <= self.space.bra_ket_set
+        assert col_set <= self.space.bra_ket_set
+        assert col_set | row_set == self.space.bra_ket_set
+
+        return (row_space, col_space)
+
+    def as_np_matrix(self, dtype=None, row_space=None, col_space=None):
+        # FIXME - docs for row_space and col_space params
         """
         Returns the underlying data as a numpy.matrix.  Returns a copy, not a view.
 
@@ -611,31 +640,8 @@ class HilbertArray(object):
         True
         """
 
-        def parse_space(s):
-            if s is None:
-                return None
-            elif isinstance(s, HilbertSpace):
-                return s.sorted_kets + s.sorted_bras
-            else:
-                return sum((parse_space(x) for x in s), [])
-
-        col_space = parse_space(col_space)
-        row_space = parse_space(row_space)
-
-        if col_space is None and row_space is None:
-            col_space = self.space.sorted_kets
-            row_space = self.space.sorted_bras
-        elif row_space is None:
-            row_space = [x for x in self.axes if not x in col_space]
-        elif col_space is None:
-            col_space = [x for x in self.axes if not x in row_space]
-
-        col_set = frozenset(col_space)
-        row_set = frozenset(row_space)
-        assert col_set.isdisjoint(row_set)
-        assert row_set <= self.space.bra_ket_set
-        assert col_set <= self.space.bra_ket_set
-        assert col_set | row_set == self.space.bra_ket_set
+        rowcol_kw = { 'row_space': row_space, 'col_space': col_space }
+        (row_space, col_space) = self._get_row_col_spaces(**rowcol_kw)
 
         col_size = shape_product([x.dim() for x in col_space])
         row_size = shape_product([x.dim() for x in row_space])
@@ -1129,7 +1135,7 @@ class HilbertArray(object):
             inner_space.assert_ket_space()
             return self.space.base_field.mat_svd_partial(self, inner_space)
 
-    def singular_vals(self, col_space=None, row_space=None):
+    def singular_vals(self, row_space=None, col_space=None):
         """
         Returns the singular values of this array.
 
@@ -1145,8 +1151,8 @@ class HilbertArray(object):
         True
         """
 
-        mat_kw = { 'col_space': col_space, 'row_space': row_space }
-        m = self.as_np_matrix(**mat_kw)
+        rowcol_kw = { 'row_space': row_space, 'col_space': col_space }
+        m = self.as_np_matrix(**rowcol_kw)
 
         return self.space.base_field.mat_svd_vals(m)
 

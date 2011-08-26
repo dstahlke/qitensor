@@ -667,11 +667,8 @@ class HilbertSpace(object):
         if not have_sage:
             raise HilbertError('This is only available under Sage')
 
-        sage_ring = self.base_field.sage_ring
-        if m.base_ring() != sage_ring:
-            m = m.change_ring(sage_ring)
         return self.reshaped_np_matrix( \
-            np.array(m, dtype=self.base_field.dtype), \
+            self.base_field.matrix_sage_to_np(m), \
             input_axes=input_axes)
 
     ########## end of stuff that only works in Sage ##########

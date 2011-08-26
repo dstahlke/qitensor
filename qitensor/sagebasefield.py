@@ -16,14 +16,20 @@ class SageHilbertBaseField(HilbertBaseField):
         np_mat = np.array(np_mat)
 
         if self.sage_ring is None:
-            m = sage.all.matrix(np_mat)
+            sage_mat = sage.all.matrix(np_mat)
         else:
-            m = sage.all.matrix(self.sage_ring, np_mat)
+            sage_mat = sage.all.matrix(self.sage_ring, np_mat)
 
         if R is None:
-            return m
+            return sage_mat
         else:
-            return m.change_ring(R)
+            return sage_mat.change_ring(R)
+
+    def matrix_sage_to_np(self, sage_mat):
+        if sage_mat.base_ring() != self.sage_ring:
+            sage_mat = sage_mat.change_ring(self.sage_ring)
+        np_mat = np.matrix(sage_mat, dtype=self.dtype)
+        return np_mat
 
     def complex_unit(self):
         return self.sage_ring(sage.all.I)

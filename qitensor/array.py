@@ -1501,6 +1501,9 @@ class HilbertArray(object):
         return self.space.base_field.mat_simplify(self, full=True)
 
     def _matrix_(self, R=None):
+        return self.sage_matrix(R)
+
+    def sage_matrix(self, R=None):
         if not have_sage:
             raise HilbertError('This is only available under Sage')
 
@@ -1522,8 +1525,6 @@ class HilbertArray(object):
         if not have_sage:
             raise HilbertError('This is only available under Sage')
 
-        import sage.all
-
         hs = self.space
         
         blocks = [self]
@@ -1541,7 +1542,9 @@ class HilbertArray(object):
             ncols = len(h.indices)
 
         # FIXME - use matrix_np_to_sage here?
-        blocks = [sage.all.matrix(x) for x in blocks]
+        blocks = [x.sage_matrix() for x in blocks]
+
+        import sage.all
 
         return sage.all.block_matrix(blocks, nrows=nrows, ncols=ncols, subdivide=True)
 
@@ -1549,13 +1552,12 @@ class HilbertArray(object):
         if not have_sage:
             raise HilbertError('This is only available under Sage')
 
-        import sage.all
-
-        m = sage.all.matrix(self)
-        m = f(m)
         out_hilb = self.space
         if transpose_dims:
             out_hilb = out_hilb.H
+
+        m = self.sage_matrix()
+        m = f(m)
         return out_hilb.reshaped_sage_matrix(m)
 
     ########## end of stuff that only works in Sage ##########

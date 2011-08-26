@@ -14,34 +14,47 @@ from qitensor.atom import HilbertAtom
 __all__ = ['HilbertArray']
 
 class HilbertArray(object):
-    def __init__(self, space, data, noinit_data, reshape):
+    def __init__(self, space, data, noinit_data, reshape, input_axes):
         """
         Don't call this constructor yourself, use HilbertSpace.array
         """
 
         hs = space
         self.space = hs
+        self.axes = hs.sorted_kets + hs.sorted_bras
 
         if noinit_data:
+            assert data is None
+            assert input_axes is None
             self.nparray = None
         elif data is None:
+            assert input_axes is None
             self.nparray = np.zeros(hs.shape, dtype=hs.base_field.dtype)
         else:
             self.nparray = np.array(data, dtype=hs.base_field.dtype)
+
+            if input_axes is None:
+                data_shape = hs.shape
+            else:
+                data_shape = tuple([ len(spc.indices) for spc in input_axes ])
+
+            # make sure given array is the right size
             if reshape:
-                if shape_product(self.nparray.shape) != shape_product(hs.shape):
+                if shape_product(self.nparray.shape) != shape_product(data_shape):
                     raise HilbertShapeError(shape_product(data.shape), 
-                        shape_product(hs.shape))
-                self.nparray = self.nparray.reshape(hs.shape)
-            if self.nparray.shape != hs.shape:
-                raise HilbertShapeError(self.nparray.shape, hs.shape)
+                        shape_product(data_shape))
+                self.nparray = self.nparray.reshape(data_shape)
+            if self.nparray.shape != data_shape:
+                raise HilbertShapeError(self.nparray.shape, data_shape)
+
+            if input_axes is not None:
+                shuffle = [ input_axes.index(x) for x in self.axes ]
+                self.nparray = self.nparray.transpose(shuffle)
 
         if self.nparray is not None:
             cast_fn = space.base_field.input_cast_function()
             if cast_fn is not None:
                 self.nparray = np.vectorize(cast_fn)(self.nparray)
-
-        self.axes = hs.sorted_kets + hs.sorted_bras
 
     def copy(self):
         """

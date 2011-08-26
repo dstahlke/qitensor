@@ -240,14 +240,14 @@ class HilbertBaseField(object):
         """
         return HilbertSpace(ket_set, bra_set, self)
 
-    def _array_factory(self, space, data, noinit_data, reshape):
+    def _array_factory(self, space, data, noinit_data, reshape, input_axes):
         r"""
         Factory method for creating ``HilbertArray`` objects.
 
         Subclasses can override this method in order to return custom
         subclasses of ``HilbertArray``.
         """
-        return HilbertArray(space, data, noinit_data, reshape)
+        return HilbertArray(space, data, noinit_data, reshape, input_axes)
 
     def indexed_space(self, label, indices, latex_label=None, group_op=None):
         r"""

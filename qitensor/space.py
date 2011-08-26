@@ -347,7 +347,8 @@ class HilbertSpace(object):
 
         return self.array(m, reshape=True)
 
-    def array(self, data=None, noinit_data=False, reshape=False):
+    def array(self, data=None, noinit_data=False, reshape=False, input_axes=None):
+        # FIXME - docs for input_axes param
         """
         Returns a ``HilbertArray`` created from the given data, or filled with
         zeros if no data is given.
@@ -379,7 +380,7 @@ class HilbertSpace(object):
             it is not the proper shape.
         :type reshape: bool; default False
 
-        >>> from qitensor import qubit
+        >>> from qitensor import qubit, qudit
         >>> ha = qubit('a')
         >>> ha.array([1,2])
         HilbertArray(|a>,
@@ -398,9 +399,21 @@ class HilbertSpace(object):
         HilbertArray(|a><a|,
         array([[ 1.+0.j,  2.+0.j],
                [ 3.+0.j,  4.+0.j]]))
+        
+        >>> import numpy
+        >>> ha = qubit('a')
+        >>> hb = qudit('b', 3)
+        >>> hc = qudit('c', 4)
+        >>> arr = numpy.zeros((2, 3, 4))
+        >>> x = (ha*hb.H*hc).array(arr, input_axes=(ha, hb.H, hc))
+        >>> x.space
+        |a,c><b|
+        >>> x.nparray.shape
+        (2, 4, 3)
         """
 
-        return self.base_field._array_factory(self, data, noinit_data, reshape)
+        return self.base_field._array_factory( \
+            self, data, noinit_data, reshape, input_axes)
 
     def random_array(self):
         """

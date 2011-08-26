@@ -107,40 +107,22 @@ class HilbertBaseField(object):
     def mat_pow(self, m, n):
         return m.np_matrix_transform(lambda x: x**n)
 
-    def mat_svd_full(self, m, s_space):
-        (u, s, v) = np.linalg.svd(m.as_np_matrix(dtype=complex))
-        u_space = m.space.ket_space() * s_space.ket_space().H
-        v_space = m.space.bra_space() * s_space.bra_space().H
-        U = u_space.reshaped_np_matrix(u)
-        V = v_space.reshaped_np_matrix(v)
-
-        dim1 = shape_product(s_space.ket_space().shape)
-        dim2 = shape_product(s_space.bra_space().shape)
-        min_dim = np.min([dim1, dim2])
-        Sm = np.zeros((dim1, dim2), dtype=self.dtype)
-        Sm[:min_dim, :min_dim] = np.diag(s)
-        S = s_space.reshaped_np_matrix(Sm)
-
-        return (U, S, V)
-
-    def mat_svd_partial(self, m, s_space):
-        (u, s, v) = np.linalg.svd(m.as_np_matrix(dtype=complex), full_matrices=False)
-        u_space = m.space.ket_space() * s_space.H
-        s_mat_space = s_space * s_space.H
-        v_space = s_space * m.space.bra_space()
-        U = u_space.reshaped_np_matrix(u)
-        V = v_space.reshaped_np_matrix(v)
-        S = s_mat_space.diag(s)
-
-        return (U, S, V)
+    def mat_svd(self, m, full_matrices):
+        # cast to complex in case we have symbolic vals from Sage
+        (u, s, v) = np.linalg.svd(np.matrix(m, dtype=complex), \
+            full_matrices=full_matrices)
+        return (u, s, v)
 
     def mat_svd_vals(self, m):
-        (u, s, v) = np.linalg.svd(np.matrix(m, dtype=complex), full_matrices=False)
+        # cast to complex in case we have symbolic vals from Sage
+        (u, s, v) = np.linalg.svd(np.matrix(m, dtype=complex), \
+            full_matrices=False)
         return s
 
     def mat_eig(self, m, w_space, hermit):
         w_space.assert_ket_space()
         eig_fn = np.linalg.eigh if hermit else np.linalg.eig
+        # cast to complex in case we have symbolic vals from Sage
         (w, v) = eig_fn(m.as_np_matrix(dtype=complex))
 
         # sort eigenvalues in ascending order of real component
@@ -154,6 +136,7 @@ class HilbertBaseField(object):
 
     def mat_eigvals(self, m, hermit):
         eig_fn = np.linalg.eigvalsh if hermit else np.linalg.eigvals
+        # cast to complex in case we have symbolic vals from Sage
         w = eig_fn(m.as_np_matrix(dtype=complex))
 
         # sort eigenvalues in ascending order of real component
@@ -166,6 +149,7 @@ class HilbertBaseField(object):
         return w
 
     def mat_qr(self, m, inner_space):
+        # cast to complex in case we have symbolic vals from Sage
         m_mat = m.as_np_matrix(dtype=complex)
         (q, r) = np.linalg.qr(m_mat)
 

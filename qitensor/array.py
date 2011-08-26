@@ -587,6 +587,10 @@ class HilbertArray(object):
         return self._get_set_item(key, True, val)
 
     def _get_row_col_spaces(self, row_space=None, col_space=None):
+        """
+        Parses the row_space and col_space parameters used by various functions.
+        """
+
         def parse_space(s):
             if s is None:
                 return None
@@ -1104,8 +1108,9 @@ class HilbertArray(object):
         True
         """
 
+        hs = self.space
+
         if inner_space is None:
-            hs = self.space
             if full_matrices:
                 inner_space = hs
             else:
@@ -1128,12 +1133,32 @@ class HilbertArray(object):
         if not isinstance(inner_space, HilbertSpace):
             raise TypeError('inner_space must be a HilbertSpace')
 
+        (u, s, v) = hs.base_field.mat_svd(self.as_np_matrix(), full_matrices)
+
         if full_matrices:
-            return self.space.base_field.mat_svd_full(
-                self, inner_space)
+            u_space = hs.ket_space() * inner_space.ket_space().H
+            v_space = hs.bra_space() * inner_space.bra_space().H
+            U = u_space.reshaped_np_matrix(u)
+            V = v_space.reshaped_np_matrix(v)
+
+            dim1 = shape_product(inner_space.ket_space().shape)
+            dim2 = shape_product(inner_space.bra_space().shape)
+            min_dim = np.min([dim1, dim2])
+            Sm = np.zeros((dim1, dim2), dtype=hs.base_field.dtype)
+            Sm[:min_dim, :min_dim] = np.diag(s)
+            S = inner_space.reshaped_np_matrix(Sm)
         else:
             inner_space.assert_ket_space()
-            return self.space.base_field.mat_svd_partial(self, inner_space)
+
+            u_space = hs.ket_space() * inner_space.H
+            v_space = inner_space * hs.bra_space()
+            U = u_space.reshaped_np_matrix(u)
+            V = v_space.reshaped_np_matrix(v)
+
+            s_mat_space = inner_space * inner_space.H
+            S = s_mat_space.diag(s)
+
+        return (U, S, V)
 
     def singular_vals(self, row_space=None, col_space=None):
         """

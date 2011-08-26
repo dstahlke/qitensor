@@ -1,5 +1,6 @@
 Version 0.7.1 (ongoing):
 	as_np_matrix take {row,col}_space args
+	svd_list method
 
 Version 0.7 (2011-08-09):
 	added QR and random_unitary methods

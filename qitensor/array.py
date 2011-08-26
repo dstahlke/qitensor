@@ -1160,6 +1160,74 @@ class HilbertArray(object):
 
         return (U, S, V)
 
+    def svd_list(self, row_space=None, col_space=None):
+        # FIXME - docs
+        """
+        >>> from qitensor import qubit, qudit
+        >>> ha = qudit('a', 3)
+        >>> hb = qubit('b')
+        >>> hc = qubit('c')
+        >>> W = (ha * hb.H * hc.H).random_array()
+        >>> W.space
+        |a><b,c|
+
+        >>> (Ul, sl, Vl) = W.svd_list()
+        >>> (len(Ul), len(sl), len(Vl))
+        (3, 3, 3)
+        >>> (Ul[0].space, Vl[0].space)
+        (|a>, <b,c|)
+        >>> np.allclose(np.array([[x.H*y for x in Ul] for y in Ul]), np.eye(len(sl)))
+        True
+        >>> np.allclose(np.array([[x*y.H for x in Vl] for y in Vl]), np.eye(len(sl)))
+        True
+        >>> (np.sum([u*s*v for (u,s,v) in zip(Ul, sl, Vl)]) - W).norm() < 1e-14
+        True
+
+        >>> (Ul, sl, Vl) = W.svd_list(col_space=ha*hb.H)
+        >>> (len(Ul), len(sl), len(Vl))
+        (2, 2, 2)
+        >>> (Ul[0].space, Vl[0].space)
+        (|a><b|, <c|)
+        >>> np.allclose(np.array([[(x.H*y).trace() for x in Ul] for y in Ul]), np.eye(len(sl)))
+        True
+        >>> np.allclose(np.array([[x*y.H for x in Vl] for y in Vl]), np.eye(len(sl)))
+        True
+        >>> (np.sum([u*s*v for (u,s,v) in zip(Ul, sl, Vl)]) - W).norm() < 1e-14
+        True
+
+        >>> # FIXME - test not appropriate here
+        >>> (Ul, sl, Vl) = W.svd_list(col_space=[hb.H, ha])
+        >>> (len(Ul), len(sl), len(Vl))
+        (2, 2, 2)
+        >>> (Ul[0].space, Vl[0].space)
+        (|a><b|, <c|)
+        >>> np.allclose(np.array([[(x.H*y).trace() for x in Ul] for y in Ul]), np.eye(len(sl)))
+        True
+        >>> np.allclose(np.array([[x*y.H for x in Vl] for y in Vl]), np.eye(len(sl)))
+        True
+        >>> (np.sum([u*s*v for (u,s,v) in zip(Ul, sl, Vl)]) - W).norm() < 1e-14
+        True
+        """
+
+        hs = self.space
+
+        rowcol_kw = { 'row_space': row_space, 'col_space': col_space }
+        (row_space, col_space) = self._get_row_col_spaces(**rowcol_kw)
+        m = self.as_np_matrix(**rowcol_kw)
+
+        (u, s, v) = hs.base_field.mat_svd(m, False)
+        #print u.shape
+        #print s.shape
+        #print v.shape
+        #print row_space
+        #print col_space
+
+        # FIXME - account for ordering of spaces
+        U_list = [np.product(col_space).array(x, reshape=True) for x in u.T]
+        V_list = [np.product(row_space).array(x, reshape=True) for x in v]
+
+        return (U_list, s, V_list)
+
     def singular_vals(self, row_space=None, col_space=None):
         """
         Returns the singular values of this array.

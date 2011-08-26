@@ -48,6 +48,7 @@ class HilbertArray(object):
                 raise HilbertShapeError(self.nparray.shape, data_shape)
 
             if input_axes is not None:
+                assert frozenset(input_axes) == frozenset(self.axes)
                 shuffle = [ input_axes.index(x) for x in self.axes ]
                 self.nparray = self.nparray.transpose(shuffle)
 

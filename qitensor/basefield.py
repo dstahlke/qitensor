@@ -119,33 +119,16 @@ class HilbertBaseField(object):
             full_matrices=False)
         return s
 
-    def mat_eig(self, m, w_space, hermit):
-        w_space.assert_ket_space()
+    def mat_eig(self, m, hermit):
         eig_fn = np.linalg.eigh if hermit else np.linalg.eig
         # cast to complex in case we have symbolic vals from Sage
-        (w, v) = eig_fn(m.as_np_matrix(dtype=complex))
-
-        # sort eigenvalues in ascending order of real component
-        srt = np.argsort(-w)
-        w = w[srt]
-        v = v[:, srt]
-
-        W = (w_space * w_space.H).diag(w)
-        V = (m.space.ket_space() * w_space.H).reshaped_np_matrix(v)
-        return (W, V)
+        (w, v) = eig_fn(np.matrix(m, dtype=complex))
+        return (w, v)
 
     def mat_eigvals(self, m, hermit):
         eig_fn = np.linalg.eigvalsh if hermit else np.linalg.eigvals
         # cast to complex in case we have symbolic vals from Sage
-        w = eig_fn(m.as_np_matrix(dtype=complex))
-
-        # sort eigenvalues in ascending order of real component
-        w = -np.sort(-w)
-
-        if hermit:
-            assert np.all(np.imag(w) == 0)
-            w = np.real(w)
-
+        w = eig_fn(np.matrix(m, dtype=complex))
         return w
 
     def mat_qr(self, m, inner_space):

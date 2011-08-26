@@ -12,6 +12,19 @@ class SageHilbertBaseField(HilbertBaseField):
         HilbertBaseField.__init__(self, object, unique_id)
         self.sage_ring = sage_ring
 
+    def matrix_np_to_sage(self, np_mat, R=None):
+        np_mat = np.array(np_mat)
+
+        if self.sage_ring is None:
+            m = sage.all.matrix(np_mat)
+        else:
+            m = sage.all.matrix(self.sage_ring, np_mat)
+
+        if R is None:
+            return m
+        else:
+            return m.change_ring(R)
+
     def complex_unit(self):
         return self.sage_ring(sage.all.I)
 
@@ -62,38 +75,23 @@ class SageHilbertBaseField(HilbertBaseField):
     def mat_pow(self, m, n):
         return m.sage_matrix_transform(lambda x: x**n)
 
-    def mat_eig(self, m, w_space, hermit):
-        w_space.assert_ket_space()
-        (w, v) = sage.all.matrix(m).eigenmatrix_right()
+    def mat_eig(self, m, hermit):
+        (w, v) = self.matrix_np_to_sage(m).eigenmatrix_right()
 
-        # convert to numpy to allow sorting
+        # convert result to numpy
         w = np.array(w.diagonal())
         v = np.array(v)
-
-        # sort eigenvalues in ascending order of real component
-        srt = np.argsort(-w)
-        w = w[srt]
-        v = v[:, srt]
 
         # Sage doesn't normalize the columns for symbolic expressions, so do it
         # here.
         v = np.array([c / sage.all.sqrt(np.sum(c**2)) for c in v.T]).T
 
-        W = (w_space * w_space.H).diag(w)
-        V = (m.space.ket_space() * w_space.H).reshaped_np_matrix(v)
-        return (W, V)
+        return (w, v)
 
     def mat_eigvals(self, m, hermit):
-        w = sage.all.matrix(m).eigenvalues()
-
-        # sort eigenvalues in ascending order of real component
-        w = -np.sort(-np.array(w))
-
-        if hermit:
-            assert np.all(np.imag(w) == 0)
-            w = np.real(w)
-
-        return w
+        w = self.matrix_np_to_sage(m).eigenvalues()
+        # convert result to numpy
+        return np.array(w)
 
 def can_use_type(dtype):
     return isinstance(dtype, sage.all.CommutativeRing)

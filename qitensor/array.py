@@ -1332,7 +1332,16 @@ class HilbertArray(object):
 
         w_space.assert_ket_space()
 
-        return self.space.base_field.mat_eig(self, w_space, hermit)
+        (w, v) = self.space.base_field.mat_eig(self.as_np_matrix(), hermit)
+
+        # sort eigenvalues in ascending order of real component
+        srt = np.argsort(-w)
+        w = w[srt]
+        v = v[:, srt]
+
+        W = (w_space * w_space.H).diag(w)
+        V = (self.space.ket_space() * w_space.H).reshaped_np_matrix(v)
+        return (W, V)
 
     def eigvals(self, hermit=False):
         """
@@ -1361,7 +1370,16 @@ class HilbertArray(object):
             raise HilbertError('bra space must be the same as ket space '+
                 '(space was '+repr(self.space)+')')
 
-        return self.space.base_field.mat_eigvals(self, hermit)
+        w = self.space.base_field.mat_eigvals(self.as_np_matrix(), hermit)
+
+        # sort eigenvalues in ascending order of real component
+        w = -np.sort(-w)
+
+        if hermit:
+            assert np.all(np.imag(w) == 0)
+            w = np.real(w)
+
+        return w
 
     def entropy(self, normalize=False, checks=True):
         """
@@ -1486,20 +1504,8 @@ class HilbertArray(object):
         if not have_sage:
             raise HilbertError('This is only available under Sage')
 
-        import sage.all
-
-        np_mat = np.array(self.as_np_matrix())
-
-        sage_ring = self.space.base_field.sage_ring
-        if sage_ring is None:
-            m = sage.all.matrix(np_mat)
-        else:
-            m = sage.all.matrix(sage_ring, np_mat)
-
-        if R is None:
-            return m
-        else:
-            return m.change_ring(R)
+        return self.space.base_field.matrix_np_to_sage( \
+            self.as_np_matrix(), R)
 
     def _latex_(self):
         if not have_sage:
@@ -1534,6 +1540,7 @@ class HilbertArray(object):
             blocks = [m[{h: i}] for m in blocks for i in h.indices]
             ncols = len(h.indices)
 
+        # FIXME - use matrix_np_to_sage here?
         blocks = [sage.all.matrix(x) for x in blocks]
 
         return sage.all.block_matrix(blocks, nrows=nrows, ncols=ncols, subdivide=True)

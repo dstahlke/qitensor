@@ -295,7 +295,8 @@ class HilbertSpace(object):
         diag = np.diagflat(v)
         return self.reshaped_np_matrix(diag)
 
-    def reshaped_np_matrix(self, m):
+    def reshaped_np_matrix(self, m, input_axes=None):
+        # FIXME - docs for input_axes param
         """
         Returns a ``HilbertArray`` created from a given numpy matrix.
 
@@ -345,7 +346,7 @@ class HilbertSpace(object):
         if len(m.shape) != 2 or m.shape[0] != ket_size or m.shape[1] != bra_size:
             raise HilbertShapeError(m.shape, (ket_size, bra_size))
 
-        return self.array(m, reshape=True)
+        return self.array(m, reshape=True, input_axes=input_axes)
 
     def array(self, data=None, noinit_data=False, reshape=False, input_axes=None):
         # FIXME - docs for input_axes param
@@ -662,13 +663,15 @@ class HilbertSpace(object):
 
     ########## stuff that only works in Sage ##########
 
-    def reshaped_sage_matrix(self, m):
+    def reshaped_sage_matrix(self, m, input_axes=None):
         if not have_sage:
             raise HilbertError('This is only available under Sage')
 
         sage_ring = self.base_field.sage_ring
         if m.base_ring() != sage_ring:
             m = m.change_ring(sage_ring)
-        return self.reshaped_np_matrix(np.array(m, dtype=self.base_field.dtype))
+        return self.reshaped_np_matrix( \
+            np.array(m, dtype=self.base_field.dtype), \
+            input_axes=input_axes)
 
     ########## end of stuff that only works in Sage ##########

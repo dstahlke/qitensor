@@ -1184,6 +1184,7 @@ class HilbertArray(object):
         >>> W.space
         |a><b,c|
 
+        >>> # test basic properties of SVD
         >>> (Ul, sl, Vl) = W.svd_list()
         >>> (len(Ul), len(sl), len(Vl))
         (3, 3, 3)
@@ -1196,6 +1197,7 @@ class HilbertArray(object):
         >>> (np.sum([u*s*v for (u,s,v) in zip(Ul, sl, Vl)]) - W).norm() < 1e-14
         True
 
+        >>> # take SVD across the |a><b| vs. <c| cut
         >>> (Ul, sl, Vl) = W.svd_list(col_space=ha*hb.H)
         >>> (len(Ul), len(sl), len(Vl))
         (2, 2, 2)
@@ -1208,16 +1210,10 @@ class HilbertArray(object):
         >>> (np.sum([u*s*v for (u,s,v) in zip(Ul, sl, Vl)]) - W).norm() < 1e-14
         True
 
-        >>> # FIXME - test not appropriate here
+        >>> # as above, but with col_space given as a list
         >>> (Ul, sl, Vl) = W.svd_list(col_space=[hb.H, ha])
-        >>> (len(Ul), len(sl), len(Vl))
-        (2, 2, 2)
         >>> (Ul[0].space, Vl[0].space)
         (|a><b|, <c|)
-        >>> np.allclose(np.array([[(x.H*y).trace() for x in Ul] for y in Ul]), np.eye(len(sl)))
-        True
-        >>> np.allclose(np.array([[x*y.H for x in Vl] for y in Vl]), np.eye(len(sl)))
-        True
         >>> (np.sum([u*s*v for (u,s,v) in zip(Ul, sl, Vl)]) - W).norm() < 1e-14
         True
         """
@@ -1226,6 +1222,8 @@ class HilbertArray(object):
 
         rowcol_kw = { 'row_space': row_space, 'col_space': col_space }
         (row_space, col_space) = self._get_row_col_spaces(**rowcol_kw)
+        assert len(row_space) > 0
+        assert len(col_space) > 0
         m = self.as_np_matrix(**rowcol_kw)
 
         (u, s, v) = hs.base_field.mat_svd(m, False)
@@ -1235,9 +1233,12 @@ class HilbertArray(object):
         #print row_space
         #print col_space
 
-        # FIXME - account for ordering of spaces
-        U_list = [np.product(col_space).array(x, reshape=True) for x in u.T]
-        V_list = [np.product(row_space).array(x, reshape=True) for x in v]
+        U_list = [ \
+            np.product(col_space).array(x, reshape=True, input_axes=col_space) \
+            for x in u.T]
+        V_list = [ \
+            np.product(row_space).array(x, reshape=True, input_axes=row_space) \
+            for x in v]
 
         return (U_list, s, V_list)
 

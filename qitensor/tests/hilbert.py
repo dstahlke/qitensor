@@ -5,6 +5,7 @@ import qitensor
 from qitensor import qubit, qudit, indexed_space
 from qitensor import MismatchedIndexSetError, DuplicatedSpaceError
 from qitensor import BraKetMixtureError, HilbertIndexError, HilbertShapeError
+from qitensor.basefield import GroupOpCyclic_factory
 
 class HilbertBasicTests(unittest.TestCase):
     def setUp(self):
@@ -20,7 +21,7 @@ class HilbertBasicTests(unittest.TestCase):
         self.assertEqual(str(self.Ha*self.Hb.H), '|a><b|')
 
     def testAtomCompatibility(self):
-        Ha2 = indexed_space('a', [0, 1])
+        Ha2 = indexed_space('a', [0, 1], group_op=GroupOpCyclic_factory(2))
         Ha3 = indexed_space('a', [0, 1, 2])
         # OK, same index set
         self.Ha * Ha2.H
@@ -33,7 +34,7 @@ class HilbertBasicTests(unittest.TestCase):
             lambda: self.Ha == Ha3)
 
     def testRedundant(self):
-        Ha2 = indexed_space('a', [0, 1])
+        Ha2 = indexed_space('a', [0, 1], group_op=GroupOpCyclic_factory(2))
         self.assertRaises(DuplicatedSpaceError, lambda: self.Ha * self.Ha)
         self.assertRaises(DuplicatedSpaceError, lambda: self.Ha * Ha2)
         self.assertRaises(DuplicatedSpaceError, lambda: self.Ha.H * self.Ha.H)

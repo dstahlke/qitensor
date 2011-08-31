@@ -171,9 +171,9 @@ class HilbertAtom(HilbertSpace):
             if self.is_dual:
                 self._prime = self.H.prime.H
             else:
-                # FIXME - carry over other properties
-                self._prime = self.base_field.indexed_space(
-                    self.label+"'", self.indices, "{"+self.latex_label+"}'")
+                self._prime = atom_factory(
+                    self.label+"'", "{"+self.latex_label+"}'", \
+                    self.indices, self.group_op, self.base_field)
         return self._prime
 
     def ket(self, idx):

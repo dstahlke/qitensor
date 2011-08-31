@@ -184,7 +184,6 @@ class HilbertBaseField(object):
 
         # Just return the atoms if possible:
         if len(ket_set) == 0 and len(bra_set) == 0:
-            # FIXME - also catch in factory
             raise HilbertError('tried to create empty HilbertSpace')
         elif len(ket_set) == 1 and len(bra_set) == 0:
             return list(ket_set)[0]

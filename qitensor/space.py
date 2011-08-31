@@ -59,7 +59,8 @@ class HilbertSpace(object):
             self.sorted_kets = sorted(list(ket_set))
             self.sorted_bras = sorted(list(bra_set))
 
-            assert len(self.bra_ket_set) > 0
+            if len(self.bra_ket_set) == 0:
+                raise HilbertError('tried to create empty HilbertSpace')
             self.base_field = list(self.bra_ket_set)[0].base_field
 
             # Make sure all atoms are compatible, otherwise raise

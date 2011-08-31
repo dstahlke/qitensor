@@ -25,6 +25,9 @@ class HilbertSpace(object):
         # subclass constructor.  That constructor will take care of setting up
         # these attributes.
         if not ket_set is None:
+            assert isinstance(ket_set, frozenset)
+            assert isinstance(bra_set, frozenset)
+
             for x in ket_set:
                 assert not x.is_dual
             for x in bra_set:
@@ -43,6 +46,8 @@ class HilbertSpace(object):
             ket_shape = [len(x.indices) for x in self.sorted_kets]
             bra_shape = [len(x.indices) for x in self.sorted_bras]
             self.shape = tuple(ket_shape + bra_shape)
+
+    #def __reduce__(
 
     def bra_space(self):
         """

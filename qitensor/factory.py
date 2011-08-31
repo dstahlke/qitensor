@@ -13,11 +13,11 @@ __all__ = ['base_field_lookup', 'indexed_space', 'qubit', 'qudit']
 _base_field_factories = []
 
 import qitensor.basefield
-_base_field_factories.append(qitensor.basefield.factory)
+_base_field_factories.append(qitensor.basefield._factory)
 
 if have_sage:
     import qitensor.sagebasefield
-    _base_field_factories.append(qitensor.sagebasefield.factory)
+    _base_field_factories.append(qitensor.sagebasefield._factory)
     
 ###########################
 

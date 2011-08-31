@@ -14,12 +14,14 @@ from qitensor.space import HilbertSpace
 __all__ = ['HilbertAtom']
 
 def _unreduce_v1(label, latex_label, indices, group_op, base_field, is_dual):
-    atom = atom_factory(label, latex_label, indices, group_op, base_field)
+    atom = base_field._atom_factory(label, latex_label, indices, group_op)
     return atom.H if is_dual else atom
 
 _atom_cache = weakref.WeakValueDictionary()
 
-def atom_factory(label, latex_label, indices, group_op, base_field):
+def _cached_atom_factory(label, latex_label, indices, group_op, base_field):
+    """This should be called only by ``qitensor.factory._atom_factory``."""
+
     if latex_label is None:
         latex_label = label
 
@@ -171,9 +173,9 @@ class HilbertAtom(HilbertSpace):
             if self.is_dual:
                 self._prime = self.H.prime.H
             else:
-                self._prime = atom_factory(
+                self._prime = self.base_field._atom_factory(
                     self.label+"'", "{"+self.latex_label+"}'", \
-                    self.indices, self.group_op, self.base_field)
+                    self.indices, self.group_op)
         return self._prime
 
     def ket(self, idx):

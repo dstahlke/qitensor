@@ -8,7 +8,7 @@ from qitensor import HilbertBaseField, HilbertAtom, HilbertSpace, HilbertArray
 
 _base_field_cache = {}
 
-def factory(dtype):
+def _factory(dtype):
     """Don't call this, use base_field_lookup instead."""
 
     if not isinstance(dtype, sage.all.CommutativeRing):
@@ -19,7 +19,7 @@ def factory(dtype):
     return _base_field_cache[dtype]
 
 def _unreduce_v1(sage_ring):
-    return factory(sage_ring)
+    return _factory(sage_ring)
 
 class SageHilbertBaseField(HilbertBaseField):
     def __init__(self, sage_ring):

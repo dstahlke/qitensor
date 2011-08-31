@@ -16,7 +16,7 @@ import numpy.linalg
 
 from qitensor import shape_product
 from qitensor.exceptions import *
-from qitensor.atom import atom_factory
+import qitensor.atom
 from qitensor.array import HilbertArray
 from qitensor.space import HilbertSpace
 
@@ -61,7 +61,7 @@ def GroupOpTimes_factory():
 
 _base_field_cache = {}
 
-def factory(dtype):
+def _factory(dtype):
     """Don't call this, use ``base_field_lookup`` instead."""
 
     if not isinstance(dtype, type):
@@ -72,7 +72,7 @@ def factory(dtype):
     return _base_field_cache[dtype]
 
 def _unreduce_v1(dtype):
-    return factory(dtype)
+    return _factory(dtype)
 
 class HilbertBaseField(object):
     def __init__(self, dtype, unique_id):
@@ -240,7 +240,8 @@ class HilbertBaseField(object):
         Subclasses can override this method in order to return custom
         subclasses of ``HilbertAtom``.
         """
-        return atom_factory(label, latex_label, indices, group_op, self)
+        return qitensor.atom._cached_atom_factory( \
+            label, latex_label, indices, group_op, self)
 
     def _space_factory(self, ket_set, bra_set):
         r"""

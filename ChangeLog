@@ -2,9 +2,9 @@ Version 0.7.1 (ongoing):
 	as_np_matrix take {row,col}_space args
 	array creation takes arg for axes order of input array
 	svd_list method
-	refactoring of basefield.py
 	memoization and better pickling for base field, atom, space
 	index_set is a tuple
+	much refactoring of code
 
 Version 0.7 (2011-08-09):
 	added QR and random_unitary methods

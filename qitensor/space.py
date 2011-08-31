@@ -15,6 +15,7 @@ import qitensor.atom
 __all__ = ['HilbertSpace']
 
 def _unreduce_v1(ket_set, bra_set):
+    base_field = list(ket_set | bra_set)[0].base_field
     return base_field._space_factory(ket_set, bra_set)
 
 _space_cache = weakref.WeakValueDictionary()
@@ -75,7 +76,7 @@ class HilbertSpace(object):
             self.shape = tuple(ket_shape + bra_shape)
 
     def __reduce__(self):
-        return _unreduce_v1, (self.ket_set, self.bra_set, self.base_field)
+        return _unreduce_v1, (self.ket_set, self.bra_set)
 
     def bra_space(self):
         """

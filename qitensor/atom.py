@@ -70,6 +70,8 @@ class HilbertAtom(HilbertSpace):
         self._hashval = hash(self.key)
         self._prime = None
 
+        # Many fields that HilbertSpace.__init__ would normally set are instead
+        # implemented as properties (later on in this source file).
         HilbertSpace.__init__(self, None, None)
 
         self.base_field = base_field
@@ -226,8 +228,7 @@ class HilbertAtom(HilbertSpace):
             return self.H.basis_vec({self.H: idx})
 
     # These are implemented as properties rather than setting them in the
-    # HilbertSpace constructor in order to avoid self-reference (which would
-    # mess up pickle).
+    # HilbertSpace constructor in order to avoid self-reference.
 
     @property
     def bra_ket_set(self):

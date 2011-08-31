@@ -1,15 +1,18 @@
 Pickle
 ======
 
-qitensor objects can be pickled.  However, the internals are currently in flux,
-so it is possible that stored objects might not be compatible with future
-versions.
+qitensor objects can be pickled.
 
-    >>> from qitensor import qubit
+    >>> from qitensor import qubit, indexed_space
     >>> import pickle
     >>> ha = qubit('a')
-    >>> x = ha.array([1, 2])
+    >>> hb = indexed_space('b', ['x', 'y', 'z'])
+    >>> x = (ha*hb).random_array()
     >>> s = pickle.dumps(x)
-    >>> pickle.loads(s)
-    HilbertArray(|a>,
-    array([ 1.+0.j,  2.+0.j]))
+    >>> y = pickle.loads(s)
+    >>> x == y
+    True
+    >>> x is y
+    False
+    >>> x.space is y.space
+    True

@@ -35,6 +35,9 @@ class GroupOpTimes_impl(object):
         """Don't use this constructor, rather call ``GroupOpTimes_factory``."""
         pass
 
+    def __reduce__(self):
+        return GroupOpTimes_factory, tuple()
+
     def op(self, x, y):
         return x*y
 

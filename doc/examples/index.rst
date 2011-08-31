@@ -10,3 +10,4 @@ Examples
    symbolic
    graph_codes
    pickle
+   pickle_sage

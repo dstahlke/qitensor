@@ -17,8 +17,8 @@ import numpy.linalg
 from qitensor import shape_product
 from qitensor.exceptions import *
 import qitensor.atom
+import qitensor.space
 from qitensor.array import HilbertArray
-from qitensor.space import HilbertSpace
 
 __all__ = ['HilbertBaseField']
 
@@ -250,7 +250,7 @@ class HilbertBaseField(object):
         Subclasses can override this method in order to return custom
         subclasses of ``HilbertSpace``.
         """
-        return HilbertSpace(ket_set, bra_set, self)
+        return qitensor.space._cached_space_factory(ket_set, bra_set, self)
 
     def _array_factory(self, space, data, noinit_data, reshape, input_axes):
         r"""

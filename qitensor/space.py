@@ -6,16 +6,36 @@ multiplication operator to HilbertAtom's or other HilbertSpace's.
 
 import numpy as np
 import itertools
+import weakref
 
 from qitensor import have_sage, shape_product
 from qitensor.exceptions import *
 
 __all__ = ['HilbertSpace']
 
+def _unreduce_v1(ket_set, bra_set, base_field):
+    return base_field._space_factory(ket_set, bra_set)
+
+_space_cache = weakref.WeakValueDictionary()
+
+def _cached_space_factory(ket_set, bra_set, base_field):
+    """This should be called only by ``qitensor.factory._space_factory``."""
+
+    assert isinstance(ket_set, frozenset)
+    assert isinstance(bra_set, frozenset)
+
+    key = (ket_set, bra_set, base_field)
+
+    if not _space_cache.has_key(key):
+        spc = HilbertSpace(ket_set, bra_set, base_field)
+        _space_cache[key] = spc
+    return _space_cache[key]
+
 class HilbertSpace(object):
     def __init__(self, ket_set, bra_set, base_field):
         """
-        Constructor should only be called from :meth:`HilbertBaseField._space_factory`
+        Constructor should only be called from :meth:`_cached_space_factory` or
+        subclasses.
         """
 
         self.base_field = base_field
@@ -47,7 +67,8 @@ class HilbertSpace(object):
             bra_shape = [len(x.indices) for x in self.sorted_bras]
             self.shape = tuple(ket_shape + bra_shape)
 
-    #def __reduce__(
+    def __reduce__(self):
+        return _unreduce_v1, (self.ket_set, self.bra_set, self.base_field)
 
     def bra_space(self):
         """

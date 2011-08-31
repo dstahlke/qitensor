@@ -3,7 +3,7 @@ Version 0.7.1 (ongoing):
 	array creation takes arg for axes order of input array
 	svd_list method
 	refactoring of basefield.py
-	proper pickling for base field, atom
+	memoization and better pickling for base field, atom, space
 	index_set is a tuple
 
 Version 0.7 (2011-08-09):

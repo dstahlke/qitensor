@@ -10,6 +10,7 @@ import weakref
 
 from qitensor import have_sage, shape_product
 from qitensor.exceptions import *
+import qitensor.atom
 
 __all__ = ['HilbertSpace']
 
@@ -25,8 +26,6 @@ def _cached_space_factory(ket_set, bra_set, base_field):
     assert isinstance(bra_set, frozenset)
 
     key = (ket_set, bra_set, base_field)
-    # FIXME - memoization broken for now
-    return HilbertSpace(ket_set, bra_set, base_field)
 
     if not _space_cache.has_key(key):
         spc = HilbertSpace(ket_set, bra_set, base_field)
@@ -63,7 +62,7 @@ class HilbertSpace(object):
 
             # Make sure all atoms are compatible, otherwise raise
             # a MismatchedIndexSetError
-            sorted([x for x in self.bra_ket_set])
+            qitensor.atom._assert_all_compatible(self.bra_ket_set)
             
             ket_shape = [len(x.indices) for x in self.sorted_kets]
             bra_shape = [len(x.indices) for x in self.sorted_bras]

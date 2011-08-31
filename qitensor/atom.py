@@ -29,17 +29,24 @@ def _cached_atom_factory(label, latex_label, indices, group_op, base_field):
 
     key = (label, latex_label, indices, group_op, base_field)
 
-    #print key
-
-    if _atom_cache.has_key(key):
-        atom = _atom_cache[key]
-        atom._assert_compatible(indices, group_op, base_field)
-        return atom
-    else:
+    if not _atom_cache.has_key(key):
         atom = HilbertAtom(label, latex_label, indices, \
             group_op, base_field, None)
         _atom_cache[key] = atom
-        return atom
+    return _atom_cache[key]
+
+def _assert_all_compatible(collection):
+    by_label = {}
+
+    for x in collection:
+        assert isinstance(x, HilbertAtom)
+        if not by_label.has_key(x.label):
+            by_label[x.label] = []
+        by_label[x.label].append(x)
+
+    for group in by_label.values():
+        for atom in group:
+            group[0]._assert_compatible(atom)
 
 class HilbertAtom(HilbertSpace):
     def __init__(self, label, latex_label, indices, group_op, base_field, dual):
@@ -48,22 +55,20 @@ class HilbertAtom(HilbertSpace):
 
         #print "init", label, dual
 
-        self.indices = indices
-        self.group_op = group_op
+        assert label is not None
+        assert latex_label is not None
+        assert indices is not None
+        assert group_op is not None
+
         self.label = label
         self.latex_label = latex_label
-
-        assert self.indices is not None
-        assert self.group_op is not None
-        assert self.label is not None
-        assert self.latex_label is not None
+        self.indices = indices
+        self.group_op = group_op
 
         self.is_dual = not dual is None
+        self.key = (label, indices, group_op, base_field, self.is_dual)
+        self._hashval = hash(self.key)
         self._prime = None
-
-        self._hashval = hash(self.label)
-        if self.is_dual:
-            self._hashval += 1
 
         HilbertSpace.__init__(self, None, None, base_field)
 
@@ -83,42 +88,28 @@ class HilbertAtom(HilbertSpace):
 
     def _mycmp(self, other):
         assert isinstance(other, HilbertAtom)
+        return cmp(self.key, other.key)
 
-        if self is other:
-            return 0
+    def _assert_compatible(self, other):
+        # It is not allowed for HilbertAtom's with the same name but other
+        # properties different to be used together (leniency is given for
+        # latex_label)
 
-        if self.label < other.label:
-            return -1
-        elif self.label > other.label:
-            return 1
-
-        self._assert_compatible(other.indices, other.group_op, other.base_field)
-
-        if self.is_dual < other.is_dual:
-            return -1
-        elif self.is_dual > other.is_dual:
-            return 1
-        else:
-            return 0
-
-    def _assert_compatible(self, other_indices, other_op, other_field):
-        # It is not allowed for HilbertAtom's to have the same name but
-        # other properties different (leniency is given for latex_label)
-
-        if self.indices != other_indices:
+        if self.indices != other.indices:
             raise MismatchedIndexSetError('Two instances of HilbertSpace '+
                 'with label "'+repr(self.label)+'" but with different '+
-                'indices: '+repr(self.indices)+' vs. '+repr(other_indices))
+                'indices: '+repr(self.indices)+' vs. '+repr(other.indices))
 
-        if self.group_op != other_op:
+        if self.group_op != other.group_op:
             raise MismatchedIndexSetError('Two instances of HilbertSpace '+
                 'with label "'+repr(self.label)+'" but with different '+
-                'group_op: '+repr(self.group_op)+' vs. '+repr(other_op))
+                'group_op: '+repr(self.group_op)+' vs. '+repr(other.group_op))
 
-        if self.base_field != other_field:
+        if self.base_field != other.base_field:
             raise MismatchedIndexSetError('Two instances of HilbertSpace '+
                 'with label "'+repr(self.label)+'" but with different '+
-                'base_field: '+repr(self.base_field)+' vs. '+repr(other_field))
+                'base_field: '+repr(self.base_field)+' vs. '+
+                repr(other.base_field))
 
     def __eq__(self, other):
         if not isinstance(other, HilbertAtom):

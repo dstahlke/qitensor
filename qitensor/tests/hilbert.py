@@ -23,15 +23,21 @@ class HilbertBasicTests(unittest.TestCase):
     def testAtomCompatibility(self):
         Ha2 = indexed_space('a', [0, 1], group_op=GroupOpCyclic_factory(2))
         Ha3 = indexed_space('a', [0, 1, 2])
+        Ha4 = indexed_space('a', [0, 1])
         # OK, same index set
         self.Ha * Ha2.H
         # Not OK, different index set
         self.assertRaises(MismatchedIndexSetError,
             lambda: self.Ha * Ha3.H)
+        # Not OK, different group operation (add vs. multiply)
+        self.assertRaises(MismatchedIndexSetError,
+            lambda: self.Ha * Ha4.H)
 
         self.assertEqual(self.Ha, Ha2)
-        self.assertRaises(MismatchedIndexSetError,
-            lambda: self.Ha == Ha3)
+        self.assertNotEqual(self.Ha, Ha3)
+        # This is no longer how it works:
+        #self.assertRaises(MismatchedIndexSetError,
+        #    lambda: self.Ha == Ha3)
 
     def testRedundant(self):
         Ha2 = indexed_space('a', [0, 1], group_op=GroupOpCyclic_factory(2))

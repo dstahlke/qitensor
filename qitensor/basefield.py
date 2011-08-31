@@ -22,43 +22,6 @@ from qitensor.array import HilbertArray
 
 __all__ = ['HilbertBaseField']
 
-##############################
-
-class GroupOpCyclic_impl(object):
-    def __init__(self, D):
-        """Don't use this constructor, rather call ``GroupOpCyclic_factory``."""
-        self.D = D
-
-    def __reduce__(self):
-        return GroupOpCyclic_factory, (self.D,)
-
-    def op(self, x, y):
-        return (x+y) % self.D
-
-# This implements memoization
-_op_cyclic_cache = {}
-def GroupOpCyclic_factory(D):
-    if not _op_cyclic_cache.has_key(D):
-        _op_cyclic_cache[D] = GroupOpCyclic_impl(D)
-    return _op_cyclic_cache[D]
-
-##############################
-
-class GroupOpTimes_impl(object):
-    def __init__(self):
-        """Don't use this constructor, rather call ``GroupOpTimes_factory``."""
-        pass
-
-    def op(self, x, y):
-        return x*y
-
-# This implements memoization
-_op_times_cache = GroupOpTimes_impl()
-def GroupOpTimes_factory():
-    return _op_times_cache
-
-##############################
-
 _base_field_cache = {}
 
 def _factory(dtype):
@@ -239,6 +202,8 @@ class HilbertBaseField(object):
 
         Subclasses can override this method in order to return custom
         subclasses of ``HilbertAtom``.
+
+        Users should call methods in ``qitensor.factory`` instead.
         """
         return qitensor.atom._cached_atom_factory( \
             label, latex_label, indices, group_op, self)
@@ -249,6 +214,8 @@ class HilbertBaseField(object):
 
         Subclasses can override this method in order to return custom
         subclasses of ``HilbertSpace``.
+
+        Users shouldn't call this function.
         """
         return qitensor.space._cached_space_factory(ket_set, bra_set, self)
 
@@ -258,79 +225,7 @@ class HilbertBaseField(object):
 
         Subclasses can override this method in order to return custom
         subclasses of ``HilbertArray``.
+
+        Users shouldn't call this function.
         """
         return HilbertArray(space, data, noinit_data, reshape, input_axes)
-
-    def indexed_space(self, label, indices, latex_label=None, group_op=None):
-        r"""
-        Returns a finite-dimensional Hilbert space with an arbitrary index set.
-
-        :param label: a unique label for this Hilbert space
-        :param indices: a sequence defining the index set
-        :param latex_label: an optional latex representation of the label
-        :param group_op: group operation
-
-        ``group_op``, if given, should be a class that defines an
-        ``op(self, x, y)`` method.  This supports things like the generalized
-        pauliX operator.  The default is ``op(self, x, y) = x*y``.  The
-        ``qubit`` and ``qudit`` constructors use ``op(self, x, y) = (x+y)%D``.
-
-        See also: :func:`qitensor.factory.indexed_space`
-
-        >>> from qitensor import base_field_lookup
-        >>> field = base_field_lookup(complex)
-        >>> ha = field.indexed_space('a', ['x', 'y', 'z'])
-        >>> ha
-        |a>
-        >>> ha.indices
-        ('x', 'y', 'z')
-        """
-
-        if group_op is None:
-            group_op = GroupOpTimes_factory()
-
-        return self._atom_factory(label, latex_label, indices, group_op)
-
-    def qudit(self, label, dim, latex_label=None):
-        r"""
-        Returns a finite-dimensional Hilbert space with index set [0, 1, ..., n-1].
-
-        :param label: a unique label for this Hilbert space
-        :param dim: the dimension of the Hilbert space
-        :param latex_label: an optional latex representation of the label
-
-        See also: :func:`qitensor.factory.qudit`
-
-        >>> from qitensor import base_field_lookup
-        >>> field = base_field_lookup(complex)
-        >>> ha = field.qudit('a', 3)
-        >>> ha
-        |a>
-        >>> ha.indices
-        (0, 1, 2)
-        """
-
-        group_op = GroupOpCyclic_factory(dim)
-
-        return self.indexed_space(label, range(dim),
-            group_op=group_op, latex_label=latex_label)
-
-    def qubit(self, label, latex_label=None):
-        r"""
-        Returns a two-dimensional Hilbert space with index set [0, 1].
-
-        :param label: a unique label for this Hilbert space
-        :param latex_label: an optional latex representation of the label
-
-        See also: :func:`qitensor.factory.qubit`
-
-        >>> from qitensor import base_field_lookup
-        >>> field = base_field_lookup(complex)
-        >>> ha = field.qubit('a')
-        >>> ha
-        |a>
-        >>> ha.indices
-        (0, 1)
-        """
-
-        return self.qudit(label, 2, latex_label)

@@ -8,7 +8,42 @@ from qitensor import have_sage
 
 __all__ = ['base_field_lookup', 'indexed_space', 'qubit', 'qudit']
 
-###########################
+##############################
+
+class GroupOpCyclic_impl(object):
+    def __init__(self, D):
+        """Don't use this constructor, rather call ``GroupOpCyclic_factory``."""
+        self.D = D
+
+    def __reduce__(self):
+        return GroupOpCyclic_factory, (self.D,)
+
+    def op(self, x, y):
+        return (x+y) % self.D
+
+# This implements memoization
+_op_cyclic_cache = {}
+def GroupOpCyclic_factory(D):
+    if not _op_cyclic_cache.has_key(D):
+        _op_cyclic_cache[D] = GroupOpCyclic_impl(D)
+    return _op_cyclic_cache[D]
+
+##############################
+
+class GroupOpTimes_impl(object):
+    def __init__(self):
+        """Don't use this constructor, rather call ``GroupOpTimes_factory``."""
+        pass
+
+    def op(self, x, y):
+        return x*y
+
+# This implements memoization
+_op_times_cache = GroupOpTimes_impl()
+def GroupOpTimes_factory():
+    return _op_times_cache
+
+##############################
 
 _base_field_factories = []
 
@@ -19,8 +54,6 @@ if have_sage:
     import qitensor.sagebasefield
     _base_field_factories.append(qitensor.sagebasefield._factory)
     
-###########################
-
 def base_field_lookup(dtype):
     r"""
     Returns the HilbertBaseField for the given data type.
@@ -39,6 +72,8 @@ def base_field_lookup(dtype):
             return ret
 
     raise NotImplementedError("data type not supported")
+
+##############################
 
 def indexed_space(label, indices, dtype=complex, latex_label=None, group_op=None):
     r"""
@@ -70,8 +105,11 @@ def indexed_space(label, indices, dtype=complex, latex_label=None, group_op=None
     """
 
     field = base_field_lookup(dtype)
-    return field.indexed_space(label, indices, \
-        latex_label=latex_label, group_op=group_op)
+
+    if group_op is None:
+        group_op = GroupOpTimes_factory()
+
+    return field._atom_factory(label, latex_label, indices, group_op)
 
 def qudit(label, dim, dtype=complex, latex_label=None):
     r"""
@@ -96,8 +134,11 @@ def qudit(label, dim, dtype=complex, latex_label=None):
     (0, 1, 2)
     """
 
-    field = base_field_lookup(dtype)
-    return field.qudit(label, dim, latex_label)
+    group_op = GroupOpCyclic_factory(dim)
+
+    return indexed_space(
+        label=label, indices=range(dim), dtype=dtype,
+        latex_label=latex_label, group_op=group_op)
 
 def qubit(label, dtype=complex, latex_label=None):
     r"""
@@ -121,5 +162,4 @@ def qubit(label, dtype=complex, latex_label=None):
     (0, 1)
     """
 
-    field = base_field_lookup(dtype)
-    return field.qubit(label, latex_label)
+    return qudit(label=label, dim=2, dtype=dtype, latex_label=latex_label)

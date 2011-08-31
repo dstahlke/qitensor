@@ -25,6 +25,8 @@ def _cached_space_factory(ket_set, bra_set, base_field):
     assert isinstance(bra_set, frozenset)
 
     key = (ket_set, bra_set, base_field)
+    # FIXME - memoization broken for now
+    return HilbertSpace(ket_set, bra_set, base_field)
 
     if not _space_cache.has_key(key):
         spc = HilbertSpace(ket_set, bra_set, base_field)

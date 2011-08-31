@@ -5,7 +5,7 @@ import qitensor
 from qitensor import qubit, qudit, indexed_space
 from qitensor import MismatchedIndexSetError, DuplicatedSpaceError
 from qitensor import BraKetMixtureError, HilbertIndexError, HilbertShapeError
-from qitensor.basefield import GroupOpCyclic_factory
+from qitensor.factory import GroupOpCyclic_factory
 
 class HilbertBasicTests(unittest.TestCase):
     def setUp(self):

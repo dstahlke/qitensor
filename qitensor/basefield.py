@@ -36,11 +36,31 @@ class GroupOpTimes(object):
     def op(self, x, y):
         return x*y
 
+base_field_cache = {}
+
+def factory(dtype):
+    """Don't call this, use base_field_lookup instead."""
+
+    if not isinstance(dtype, type):
+        return None
+
+    if not base_field_cache.has_key(dtype):
+        base_field_cache[dtype] = HilbertBaseField(dtype, repr(dtype))
+    return base_field_cache[dtype]
+
+def _unreduce_v1(dtype):
+    return factory(dtype)
+
 class HilbertBaseField(object):
     def __init__(self, dtype, unique_id):
+        """Don't call this, use base_field_lookup instead."""
+
         self.dtype = dtype
-        self.unique_id = unique_id
+        self.unique_id = repr(dtype)
         self.sage_ring = None
+
+    def __reduce__(self):
+        return _unreduce_v1, (self.dtype, )
 
     def assert_same(self, other):
         if self.unique_id != other.unique_id:

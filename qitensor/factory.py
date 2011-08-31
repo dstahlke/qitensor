@@ -5,11 +5,21 @@ package.
 """
 
 from qitensor import have_sage
-from qitensor.basefield import HilbertBaseField
 
 __all__ = ['base_field_lookup', 'indexed_space', 'qubit', 'qudit']
 
-base_field_cache = {}
+###########################
+
+_base_field_factories = []
+
+import qitensor.basefield
+_base_field_factories.append(qitensor.basefield.factory)
+
+if have_sage:
+    import qitensor.sagebasefield
+    _base_field_factories.append(qitensor.sagebasefield.factory)
+    
+###########################
 
 def base_field_lookup(dtype):
     r"""
@@ -23,20 +33,12 @@ def base_field_lookup(dtype):
     <class 'qitensor.basefield.HilbertBaseField'>
     """
 
-    if base_field_cache.has_key(dtype):
-        return base_field_cache[dtype]
+    for f in _base_field_factories:
+        ret = f(dtype)
+        if ret is not None:
+            return ret
 
-    if have_sage:
-        import qitensor.sagebasefield
-
-    if have_sage and qitensor.sagebasefield.can_use_type(dtype):
-        base_field_cache[dtype] = qitensor.sagebasefield.create_base_field(dtype)
-    elif isinstance(dtype, type):
-        base_field_cache[dtype] = HilbertBaseField(dtype, repr(dtype))
-    else:
-        raise NotImplementedError("data type not supported")
-
-    return base_field_cache[dtype]
+    raise NotImplementedError("data type not supported")
 
 def indexed_space(label, indices, dtype=complex, latex_label=None, group_op=None):
     r"""

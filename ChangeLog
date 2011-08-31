@@ -3,6 +3,7 @@ Version 0.7.1 (ongoing):
 	array creation takes arg for axes order of input array
 	svd_list method
 	refactoring of basefield.py
+	proper pickling for base field
 
 Version 0.7 (2011-08-09):
 	added QR and random_unitary methods

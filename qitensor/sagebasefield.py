@@ -6,11 +6,30 @@ import numpy as np
 import sage.all
 from qitensor import HilbertBaseField, HilbertAtom, HilbertSpace, HilbertArray
 
+base_field_cache = {}
+
+def factory(dtype):
+    """Don't call this, use base_field_lookup instead."""
+
+    if not isinstance(dtype, sage.all.CommutativeRing):
+        return None
+
+    if not base_field_cache.has_key(dtype):
+        base_field_cache[dtype] = SageHilbertBaseField(dtype)
+    return base_field_cache[dtype]
+
+def _unreduce_v1(sage_ring):
+    return factory(sage_ring)
+
 class SageHilbertBaseField(HilbertBaseField):
     def __init__(self, sage_ring):
+        """Don't call this, use base_field_lookup instead."""
         unique_id = 'sage '+repr(sage_ring)
         HilbertBaseField.__init__(self, object, unique_id)
         self.sage_ring = sage_ring
+
+    def __reduce__(self):
+        return _unreduce_v1, (self.sage_ring, )
 
     def matrix_np_to_sage(self, np_mat, R=None):
         np_mat = np.array(np_mat)
@@ -97,10 +116,3 @@ class SageHilbertBaseField(HilbertBaseField):
         w = self.matrix_np_to_sage(m).eigenvalues()
         # convert result to numpy
         return np.array(w)
-
-def can_use_type(dtype):
-    return isinstance(dtype, sage.all.CommutativeRing)
-
-def create_base_field(dtype):
-    assert can_use_type(dtype)
-    return SageHilbertBaseField(dtype)

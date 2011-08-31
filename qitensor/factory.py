@@ -66,7 +66,7 @@ def indexed_space(label, indices, dtype=complex, latex_label=None, group_op=None
     >>> ha
     |a>
     >>> ha.indices
-    ['x', 'y', 'z']
+    ('x', 'y', 'z')
     """
 
     field = base_field_lookup(dtype)
@@ -93,7 +93,7 @@ def qudit(label, dim, dtype=complex, latex_label=None):
     >>> ha
     |a>
     >>> ha.indices
-    [0, 1, 2]
+    (0, 1, 2)
     """
 
     field = base_field_lookup(dtype)
@@ -118,7 +118,7 @@ def qubit(label, dtype=complex, latex_label=None):
     >>> ha
     |a>
     >>> ha.indices
-    [0, 1]
+    (0, 1)
     """
 
     field = base_field_lookup(dtype)

@@ -27,7 +27,7 @@ def atom_factory(label, latex_label, indices, group_op, base_field):
 
     key = (label, latex_label, indices, group_op, base_field)
 
-    print key
+    #print key
 
     if _atom_cache.has_key(key):
         atom = _atom_cache[key]
@@ -44,7 +44,7 @@ class HilbertAtom(HilbertSpace):
         """Users should not call this constructor directly, rather use the
         methods in qitensor.factory."""
 
-        print "init", label, dual
+        #print "init", label, dual
 
         self.indices = indices
         self.group_op = group_op

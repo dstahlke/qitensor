@@ -282,7 +282,7 @@ class HilbertBaseField(object):
         >>> ha
         |a>
         >>> ha.indices
-        ['x', 'y', 'z']
+        ('x', 'y', 'z')
         """
 
         if group_op is None:
@@ -306,7 +306,7 @@ class HilbertBaseField(object):
         >>> ha
         |a>
         >>> ha.indices
-        [0, 1, 2]
+        (0, 1, 2)
         """
 
         group_op = GroupOpCyclic_factory(dim)
@@ -329,7 +329,7 @@ class HilbertBaseField(object):
         >>> ha
         |a>
         >>> ha.indices
-        [0, 1]
+        (0, 1)
         """
 
         return self.qudit(label, 2, latex_label)

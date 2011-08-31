@@ -14,32 +14,31 @@ import qitensor.atom
 
 __all__ = ['HilbertSpace']
 
-def _unreduce_v1(ket_set, bra_set, base_field):
+def _unreduce_v1(ket_set, bra_set):
     return base_field._space_factory(ket_set, bra_set)
 
 _space_cache = weakref.WeakValueDictionary()
 
-def _cached_space_factory(ket_set, bra_set, base_field):
+def _cached_space_factory(ket_set, bra_set):
     """This should be called only by ``qitensor.factory._space_factory``."""
 
     assert isinstance(ket_set, frozenset)
     assert isinstance(bra_set, frozenset)
 
-    key = (ket_set, bra_set, base_field)
+    key = (ket_set, bra_set)
 
     if not _space_cache.has_key(key):
-        spc = HilbertSpace(ket_set, bra_set, base_field)
+        spc = HilbertSpace(ket_set, bra_set)
         _space_cache[key] = spc
     return _space_cache[key]
 
 class HilbertSpace(object):
-    def __init__(self, ket_set, bra_set, base_field):
+    def __init__(self, ket_set, bra_set):
         """
         Constructor should only be called from :meth:`_cached_space_factory` or
         subclasses.
         """
 
-        self.base_field = base_field
         self._H = None
 
         # If ket_set is None then we are being called from the HilbertAtom
@@ -54,15 +53,21 @@ class HilbertSpace(object):
             for x in bra_set:
                 assert x.is_dual
 
-            self.bra_ket_set = bra_set | ket_set
             self.ket_set = ket_set
             self.bra_set = bra_set
-            self.sorted_kets = sorted([x for x in ket_set])
-            self.sorted_bras = sorted([x for x in bra_set])
+            self.bra_ket_set = bra_set | ket_set
+            self.sorted_kets = sorted(list(ket_set))
+            self.sorted_bras = sorted(list(bra_set))
+
+            assert len(self.bra_ket_set) > 0
+            self.base_field = list(self.bra_ket_set)[0].base_field
 
             # Make sure all atoms are compatible, otherwise raise
             # a MismatchedIndexSetError
             qitensor.atom._assert_all_compatible(self.bra_ket_set)
+
+            for x in self.bra_ket_set:
+                self.base_field.assert_same(x.base_field)
             
             ket_shape = [len(x.indices) for x in self.sorted_kets]
             bra_shape = [len(x.indices) for x in self.sorted_bras]

@@ -70,7 +70,9 @@ class HilbertAtom(HilbertSpace):
         self._hashval = hash(self.key)
         self._prime = None
 
-        HilbertSpace.__init__(self, None, None, base_field)
+        HilbertSpace.__init__(self, None, None)
+
+        self.base_field = base_field
 
         ket_shape = [len(x.indices) for x in self.sorted_kets]
         bra_shape = [len(x.indices) for x in self.sorted_bras]

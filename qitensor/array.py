@@ -212,11 +212,6 @@ class HilbertArray(object):
         mul_H = frozenset([x.H for x in mul_space])
         #print mul_space
 
-        ret_space = \
-            hs.base_field.create_space2(hs.ket_set, (hs.bra_set-mul_H)) * \
-            hs.base_field.create_space2((ohs.ket_set-mul_space), ohs.bra_set)
-        #print 'ret', ret_space
-
         axes_self  = [self.get_dim(x.H) for x in sorted(mul_space)]
         axes_other = [other.get_dim(x)  for x in sorted(mul_space)]
         #print axes_self, axes_other
@@ -243,6 +238,18 @@ class HilbertArray(object):
             # convert 0-d array to scalar
             return td[()]
         else:
+            ket1 = hs.ket_set
+            ket2 = (ohs.ket_set-mul_space)
+            bra1 = (hs.bra_set-mul_H)
+            bra2 = ohs.bra_set
+
+            if not (ket1.isdisjoint(ket2) and bra1.isdisjoint(bra2)):
+                raise DuplicatedSpaceError(
+                    hs.base_field.create_space2(ket1 & ket2, bra1 & bra2))
+
+            ret_space = hs.base_field.create_space2(ket1 | ket2, bra1 | bra2)
+            #print 'ret', ret_space
+
             ret = ret_space.array(noinit_data=True)
             #print "ret", ret.axes
             permute = tuple([td_axes.index(x) for x in ret.axes])

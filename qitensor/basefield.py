@@ -182,14 +182,11 @@ class HilbertBaseField(object):
         True
         """
 
-        assert isinstance(ket_set, frozenset)
-        assert isinstance(bra_set, frozenset)
-
-        for x in ket_set | bra_set:
-            self.assert_same(x.base_field)
-
         # Just return the atoms if possible:
-        if len(ket_set) == 1 and len(bra_set) == 0:
+        if len(ket_set) == 0 and len(bra_set) == 0:
+            # FIXME - also catch in factory
+            raise HilbertError('tried to create empty HilbertSpace')
+        elif len(ket_set) == 1 and len(bra_set) == 0:
             return list(ket_set)[0]
         elif len(ket_set) == 0 and len(bra_set) == 1:
             return list(bra_set)[0]
@@ -217,7 +214,7 @@ class HilbertBaseField(object):
 
         Users shouldn't call this function.
         """
-        return qitensor.space._cached_space_factory(ket_set, bra_set, self)
+        return qitensor.space._cached_space_factory(ket_set, bra_set)
 
     def _array_factory(self, space, data, noinit_data, reshape, input_axes):
         r"""

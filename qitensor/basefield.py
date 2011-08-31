@@ -16,37 +16,60 @@ import numpy.linalg
 
 from qitensor import shape_product
 from qitensor.exceptions import *
-from qitensor.atom import HilbertAtom
+from qitensor.atom import atom_factory
 from qitensor.array import HilbertArray
 from qitensor.space import HilbertSpace
 
 __all__ = ['HilbertBaseField']
 
-class GroupOpCyclic(object):
+##############################
+
+class GroupOpCyclic_impl(object):
     def __init__(self, D):
+        """Don't use this constructor, rather call ``GroupOpCyclic_factory``."""
         self.D = D
+
+    def __reduce__(self):
+        return GroupOpCyclic_factory, (self.D,)
 
     def op(self, x, y):
         return (x+y) % self.D
 
-class GroupOpTimes(object):
+# This implements memoization
+_op_cyclic_cache = {}
+def GroupOpCyclic_factory(D):
+    if not _op_cyclic_cache.has_key(D):
+        _op_cyclic_cache[D] = GroupOpCyclic_impl(D)
+    return _op_cyclic_cache[D]
+
+##############################
+
+class GroupOpTimes_impl(object):
     def __init__(self):
+        """Don't use this constructor, rather call ``GroupOpTimes_factory``."""
         pass
 
     def op(self, x, y):
         return x*y
 
-base_field_cache = {}
+# This implements memoization
+_op_times_cache = GroupOpTimes_impl()
+def GroupOpTimes_factory():
+    return _op_times_cache
+
+##############################
+
+_base_field_cache = {}
 
 def factory(dtype):
-    """Don't call this, use base_field_lookup instead."""
+    """Don't call this, use ``base_field_lookup`` instead."""
 
     if not isinstance(dtype, type):
         return None
 
-    if not base_field_cache.has_key(dtype):
-        base_field_cache[dtype] = HilbertBaseField(dtype, repr(dtype))
-    return base_field_cache[dtype]
+    if not _base_field_cache.has_key(dtype):
+        _base_field_cache[dtype] = HilbertBaseField(dtype, repr(dtype))
+    return _base_field_cache[dtype]
 
 def _unreduce_v1(dtype):
     return factory(dtype)
@@ -217,7 +240,7 @@ class HilbertBaseField(object):
         Subclasses can override this method in order to return custom
         subclasses of ``HilbertAtom``.
         """
-        return HilbertAtom(label, latex_label, indices, group_op, self)
+        return atom_factory(label, latex_label, indices, group_op, self)
 
     def _space_factory(self, ket_set, bra_set):
         r"""
@@ -263,7 +286,7 @@ class HilbertBaseField(object):
         """
 
         if group_op is None:
-            group_op = GroupOpTimes()
+            group_op = GroupOpTimes_factory()
 
         return self._atom_factory(label, latex_label, indices, group_op)
 
@@ -286,7 +309,7 @@ class HilbertBaseField(object):
         [0, 1, 2]
         """
 
-        group_op = GroupOpCyclic(dim)
+        group_op = GroupOpCyclic_factory(dim)
 
         return self.indexed_space(label, range(dim),
             group_op=group_op, latex_label=latex_label)

@@ -6,7 +6,7 @@ import numpy as np
 import sage.all
 from qitensor import HilbertBaseField, HilbertAtom, HilbertSpace, HilbertArray
 
-base_field_cache = {}
+_base_field_cache = {}
 
 def factory(dtype):
     """Don't call this, use base_field_lookup instead."""
@@ -14,9 +14,9 @@ def factory(dtype):
     if not isinstance(dtype, sage.all.CommutativeRing):
         return None
 
-    if not base_field_cache.has_key(dtype):
-        base_field_cache[dtype] = SageHilbertBaseField(dtype)
-    return base_field_cache[dtype]
+    if not _base_field_cache.has_key(dtype):
+        _base_field_cache[dtype] = SageHilbertBaseField(dtype)
+    return _base_field_cache[dtype]
 
 def _unreduce_v1(sage_ring):
     return factory(sage_ring)

@@ -12,8 +12,28 @@ from qitensor.space import HilbertSpace
 
 __all__ = ['HilbertAtom']
 
+def _unreduce_v1(label, latex_label, indices, group_op, base_field, is_dual):
+    atom = atom_factory(label, latex_label, indices, group_op, base_field)
+    return atom.H if is_dual else atom
+
+_atom_cache = {}
+
+def atom_factory(label, latex_label, indices, group_op, base_field):
+    if _atom_cache.has_key(label):
+        atom = _atom_cache[label]
+        atom._assert_compatible(indices, group_op, base_field)
+        return atom
+    else:
+        atom = HilbertAtom(label, latex_label, indices, \
+            group_op, base_field, None)
+        _atom_cache[label] = atom
+        return atom
+
 class HilbertAtom(HilbertSpace):
-    def __init__(self, label, latex_label, indices, group_op, base_field, dual=None):
+    def __init__(self, label, latex_label, indices, group_op, base_field, dual):
+        """Users should not call this constructor directly, rather use the
+        methods in qitensor.factory."""
+
         is_dual = not dual is None
 
         self.indices = indices
@@ -42,20 +62,22 @@ class HilbertAtom(HilbertSpace):
             self._H = HilbertAtom(label, latex_label,
                 indices, group_op, base_field, self)
 
+    def __reduce__(self):
+        return _unreduce_v1, (self.label, self.latex_label, \
+            self.indices, self.group_op, self.base_field, self.is_dual)
+
     def _mycmp(self, other):
         assert isinstance(other, HilbertAtom)
+
+        if self is other:
+            return 0
 
         if self.label < other.label:
             return -1
         elif self.label > other.label:
             return 1
 
-        # It is not allowed for HilbertAtom's to have the same name but
-        # different index set
-        if self.indices != other.indices:
-            raise MismatchedIndexSetError('Two instances of HilbertSpace '+
-                'with label "'+repr(self.label)+'" but with different '+
-                'indices: '+repr(self.indices)+' vs. '+repr(other.indices))
+        self._assert_compatible(other.indices, other.group_op, other.base_field)
 
         if self.is_dual < other.is_dual:
             return -1
@@ -63,6 +85,25 @@ class HilbertAtom(HilbertSpace):
             return 1
         else:
             return 0
+
+    def _assert_compatible(self, other_indices, other_op, other_field):
+        # It is not allowed for HilbertAtom's to have the same name but
+        # other properties different (leniency is given for latex_label)
+
+        if self.indices != other_indices:
+            raise MismatchedIndexSetError('Two instances of HilbertSpace '+
+                'with label "'+repr(self.label)+'" but with different '+
+                'indices: '+repr(self.indices)+' vs. '+repr(other.indices))
+
+        if self.group_op != other_op:
+            raise MismatchedIndexSetError('Two instances of HilbertSpace '+
+                'with label "'+repr(self.label)+'" but with different '+
+                'group_op: '+repr(self.group_op)+' vs. '+repr(other_op))
+
+        if self.base_field != other_field:
+            raise MismatchedIndexSetError('Two instances of HilbertSpace '+
+                'with label "'+repr(self.label)+'" but with different '+
+                'base_field: '+repr(self.base_field)+' vs. '+repr(other_field))
 
     def __eq__(self, other):
         if not isinstance(other, HilbertAtom):

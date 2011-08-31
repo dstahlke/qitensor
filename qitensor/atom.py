@@ -6,6 +6,7 @@ created using the factory functions in :mod:`qitensor.factory`.
 """
 
 import numpy as np
+import weakref
 
 from qitensor.exceptions import *
 from qitensor.space import HilbertSpace
@@ -16,17 +17,26 @@ def _unreduce_v1(label, latex_label, indices, group_op, base_field, is_dual):
     atom = atom_factory(label, latex_label, indices, group_op, base_field)
     return atom.H if is_dual else atom
 
-_atom_cache = {}
+_atom_cache = weakref.WeakValueDictionary()
 
 def atom_factory(label, latex_label, indices, group_op, base_field):
-    if _atom_cache.has_key(label):
-        atom = _atom_cache[label]
+    if latex_label is None:
+        latex_label = label
+
+    indices = tuple(indices)
+
+    key = (label, latex_label, indices, group_op, base_field)
+
+    print key
+
+    if _atom_cache.has_key(key):
+        atom = _atom_cache[key]
         atom._assert_compatible(indices, group_op, base_field)
         return atom
     else:
         atom = HilbertAtom(label, latex_label, indices, \
             group_op, base_field, None)
-        _atom_cache[label] = atom
+        _atom_cache[key] = atom
         return atom
 
 class HilbertAtom(HilbertSpace):
@@ -34,16 +44,19 @@ class HilbertAtom(HilbertSpace):
         """Users should not call this constructor directly, rather use the
         methods in qitensor.factory."""
 
-        is_dual = not dual is None
+        print "init", label, dual
 
         self.indices = indices
         self.group_op = group_op
         self.label = label
-        if latex_label is None:
-            latex_label = label
         self.latex_label = latex_label
-        self.is_dual = is_dual
 
+        assert self.indices is not None
+        assert self.group_op is not None
+        assert self.label is not None
+        assert self.latex_label is not None
+
+        self.is_dual = not dual is None
         self._prime = None
 
         self._hashval = hash(self.label)
@@ -93,7 +106,7 @@ class HilbertAtom(HilbertSpace):
         if self.indices != other_indices:
             raise MismatchedIndexSetError('Two instances of HilbertSpace '+
                 'with label "'+repr(self.label)+'" but with different '+
-                'indices: '+repr(self.indices)+' vs. '+repr(other.indices))
+                'indices: '+repr(self.indices)+' vs. '+repr(other_indices))
 
         if self.group_op != other_op:
             raise MismatchedIndexSetError('Two instances of HilbertSpace '+
@@ -158,6 +171,7 @@ class HilbertAtom(HilbertSpace):
             if self.is_dual:
                 self._prime = self.H.prime.H
             else:
+                # FIXME - carry over other properties
                 self._prime = self.base_field.indexed_space(
                     self.label+"'", self.indices, "{"+self.latex_label+"}'")
         return self._prime

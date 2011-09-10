@@ -30,7 +30,7 @@ import numpy as np
 try:
     import sage.all
     have_sage = True
-except:
+except ImportError:
     have_sage = False
 
 def shape_product(l):

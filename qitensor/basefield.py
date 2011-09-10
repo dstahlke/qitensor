@@ -96,11 +96,11 @@ class HilbertBaseField(object):
     def mat_conj(self, mat):
         return mat.conj()
 
-    def mat_n(self, mat, prec=None, digits=None):
+    def mat_n(self, mat, prec=None, digits=None): # pylint: disable=W0613
         # arrays in this base field are already numeric
         return mat
 
-    def mat_simplify(self, mat, full=False):
+    def mat_simplify(self, mat, full=False): # pylint: disable=W0613
         return mat
 
     def mat_expm(self, mat, q):

@@ -14,8 +14,7 @@ import numpy as np
 import numpy.random
 import numpy.linalg
 
-from qitensor import shape_product
-from qitensor.exceptions import *
+from qitensor.exceptions import HilbertError, IncompatibleBaseFieldError
 import qitensor.atom
 import qitensor.space
 from qitensor.array import HilbertArray
@@ -42,7 +41,7 @@ class HilbertBaseField(object):
         """Don't call this, use base_field_lookup instead."""
 
         self.dtype = dtype
-        self.unique_id = repr(dtype)
+        self.unique_id = unique_id
         self.sage_ring = None
 
     def __reduce__(self):
@@ -119,7 +118,7 @@ class HilbertBaseField(object):
 
     def mat_svd_vals(self, mat):
         # cast to complex in case we have symbolic vals from Sage
-        (u, s, v) = np.linalg.svd(np.matrix(mat, dtype=complex), \
+        (_u, s, _v) = np.linalg.svd(np.matrix(mat, dtype=complex), \
             full_matrices=False)
         return s
 

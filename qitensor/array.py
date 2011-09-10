@@ -7,7 +7,9 @@ numpy.array.  HilbertArray's are to be created using the
 import numpy as np
 
 from qitensor import have_sage, shape_product
-from qitensor.exceptions import *
+from qitensor.exceptions import BraKetMixtureError, DuplicatedSpaceError, \
+    HilbertError, HilbertIndexError, HilbertShapeError, HilbertSliceError, \
+    NotKetSpaceError
 from qitensor.space import HilbertSpace
 from qitensor.atom import HilbertAtom
 
@@ -733,7 +735,7 @@ class HilbertArray(object):
         """
 
         return self.np_matrix_transform( \
-            lambda x: self.space.base_field.mat_adjoint(x), \
+            self.space.base_field.mat_adjoint, \
             transpose_dims=True)
 
     @property
@@ -759,7 +761,7 @@ class HilbertArray(object):
         """
 
         return self.np_matrix_transform( \
-            lambda x: self.space.base_field.mat_inverse(x), \
+            self.space.base_field.mat_inverse, \
             transpose_dims=True)
 
     @property
@@ -942,7 +944,7 @@ class HilbertArray(object):
         """
 
         return self.np_matrix_transform( \
-            lambda x: self.space.base_field.mat_conj(x))
+            self.space.base_field.mat_conj)
 
     def trace(self, axes=None):
         """

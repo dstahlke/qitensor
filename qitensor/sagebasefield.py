@@ -1,10 +1,9 @@
 #!/usr/bin/python
 
-import qitensor
 import numpy as np
 
 import sage.all
-from qitensor import HilbertBaseField, HilbertAtom, HilbertSpace, HilbertArray
+from qitensor import HilbertBaseField
 
 _base_field_cache = {}
 
@@ -57,7 +56,7 @@ class SageHilbertBaseField(HilbertBaseField):
         return self.sage_ring(sage.all.I)
 
     def input_cast_function(self):
-        return lambda x: self.sage_ring(x)
+        return self.sage_ring
 
     def fractional_phase(self, a, b):
         return self.sage_ring(sage.all.exp(2 * sage.all.pi * sage.all.I * a / b))

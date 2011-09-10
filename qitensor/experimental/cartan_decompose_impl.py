@@ -41,9 +41,11 @@ PAULIS = np.array([
     [[1, 0], [0, -1]],
 ])
 
-DOUBLE_PAULIS = np.array([
-    bipartite_op_tensor_product(PAULIS[i], PAULIS[i]) for i in range(3)
-])
+def _make_double_paulis():
+    return np.array([
+        bipartite_op_tensor_product(PAULIS[i], PAULIS[i]) for i in range(3)
+    ])
+DOUBLE_PAULIS = _make_double_paulis()
 
 def decompose_dyad(dyad):
     """Decompose a dyad into a ket and a bra."""

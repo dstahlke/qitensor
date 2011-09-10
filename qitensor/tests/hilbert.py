@@ -4,7 +4,7 @@ import unittest
 import qitensor
 from qitensor import qubit, qudit, indexed_space
 from qitensor import MismatchedIndexSetError, DuplicatedSpaceError
-from qitensor import BraKetMixtureError, HilbertIndexError, HilbertShapeError
+from qitensor import HilbertIndexError, HilbertShapeError
 from qitensor.factory import GroupOpCyclic_factory
 
 class HilbertBasicTests(unittest.TestCase):
@@ -123,7 +123,7 @@ class HilbertOperTests(unittest.TestCase):
     def testInverse(self):
         H = self.Ha * self.Hx
         H2 = H * H.H
-        for i in range(20):
+        for _i in range(20):
             M = H2.random_array() + 1j*H2.random_array()
             if abs(M.det()) > self.epsilon:
                 MI = M.I

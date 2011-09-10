@@ -2,7 +2,7 @@
 This module contains functions related to quantum circuits.
 """
 
-from qitensor import HilbertAtom
+from qitensor import HilbertAtom, HilbertError
 
 __all__ = ['cphase', 'cnot', 'max_entangled']
 

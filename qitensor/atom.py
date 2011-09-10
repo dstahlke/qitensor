@@ -5,10 +5,9 @@ product spaces by using the multiplication operator.  HilbertAtoms should be
 created using the factory functions in :mod:`qitensor.factory`.
 """
 
-import numpy as np
 import weakref
 
-from qitensor.exceptions import *
+from qitensor.exceptions import MismatchedIndexSetError,HilbertError
 from qitensor.space import HilbertSpace
 
 __all__ = ['HilbertAtom']
@@ -373,7 +372,6 @@ class HilbertAtom(HilbertSpace):
 
         if len(self.indices) != 2:
             raise HilbertError('z_plus only available for qubits')
-        i = self.base_field.complex_unit()
         return self.array([1, 0])
 
     def z_minus(self):
@@ -390,7 +388,6 @@ class HilbertAtom(HilbertSpace):
 
         if len(self.indices) != 2:
             raise HilbertError('z_minus only available for qubits')
-        i = self.base_field.complex_unit()
         return self.array([0, 1])
 
     # Special operators

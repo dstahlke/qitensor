@@ -9,7 +9,7 @@ Sage: pickling
     >>> s = ha.array([1, x]) # doctest: +SKIP
     >>> t = hb.array([1, y]) # doctest: +SKIP
     >>> Q = s*t # doctest: +SKIP
-    >>> Q
+    >>> Q # doctest: +SKIP
     |a,b>
     [  1]
     [  y]
@@ -17,8 +17,8 @@ Sage: pickling
     [  x]
     [x*y]
 
-    >>> R = loads(dumps(Q))
-    >>> R
+    >>> R = loads(dumps(Q)) # doctest: +SKIP
+    >>> R # doctest: +SKIP
     |a,b>
     [  1]
     [  y]
@@ -26,9 +26,9 @@ Sage: pickling
     [  x]
     [x*y]
 
-    >>> Q == R
+    >>> Q == R # doctest: +SKIP
     True
-    >>> Q is R
+    >>> Q is R # doctest: +SKIP
     False
-    >>> Q.space is R.space
+    >>> Q.space is R.space # doctest: +SKIP
     True

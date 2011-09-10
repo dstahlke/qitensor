@@ -9,7 +9,8 @@ import itertools
 import weakref
 
 from qitensor import have_sage, shape_product
-from qitensor.exceptions import *
+from qitensor.exceptions import DuplicatedSpaceError, HilbertError, \
+    HilbertIndexError, HilbertShapeError, NotKetSpaceError
 import qitensor.atom
 
 __all__ = ['HilbertSpace']

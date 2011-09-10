@@ -17,7 +17,7 @@ class CartanTests(unittest.TestCase):
     def testXformToMagic(self):
         #print "Testing locally_transform_to_magic_basis."
         mb = MAGIC_BASIS
-        for i in range(20):
+        for _i in range(20):
             U = self.random_unitary(4)
             UT = mb.H * (mb * U * mb.H).T * mb
             (ew, psi) = linalg.eig(UT * U)
@@ -30,7 +30,7 @@ class CartanTests(unittest.TestCase):
 
     def testRandomUnitary(self):
         #print "Testing unitary_to_cartan with random matrices."
-        for i in range(20):
+        for _i in range(20):
             U = self.random_unitary(4)
 
             (UA, UB, VA, VB, alpha) = unitary_to_cartan(U)
@@ -42,10 +42,10 @@ class CartanTests(unittest.TestCase):
 
     def testRandomAlpha(self):
         #print "Testing going from alpha to unitary back to alpha."
-        for i in range(20):
+        for _i in range(20):
             alpha_in = np.random.rand(3) * np.pi/2 - np.pi/4
             U = unitary_from_cartan(alpha_in)
-            (UA, UB, VA, VB, alpha_out) = unitary_to_cartan(U)
+            (_UA, _UB, _VA, _VB, alpha_out) = unitary_to_cartan(U)
             # because the results are not unique, just compare the sorted absolute
             # values
             assert np.allclose(np.sort(abs(alpha_in)), np.sort(abs(alpha_out)))

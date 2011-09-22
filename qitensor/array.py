@@ -1101,7 +1101,7 @@ class HilbertArray(object):
           input.  The given space will be used for both the bra and the ket
           space of S.
 
-        See also: :func:`singular_vals`
+        See also: :func:`singular_vals`, :func:`svd_list`
 
         >>> from qitensor import qubit, qudit
         >>> ha = qubit('a')
@@ -1265,7 +1265,7 @@ class HilbertArray(object):
         """
         Returns the singular values of this array.
 
-        See also: :func:`svd`
+        See also: :func:`svd`, :func:`svd_list`
 
         >>> from qitensor import qubit, qudit
         >>> import numpy

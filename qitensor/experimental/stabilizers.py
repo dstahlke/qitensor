@@ -106,13 +106,14 @@ def continuous_stabilizers( \
     #print len(basis), slice_l, slice_r
 
     # make sure basis is independent
-    assert len(get_nullspace(lambda x: x*psi.space.eye(), basis)) == 0
+    # FIXME: test is too slow
+    #assert len(get_nullspace(lambda x: x*psi.space.eye(), basis)) == 0
 
     nullspace = get_nullspace(lambda x: x*psi, basis)
     if len(nullspace) == 0:
         return []
     nullspace = make_mostly_diagonal(nullspace)
-    print nullspace
+    #print nullspace
     stabilizers = []
     for nvec in nullspace:
         nop = [x*y for (x, y) in zip(nvec, basis)]

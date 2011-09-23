@@ -30,25 +30,6 @@ class SageHilbertBaseField(HilbertBaseField):
     def __reduce__(self):
         return _unreduce_v1, (self.sage_ring, )
 
-    def matrix_np_to_sage(self, np_mat, R=None):
-        np_mat = np.array(np_mat)
-
-        if self.sage_ring is None:
-            sage_mat = sage.all.matrix(np_mat)
-        else:
-            sage_mat = sage.all.matrix(self.sage_ring, np_mat)
-
-        if R is None:
-            return sage_mat
-        else:
-            return sage_mat.change_ring(R)
-
-    def matrix_sage_to_np(self, sage_mat):
-        if sage_mat.base_ring() != self.sage_ring:
-            sage_mat = sage_mat.change_ring(self.sage_ring)
-        np_mat = np.matrix(sage_mat, dtype=self.dtype)
-        return np_mat
-
     def sage_mat_xform(self, m, f):
         return self.matrix_sage_to_np(f(self.matrix_np_to_sage(m)))
 

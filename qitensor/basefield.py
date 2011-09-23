@@ -52,6 +52,27 @@ class HilbertBaseField(object):
             raise IncompatibleBaseFieldError('Different base_fields: '+
                 repr(self.unique_id)+' vs. '+repr(other.unique_id))
 
+    def matrix_np_to_sage(self, np_mat, R=None):
+        np_mat = np.array(np_mat)
+
+        import sage.all
+        if self.sage_ring is None:
+            sage_mat = sage.all.matrix(np_mat)
+        else:
+            sage_mat = sage.all.matrix(self.sage_ring, np_mat)
+
+        if R is None:
+            return sage_mat
+        else:
+            return sage_mat.change_ring(R)
+
+    def matrix_sage_to_np(self, sage_mat):
+        if self.sage_ring is not None:
+            if sage_mat.base_ring() != self.sage_ring:
+                sage_mat = sage_mat.change_ring(self.sage_ring)
+        np_mat = np.matrix(sage_mat, dtype=self.dtype)
+        return np_mat
+
     def input_cast_function(self):
         return None
 

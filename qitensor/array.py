@@ -1192,7 +1192,7 @@ class HilbertArray(object):
 
         return (U, S, V)
 
-    def svd_list(self, row_space=None, col_space=None):
+    def svd_list(self, row_space=None, col_space=None, thresh=0):
         # FIXME - docs
         """
         >>> from qitensor import qubit, qudit
@@ -1252,12 +1252,17 @@ class HilbertArray(object):
         #print row_space
         #print col_space
 
-        U_list = [ \
+        U_list = np.array([ \
             np.product(col_space).array(x, reshape=True, input_axes=col_space) \
-            for x in u.T]
-        V_list = [ \
+            for x in u.T])
+        V_list = np.array([ \
             np.product(row_space).array(x, reshape=True, input_axes=row_space) \
-            for x in v]
+            for x in v])
+
+        if thresh > 0:
+            U_list = U_list[s > thresh]
+            V_list = V_list[s > thresh]
+            s = s[s > thresh]
 
         return (U_list, s, V_list)
 

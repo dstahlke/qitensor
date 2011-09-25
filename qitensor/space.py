@@ -266,6 +266,9 @@ class HilbertSpace(object):
     def __repr__(self):
         return str(self)
 
+    def _repr_latex_(self): # for IPython
+        return '$'+self._latex_()+'$'
+
     def _latex_(self): # for Sage
         bra_labels = [x.latex_label for x in self.sorted_bras]
         ket_labels = [x.latex_label for x in self.sorted_kets]

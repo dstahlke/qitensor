@@ -1551,7 +1551,8 @@ class HilbertArray(object):
             self.as_np_matrix(), R)
 
     def _latex_(self):
-        return self._repr_latex_() # FIXME
+        return self._latex_block_table(mathjax=0)
+
         if not have_sage:
             raise HilbertError('This is only available under Sage')
 
@@ -1604,6 +1605,9 @@ class HilbertArray(object):
     ########## IPython stuff ##########
 
     def _repr_latex_(self):
+        return self._latex_block_table(mathjax=1)
+
+    def _latex_block_table(self, mathjax):
         spc = self.space
         if len(spc.ket_set):
             ket_indices = list(spc.ket_space().index_iter())
@@ -1613,8 +1617,8 @@ class HilbertArray(object):
             bra_indices = list(spc.bra_space().index_iter())
         else:
             bra_indices = [None]
-        # FIXME
-        fmt = np.core.arrayprint.ComplexFormat(self.nparray.flatten(), 6, True)
+
+        fmt = spc.base_field.latex_formatter(self.nparray.flatten())
 
         ht = r'\scriptsize{'
         ht += r'\begin{array}{|'
@@ -1632,7 +1636,7 @@ class HilbertArray(object):
         if spc.bra_set:
             if spc.ket_set:
                 ht += '&'
-            ht += r'\hline' + "\n"
+            if mathjax: ht += r'\hline' + "\n"
             for (b_idx_n, b_idx) in enumerate(bra_indices):
                 if b_idx_n:
                     ht += ' & '
@@ -1646,7 +1650,7 @@ class HilbertArray(object):
         last_k = None
         for k_idx in ket_indices:
             if k_idx is None or k_idx[0] != last_k:
-                ht += r'\hline' + "\n"
+                if mathjax: ht += r'\hline' + "\n"
                 if k_idx is not None:
                     last_k = k_idx[0]
             if k_idx is not None:
@@ -1674,75 +1678,75 @@ class HilbertArray(object):
                 ht += vs
             ht += r' \\' + "\n"
 
-        ht += r'\hline' + "\n"
+        if mathjax: ht += r'\hline' + "\n"
         ht += r"\end{array}" + "\n"
         ht += '}' # small
 
-        return '$$'+ht+'$$'
+        return '$$'+ht+'$$' if mathjax else ht
 
-    def _repr_htmlzz_(self):
-        import cgi
-
-        st1 = "style='border: 2px solid black;'"
-        st2 = "style='border: 1px dotted; padding: 2px;'"
-        spc = self.space
-        if len(spc.ket_set):
-            ket_indices = list(spc.ket_space().index_iter())
-        else:
-            ket_indices = [None]
-        if len(spc.bra_set):
-            bra_indices = list(spc.bra_space().index_iter())
-        else:
-            bra_indices = [None]
-        # FIXME
-        fmt = np.core.arrayprint.ComplexFormat(self.nparray.flatten(), 6, True)
-
-        ht = "<table>\n"
-
-        ht += "<colgroup "+st1+"></colgroup>\n"
-        if len(spc.bra_set):
-            bra_shape = spc.bra_space().shape
-            colgrp_size = np.product(bra_shape[1:])
-            for i in range(bra_shape[0]):
-                ht += ("<colgroup span=%d "+st1+"></colgroup>\n") % colgrp_size
-        else:
-            ht += "<colgroup "+st1+"></colgroup>\n"
-
-        ht += "<tbody "+st1+">\n"
-        ht += '<tr '+st2+'>'
-        ht += '<td '+st2+'><nobr>'+cgi.escape(str(spc))+'</nobr></td>'
-        for b_idx in bra_indices:
-            s = ' ' if b_idx is None else str(b_idx)
-            ht += '<th '+st2+'><nobr>'+s+'</nobr></th>'
-        ht += '</tr>\n'
-        ht += '</tbody>\n'
-
-        last_k = None
-        for k_idx in ket_indices:
-            if k_idx is not None and k_idx[0] != last_k:
-                if last_k is not None:
-                    ht += '</tbody>\n'
-                ht += "<tbody "+st1+">\n"
-                last_k = k_idx[0]
-            ht += '<tr '+st2+'>'
-            k_idx_s = ' ' if k_idx is None else str(k_idx)
-            ht += '<th '+st2+'><nobr>'+k_idx_s+'</nobr></th>'
-            for b_idx in bra_indices:
-                if k_idx is None and b_idx is None:
-                    assert 0
-                elif k_idx is None:
-                    idx = b_idx
-                elif b_idx is None:
-                    idx = k_idx
-                else:
-                    idx = k_idx + b_idx
-                v = self[idx]
-                vs = "<nobr><tt>"+fmt(v)+"</tt></nobr>"
-                if abs(v) < 1e-12: # FIXME
-                    vs = "<font color='#cccccc'>"+vs+"</font>"
-                ht += '<td '+st2+'>'+vs+'</td>'
-            ht += '</tr>\n'
-        ht += '</tbody>\n'
-        ht += '</table>\n'
-
-        return ht
+#    def _repr_html_(self):
+#        import cgi
+#
+#        st1 = "style='border: 2px solid black;'"
+#        st2 = "style='border: 1px dotted; padding: 2px;'"
+#        spc = self.space
+#        if len(spc.ket_set):
+#            ket_indices = list(spc.ket_space().index_iter())
+#        else:
+#            ket_indices = [None]
+#        if len(spc.bra_set):
+#            bra_indices = list(spc.bra_space().index_iter())
+#        else:
+#            bra_indices = [None]
+#        # FIXME
+#        fmt = np.core.arrayprint.ComplexFormat(self.nparray.flatten(), 6, True)
+#
+#        ht = "<table>\n"
+#
+#        ht += "<colgroup "+st1+"></colgroup>\n"
+#        if len(spc.bra_set):
+#            bra_shape = spc.bra_space().shape
+#            colgrp_size = np.product(bra_shape[1:])
+#            for i in range(bra_shape[0]):
+#                ht += ("<colgroup span=%d "+st1+"></colgroup>\n") % colgrp_size
+#        else:
+#            ht += "<colgroup "+st1+"></colgroup>\n"
+#
+#        ht += "<tbody "+st1+">\n"
+#        ht += '<tr '+st2+'>'
+#        ht += '<td '+st2+'><nobr>'+cgi.escape(str(spc))+'</nobr></td>'
+#        for b_idx in bra_indices:
+#            s = ' ' if b_idx is None else str(b_idx)
+#            ht += '<th '+st2+'><nobr>'+s+'</nobr></th>'
+#        ht += '</tr>\n'
+#        ht += '</tbody>\n'
+#
+#        last_k = None
+#        for k_idx in ket_indices:
+#            if k_idx is not None and k_idx[0] != last_k:
+#                if last_k is not None:
+#                    ht += '</tbody>\n'
+#                ht += "<tbody "+st1+">\n"
+#                last_k = k_idx[0]
+#            ht += '<tr '+st2+'>'
+#            k_idx_s = ' ' if k_idx is None else str(k_idx)
+#            ht += '<th '+st2+'><nobr>'+k_idx_s+'</nobr></th>'
+#            for b_idx in bra_indices:
+#                if k_idx is None and b_idx is None:
+#                    assert 0
+#                elif k_idx is None:
+#                    idx = b_idx
+#                elif b_idx is None:
+#                    idx = k_idx
+#                else:
+#                    idx = k_idx + b_idx
+#                v = self[idx]
+#                vs = "<nobr><tt>"+fmt(v)+"</tt></nobr>"
+#                if abs(v) < 1e-12: # FIXME
+#                    vs = "<font color='#cccccc'>"+vs+"</font>"
+#                ht += '<td '+st2+'>'+vs+'</td>'
+#            ht += '</tr>\n'
+#        ht += '</tbody>\n'
+#        ht += '</table>\n'
+#
+#        return ht

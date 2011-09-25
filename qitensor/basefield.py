@@ -73,6 +73,12 @@ class HilbertBaseField(object):
         np_mat = np.matrix(sage_mat, dtype=self.dtype)
         return np_mat
 
+    def latex_formatter(self, data):
+        if self.dtype == complex:
+            return np.core.arrayprint.ComplexFormat(data, 6, True)
+        else:
+            return str
+
     def input_cast_function(self):
         return None
 

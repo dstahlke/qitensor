@@ -1552,16 +1552,16 @@ class HilbertArray(object):
 
     def _latex_(self):
         return self._latex_block_table(mathjax=0)
-
-        if not have_sage:
-            raise HilbertError('This is only available under Sage')
-
-        import sage.all
-
-        return '\\begin{array}{l}\n'+ \
-            sage.all.latex(self.space)+' \\\\\n'+ \
-            sage.all.latex(self.sage_block_matrix())+ \
-            '\\end{array}'
+# Alternative way to do it:
+#        if not have_sage:
+#            raise HilbertError('This is only available under Sage')
+#
+#        import sage.all
+#
+#        return '\\begin{array}{l}\n'+ \
+#            sage.all.latex(self.space)+' \\\\\n'+ \
+#            sage.all.latex(self.sage_block_matrix())+ \
+#            '\\end{array}'
 
     def sage_block_matrix(self):
         if not have_sage:
@@ -1608,6 +1608,8 @@ class HilbertArray(object):
         return self._latex_block_table(mathjax=1)
 
     def _latex_block_table(self, mathjax):
+        """Formats array in Latex.  Used by both Sage and IPython."""
+
         spc = self.space
         if len(spc.ket_set):
             ket_indices = list(spc.ket_space().index_iter())
@@ -1684,6 +1686,8 @@ class HilbertArray(object):
 
         return '$$'+ht+'$$' if mathjax else ht
 
+# This works too, but the latex version is better since it allows the
+# possibility of the matrix components themselves being rendered with latex.
 #    def _repr_html_(self):
 #        import cgi
 #
@@ -1698,8 +1702,7 @@ class HilbertArray(object):
 #            bra_indices = list(spc.bra_space().index_iter())
 #        else:
 #            bra_indices = [None]
-#        # FIXME
-#        fmt = np.core.arrayprint.ComplexFormat(self.nparray.flatten(), 6, True)
+#        fmt = spc.base_field.latex_formatter(self.nparray.flatten())
 #
 #        ht = "<table>\n"
 #

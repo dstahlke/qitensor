@@ -75,6 +75,7 @@ class HilbertBaseField(object):
 
     def latex_formatter(self, data):
         if self.dtype == complex:
+            # FIXME - print options should be configurable (take from numpy options?)
             return np.core.arrayprint.ComplexFormat(data, 6, True)
         else:
             return str

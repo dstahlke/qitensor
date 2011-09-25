@@ -36,6 +36,17 @@ except ImportError:
 def shape_product(l):
     return np.prod(l, dtype=int)
 
+class PrintOptions: pass
+
+PRINT_OPTS = PrintOptions()
+
+def set_printoptions(precision=6, suppress=True, suppress_thresh=1e-12):
+    PRINT_OPTS.precision = precision
+    PRINT_OPTS.suppress = suppress
+    PRINT_OPTS.suppress_thresh = suppress_thresh
+
+set_printoptions()
+
 from qitensor.exceptions import *
 from qitensor.basefield import *
 from qitensor.space import *
@@ -52,4 +63,5 @@ __all__ = \
     atom.__all__ + \
     array.__all__ + \
     factory.__all__ + \
-    circuit.__all__
+    circuit.__all__ + \
+    ['set_printoptions']

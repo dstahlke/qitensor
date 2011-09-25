@@ -6,7 +6,7 @@ numpy.array.  HilbertArray's are to be created using the
 
 import numpy as np
 
-from qitensor import have_sage, shape_product
+from qitensor import have_sage, shape_product, PRINT_OPTS
 from qitensor.exceptions import BraKetMixtureError, DuplicatedSpaceError, \
     HilbertError, HilbertIndexError, HilbertShapeError, HilbertSliceError, \
     NotKetSpaceError
@@ -1604,8 +1604,12 @@ class HilbertArray(object):
 
     ########## IPython stuff ##########
 
-    def _repr_latex_(self):
-        return self._latex_block_table(mathjax=1)
+    # latex seems to slow the browser too much, even in chrome
+    #def _repr_latex_(self):
+    #    return self._latex_block_table(mathjax=1)
+
+    def _repr_html_(self):
+        return self._html_block_table()
 
     def _latex_block_table(self, mathjax):
         """Formats array in Latex.  Used by both Sage and IPython."""
@@ -1671,7 +1675,7 @@ class HilbertArray(object):
                 else:
                     idx = k_idx + b_idx
                 v = self[idx]
-                if abs(v) < 1e-12: # FIXME
+                if PRINT_OPTS.suppress and abs(v) < PRINT_OPTS.suppress_thresh:
                     vs = r'\color{Silver}{0}'
                 else:
                     vs = fmt(v)
@@ -1686,70 +1690,89 @@ class HilbertArray(object):
 
         return '$$'+ht+'$$' if mathjax else ht
 
-# This works too, but the latex version is better since it allows the
-# possibility of the matrix components themselves being rendered with latex.
-#    def _repr_html_(self):
-#        import cgi
-#
-#        st1 = "style='border: 2px solid black;'"
-#        st2 = "style='border: 1px dotted; padding: 2px;'"
-#        spc = self.space
-#        if len(spc.ket_set):
-#            ket_indices = list(spc.ket_space().index_iter())
-#        else:
-#            ket_indices = [None]
-#        if len(spc.bra_set):
-#            bra_indices = list(spc.bra_space().index_iter())
-#        else:
-#            bra_indices = [None]
-#        fmt = spc.base_field.latex_formatter(self.nparray.flatten())
-#
-#        ht = "<table>\n"
-#
-#        ht += "<colgroup "+st1+"></colgroup>\n"
-#        if len(spc.bra_set):
-#            bra_shape = spc.bra_space().shape
-#            colgrp_size = np.product(bra_shape[1:])
-#            for i in range(bra_shape[0]):
-#                ht += ("<colgroup span=%d "+st1+"></colgroup>\n") % colgrp_size
-#        else:
-#            ht += "<colgroup "+st1+"></colgroup>\n"
-#
-#        ht += "<tbody "+st1+">\n"
-#        ht += '<tr '+st2+'>'
-#        ht += '<td '+st2+'><nobr>'+cgi.escape(str(spc))+'</nobr></td>'
-#        for b_idx in bra_indices:
-#            s = ' ' if b_idx is None else str(b_idx)
-#            ht += '<th '+st2+'><nobr>'+s+'</nobr></th>'
-#        ht += '</tr>\n'
-#        ht += '</tbody>\n'
-#
-#        last_k = None
-#        for k_idx in ket_indices:
-#            if k_idx is not None and k_idx[0] != last_k:
-#                if last_k is not None:
-#                    ht += '</tbody>\n'
-#                ht += "<tbody "+st1+">\n"
-#                last_k = k_idx[0]
-#            ht += '<tr '+st2+'>'
-#            k_idx_s = ' ' if k_idx is None else str(k_idx)
-#            ht += '<th '+st2+'><nobr>'+k_idx_s+'</nobr></th>'
-#            for b_idx in bra_indices:
-#                if k_idx is None and b_idx is None:
-#                    assert 0
-#                elif k_idx is None:
-#                    idx = b_idx
-#                elif b_idx is None:
-#                    idx = k_idx
-#                else:
-#                    idx = k_idx + b_idx
-#                v = self[idx]
-#                vs = "<nobr><tt>"+fmt(v)+"</tt></nobr>"
-#                if abs(v) < 1e-12: # FIXME
-#                    vs = "<font color='#cccccc'>"+vs+"</font>"
-#                ht += '<td '+st2+'>'+vs+'</td>'
-#            ht += '</tr>\n'
-#        ht += '</tbody>\n'
-#        ht += '</table>\n'
-#
-#        return ht
+    def _html_block_table(self):
+        st_tab   = "style='border: 2px solid black;'"
+        st_tr    = "style='border: 1px dotted; padding: 2px;'"
+        st_th    = "style='border: 1px dotted; padding: 2px; text-align: center;'"
+        st_tdval = "style='border: 1px dotted; padding: 2px; text-align: right;'"
+        spc = self.space
+        if len(spc.ket_set):
+            ket_indices = list(spc.ket_space().index_iter())
+        else:
+            ket_indices = [None]
+        if len(spc.bra_set):
+            bra_indices = list(spc.bra_space().index_iter())
+        else:
+            bra_indices = [None]
+        # FIXME - if this really returns latex, then dollar signs need to be added
+        fmt = spc.base_field.latex_formatter(self.nparray.flatten())
+
+        ht = "<table style='margin: 0px 0px;'>\n"
+
+        if spc.ket_set:
+            ht += "<colgroup "+st_tab+"></colgroup>\n"
+        if len(spc.bra_set):
+            colgrp_size = spc.bra_space().shape[-1]
+            for i in range(spc.bra_space().dim() / colgrp_size):
+                ht += ("<colgroup span=%d "+st_tab+"></colgroup>\n") % colgrp_size
+        else:
+            ht += "<colgroup "+st_tab+"></colgroup>\n"
+
+        if spc.bra_set:
+            ht += "<tbody "+st_tab+">\n"
+            ht += '<tr '+st_tr+'>'
+            if spc.ket_set:
+                ht += '<td '+st_th+'> </td>'
+
+            for b_idx in bra_indices:
+                ht += '<td '+st_th+'><nobr>'
+                #ht += r'$\left< '
+                #for (x, y) in zip(b_idx, spc.sorted_bras):
+                #    ht += str(x) + '_{' + y.latex_label + '}'
+                #ht += r' \right|$'
+                ht += '&lt;'
+                ht += ','.join(y.label+'='+str(x) for (x, y) in zip(b_idx, spc.sorted_bras))
+                ht += '|'
+                ht += '</nobr></td>'
+
+            ht += '</tr>\n'
+            ht += '</tbody>\n'
+
+        last_k = None
+        for k_idx in ket_indices:
+            if k_idx is not None and len(k_idx) > 1 and k_idx[-2] != last_k:
+                if last_k is not None:
+                    ht += '</tbody>\n'
+                ht += "<tbody "+st_tab+">\n"
+                last_k = k_idx[-2]
+            ht += '<tr '+st_tr+'>'
+            if spc.ket_set:
+                ht += '<td '+st_th+'><nobr>'
+                #ht += r'$\left| '
+                #for (x, y) in zip(k_idx, spc.sorted_kets):
+                #    ht += str(x) + '_{' + y.latex_label + '}'
+                #ht += r' \right>$'
+                ht += '|'
+                ht += ','.join(y.label+'='+str(x) for (x, y) in zip(k_idx, spc.sorted_kets))
+                ht += '&gt;'
+                ht += '</nobr></td>'
+            for b_idx in bra_indices:
+                if k_idx is None and b_idx is None:
+                    assert 0
+                elif k_idx is None:
+                    idx = b_idx
+                elif b_idx is None:
+                    idx = k_idx
+                else:
+                    idx = k_idx + b_idx
+                v = self[idx]
+                if PRINT_OPTS.suppress and abs(v) < PRINT_OPTS.suppress_thresh:
+                    vs = "<font color='#cccccc'>0</font>"
+                else:
+                    vs = "<nobr><tt>"+fmt(v)+"</tt></nobr>"
+                ht += '<td '+st_tdval+'>'+vs+'</td>'
+            ht += '</tr>\n'
+        ht += '</tbody>\n'
+        ht += '</table>\n'
+
+        return ht

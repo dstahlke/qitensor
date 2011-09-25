@@ -1600,4 +1600,53 @@ class HilbertArray(object):
         m = f(m)
         return out_hilb.reshaped_sage_matrix(m)
 
-    ########## end of stuff that only works in Sage ##########
+    ########## IPython stuff ##########
+
+    def _repr_html_(self):
+        import cgi
+
+        st1 = "style='border: 2px solid black;'"
+        st2 = "style='border: 1px dotted; padding: 2px;'"
+        spc = self.space
+        ket_indices = list(spc.ket_space().index_iter())
+        bra_indices = list(spc.bra_space().index_iter())
+        # FIXME
+        fmt = np.core.arrayprint.ComplexFormat(self.nparray.flatten(), 6, True)
+
+        ht = ""
+        ht += "<table>\n"
+
+        ht += "<colgroup "+st1+"></colgroup>\n"
+        bra_shape = spc.bra_space().shape
+        colgrp_size = np.product(bra_shape[1:])
+        for i in range(bra_shape[0]):
+            ht += ("<colgroup span=%d "+st1+"></colgroup>\n") % colgrp_size
+
+        ht += "<tbody "+st1+">\n"
+        ht += '<tr '+st2+'>'
+        ht += '<td '+st2+'><nobr>'+cgi.escape(str(spc))+'</nobr></td>'
+        for b_idx in bra_indices:
+            ht += '<th '+st2+'><nobr>'+str(b_idx)+'</nobr></th>'
+        ht += '</tr>\n'
+        ht += '</tbody>\n'
+
+        last_k = None
+        for k_idx in ket_indices:
+            if k_idx[0] != last_k:
+                if last_k is not None:
+                    ht += '</tbody>\n'
+                ht += "<tbody "+st1+">\n"
+                last_k = k_idx[0]
+            ht += '<tr '+st2+'>'
+            ht += '<th '+st2+'><nobr>'+str(k_idx)+'</nobr></th>'
+            for b_idx in bra_indices:
+                v = self[k_idx+b_idx]
+                vs = "<nobr><tt>"+fmt(v)+"</tt></nobr>"
+                if abs(v) < 1e-12: # FIXME
+                    vs = "<font color='#cccccc'>"+vs+"</font>"
+                ht += '<td '+st2+'>'+vs+'</td>'
+            ht += '</tr>\n'
+        ht += '</tbody>\n'
+        ht += '</table>\n'
+
+        return ht

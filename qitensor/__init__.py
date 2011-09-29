@@ -27,25 +27,38 @@ __version__ = "0.7.1"
 
 import numpy as np
 
+########################################
+
 try:
     import sage.all
     have_sage = True
 except ImportError:
     have_sage = False
 
+########################################
+
 def shape_product(l):
     return np.prod(l, dtype=int)
+
+########################################
 
 class PrintOptions: pass
 
 PRINT_OPTS = PrintOptions()
+PRINT_OPTS.precision = 6
+PRINT_OPTS.suppress = True
+PRINT_OPTS.suppress_thresh = 1e-12
+# FIXME - option for html vs. latex vs. none for ipython pretty printing
 
-def set_printoptions(precision=6, suppress=True, suppress_thresh=1e-12):
-    PRINT_OPTS.precision = precision
-    PRINT_OPTS.suppress = suppress
-    PRINT_OPTS.suppress_thresh = suppress_thresh
+def set_printoptions(precision=None, suppress=None, suppress_thresh=None):
+    if precision is not None:
+        PRINT_OPTS.precision = precision
+    if suppress is not None:
+        PRINT_OPTS.suppress = suppress
+    if suppress_thresh is not None:
+        PRINT_OPTS.suppress_thresh = suppress_thresh
 
-set_printoptions()
+########################################
 
 from qitensor.exceptions import *
 from qitensor.basefield import *

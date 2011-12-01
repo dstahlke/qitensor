@@ -1,3 +1,6 @@
+Version 0.8.1 (ongoing):
+	no changes yet
+
 Version 0.8 (2011-12-01):
 	as_np_matrix take {row,col}_space args
 	array creation takes arg for axes order of input array

@@ -1,4 +1,4 @@
-Version 0.7.1 (ongoing):
+Version 0.8 (2011-12-01):
 	as_np_matrix take {row,col}_space args
 	array creation takes arg for axes order of input array
 	svd_list method

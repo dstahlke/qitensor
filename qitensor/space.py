@@ -505,6 +505,36 @@ class HilbertSpace(object):
 
         return self.random_array().QR()[0]
 
+    def random_isometry(self):
+        """
+        Returns a random isometry.
+
+        The ket space must be at least as great in dimension as the bra space.
+
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> hb = qudit('b', 7)
+        >>> hc = qudit('c', 3)
+        >>> m = (ha * hb * hc.H).random_isometry()
+        >>> (m.H * m - hc.eye()).norm() < 1e-14
+        True
+        >>> m = (hb * ha.H * hc.H).random_isometry()
+        >>> (m.H * m - (ha*hc).eye()).norm() < 1e-14
+        True
+        """
+
+        if len(self.ket_set) == 0 or len(self.bra_set) == 0:
+            raise HilbertError('not an operator space: '+str(self))
+
+        dk = self.ket_space().dim()
+        db = self.bra_space().dim()
+        if dk < db:
+            raise HilbertShapeError(dk, db)
+
+        U = self.ket_space().O.random_unitary()
+        iso = U.as_np_matrix()[:, :db]
+        return self.reshaped_np_matrix(iso)
+
     def eye(self):
         """
         Returns a ``HilbertArray`` corresponding to the identity matrix.

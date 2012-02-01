@@ -42,24 +42,6 @@ def shape_product(l):
 
 ########################################
 
-class PrintOptions: pass
-
-PRINT_OPTS = PrintOptions()
-PRINT_OPTS.precision = 6
-PRINT_OPTS.suppress = True
-PRINT_OPTS.suppress_thresh = 1e-12
-# FIXME - option for html vs. latex vs. none for ipython pretty printing
-
-def set_printoptions(precision=None, suppress=None, suppress_thresh=None):
-    if precision is not None:
-        PRINT_OPTS.precision = precision
-    if suppress is not None:
-        PRINT_OPTS.suppress = suppress
-    if suppress_thresh is not None:
-        PRINT_OPTS.suppress_thresh = suppress_thresh
-
-########################################
-
 from qitensor.exceptions import *
 from qitensor.basefield import *
 from qitensor.space import *
@@ -77,4 +59,4 @@ __all__ = \
     array.__all__ + \
     factory.__all__ + \
     circuit.__all__ + \
-    ['set_printoptions']
+    array_formatter.__all__

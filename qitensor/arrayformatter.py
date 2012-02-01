@@ -16,21 +16,42 @@ class HilbertArrayFormatter(object):
         self.suppress = True
         self.suppress_thresh = 1e-12
 
+    def py_scalar_latex_formatter(self, data):
+        if data.dtype == complex:
+            # suppress=False here since supression is done elsewhere
+            return np.core.arrayprint.ComplexFormat( \
+                data, self.precision, False)
+        else:
+            return str
+
+    def sage_scalar_latex_formatter(self, data):
+        return lambda x: sage.all.latex(x)
+
     def array_str(self, arr):
         if self.str_use_sage:
             return str(arr.space)+'\n'+str(arr.sage_block_matrix())
         else:
-            return str(arr.space) + '\n' + str(arr.nparray)
+            return str(arr.space)+'\n'+str(arr.nparray)
 
     def array_repr(self, arr):
         if self.repr_use_sage:
-            return repr(arr.space)+'\n'+repr(arr.sage_block_matrix())
+            return 'HilbertArray('+repr(arr.space)+',\n'+repr(arr.sage_block_matrix())+')'
         else:
-            return 'HilbertArray('+repr(arr.space)+',\n'+ \
-                repr(arr.nparray)+')'
+            return 'HilbertArray('+repr(arr.space)+',\n'+repr(arr.nparray)+')'
 
     def array_latex_block_table(self, arr, use_mathjax):
         """Formats array in Latex.  Used by both Sage and IPython."""
+
+# Alternative way to do it:
+#        if not have_sage:
+#            raise HilbertError('This is only available under Sage')
+#
+#        import sage.all
+#
+#        return '\\begin{array}{l}\n'+ \
+#            sage.all.latex(self.space)+' \\\\\n'+ \
+#            sage.all.latex(self.sage_block_matrix())+ \
+#            '\\end{array}'
 
         spc = arr.space
         if len(spc.ket_set):

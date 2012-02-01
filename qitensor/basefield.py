@@ -18,7 +18,7 @@ from qitensor.exceptions import HilbertError, IncompatibleBaseFieldError
 import qitensor.atom
 import qitensor.space
 from qitensor.array import HilbertArray
-from qitensor import PRINT_OPTS
+from qitensor.arrayformatter import FORMATTER
 
 __all__ = ['HilbertBaseField']
 
@@ -75,12 +75,7 @@ class HilbertBaseField(object):
         return np_mat
 
     def latex_formatter(self, data):
-        if self.dtype == complex:
-            # suppress=False here since supression is done elsewhere
-            return np.core.arrayprint.ComplexFormat( \
-                data, PRINT_OPTS.precision, False)
-        else:
-            return str
+        return FORMATTER.py_scalar_latex_formatter(data)
 
     def input_cast_function(self):
         return None

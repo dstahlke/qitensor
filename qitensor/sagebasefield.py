@@ -7,10 +7,6 @@ from qitensor import HilbertBaseField
 
 _base_field_cache = {}
 
-class SageLatexFormatter(object):
-    def __call__(self, x):
-        return sage.all.latex(x)
-
 def _factory(dtype):
     """Don't call this, use base_field_lookup instead."""
 
@@ -41,7 +37,7 @@ class SageHilbertBaseField(HilbertBaseField):
         return self.sage_ring(sage.all.I)
 
     def latex_formatter(self, data):
-        return SageLatexFormatter()
+        return FORMATTER.sage_scalar_latex_formatter(data)
 
     def input_cast_function(self):
         return self.sage_ring

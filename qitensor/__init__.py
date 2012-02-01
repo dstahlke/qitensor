@@ -50,6 +50,7 @@ from qitensor.array import *
 from qitensor.factory import *
 from qitensor.circuit import *
 import qitensor.experimental
+from qitensor.arrayformatter import *
 
 __all__ = \
     exceptions.__all__ + \
@@ -59,4 +60,4 @@ __all__ = \
     array.__all__ + \
     factory.__all__ + \
     circuit.__all__ + \
-    array_formatter.__all__
+    arrayformatter.__all__

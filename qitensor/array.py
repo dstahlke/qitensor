@@ -12,6 +12,7 @@ from qitensor.exceptions import BraKetMixtureError, DuplicatedSpaceError, \
     NotKetSpaceError
 from qitensor.space import HilbertSpace
 from qitensor.atom import HilbertAtom
+from qitensor.arrayformatter import FORMATTER
 
 __all__ = ['HilbertArray']
 
@@ -498,19 +499,6 @@ class HilbertArray(object):
     def __ipow__(self, other):
         self.nparray[:] = self.__pow__(other).nparray
         return self
-
-    def __str__(self):
-        if have_sage:
-            return str(self.space)+'\n'+str(self.sage_block_matrix())
-        else:
-            return str(self.space) + '\n' + str(self.nparray)
-
-    def __repr__(self):
-        if have_sage:
-            return repr(self.space)+'\n'+repr(self.sage_block_matrix())
-        else:
-            return 'HilbertArray('+repr(self.space)+',\n'+ \
-                repr(self.nparray)+')'
 
     def _index_key_to_map(self, key):
         index_map = {}
@@ -1551,17 +1539,7 @@ class HilbertArray(object):
             self.as_np_matrix(), R)
 
     def _latex_(self):
-        return self._latex_block_table(mathjax=0)
-# Alternative way to do it:
-#        if not have_sage:
-#            raise HilbertError('This is only available under Sage')
-#
-#        import sage.all
-#
-#        return '\\begin{array}{l}\n'+ \
-#            sage.all.latex(self.space)+' \\\\\n'+ \
-#            sage.all.latex(self.sage_block_matrix())+ \
-#            '\\end{array}'
+        return FORMATTER.array_latex_block_table(self, mathjax=0)
 
     def sage_block_matrix(self):
         if not have_sage:
@@ -1602,11 +1580,17 @@ class HilbertArray(object):
         m = f(m)
         return out_hilb.reshaped_sage_matrix(m)
 
+    def __str__(self):
+        return FORMATTER.array_str(self)
+
+    def __repr__(self):
+        return FORMATTER.array_repr(self)
+
     ########## IPython stuff ##########
 
     # latex seems to slow the browser too much, even in chrome
     #def _repr_latex_(self):
-    #    return self._latex_block_table(mathjax=1)
+    #    return FORMATTER.array_latex_block_table(self, mathjax=1)
 
     def _repr_html_(self):
-        return self._html_block_table()
+        return FORMATTER.array_html_block_table(self)

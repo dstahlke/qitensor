@@ -1192,6 +1192,7 @@ class HilbertArray(object):
         |a><b,c|
 
         >>> # test basic properties of SVD
+        >>> import numpy as np
         >>> (Ul, sl, Vl) = W.svd_list()
         >>> (len(Ul), len(sl), len(Vl))
         (3, 3, 3)
@@ -1205,6 +1206,7 @@ class HilbertArray(object):
         True
 
         >>> # take SVD across the |a><b| vs. <c| cut
+        >>> import numpy
         >>> (Ul, sl, Vl) = W.svd_list(col_space=ha*hb.H)
         >>> (len(Ul), len(sl), len(Vl))
         (2, 2, 2)

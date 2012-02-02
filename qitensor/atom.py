@@ -272,6 +272,9 @@ class HilbertAtom(HilbertSpace):
         (regardless of the actual values of the index set).
 
         >>> from qitensor import qudit, indexed_space
+        >>> import numpy
+        >>> numpy.set_printoptions(suppress = True)
+
         >>> ha = qudit('a', 4)
         >>> ha.fourier_basis_state(0)
         HilbertArray(|a>,
@@ -408,12 +411,14 @@ class HilbertAtom(HilbertSpace):
 
         See also: :func:`X`
 
-        >>> from qitensor import qubit
+        >>> from qitensor import qubit, qudit
+
         >>> ha = qubit('a')
         >>> ha.pauliX()
         HilbertArray(|a><a|,
         array([[ 0.+0.j,  1.+0.j],
                [ 1.+0.j,  0.+0.j]]))
+
         >>> hb = qudit('b', 3)
         >>> hb.pauliX(1)
         HilbertArray(|b><b|,
@@ -468,6 +473,9 @@ class HilbertAtom(HilbertSpace):
         See also: :func:`Z`
 
         >>> from qitensor import qubit, indexed_space
+        >>> import numpy
+        >>> numpy.set_printoptions(suppress = True)
+
         >>> ha = qubit('a')
         >>> ha.pauliZ()
         HilbertArray(|a><a|,
@@ -543,6 +551,9 @@ class HilbertAtom(HilbertSpace):
         See also: :func:`pauliZ`
 
         >>> from qitensor import qubit, indexed_space
+        >>> import numpy
+        >>> numpy.set_printoptions(suppress = True)
+
         >>> ha = qubit('a')
         >>> ha.Z
         HilbertArray(|a><a|,
@@ -566,6 +577,9 @@ class HilbertAtom(HilbertSpace):
         This is only available for qubit spaces.
 
         >>> from qitensor import qubit
+        >>> import numpy
+        >>> numpy.set_printoptions(suppress = True, precision = 6)
+
         >>> ha = qubit('a')
         >>> ha.hadamard()
         HilbertArray(|a><a|,
@@ -605,6 +619,9 @@ class HilbertAtom(HilbertSpace):
         This is only available for qubit spaces.
 
         >>> from qitensor import qubit
+        >>> import numpy
+        >>> numpy.set_printoptions(suppress = True, precision = 6)
+
         >>> ha = qubit('a')
         >>> ha.gateT()
         HilbertArray(|a><a|,

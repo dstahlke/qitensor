@@ -1033,6 +1033,7 @@ class HilbertArray(object):
 
         >>> import numpy
         >>> from qitensor import qubit
+        >>> numpy.set_printoptions(suppress = True)
         >>> ha = qubit('a')
         >>> (ha.X * numpy.pi * 1j).expm()
         HilbertArray(|a><a|,

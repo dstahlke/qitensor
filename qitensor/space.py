@@ -511,7 +511,8 @@ class HilbertSpace(object):
 
         The ket space must be at least as great in dimension as the bra space.
 
-        >>> from qitensor import qubit
+        >>> from qitensor import qubit, qudit
+
         >>> ha = qubit('a')
         >>> hb = qudit('b', 7)
         >>> hc = qudit('c', 3)

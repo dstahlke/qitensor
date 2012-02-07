@@ -5,6 +5,7 @@ package.
 """
 
 from qitensor import have_sage
+from qitensor.basefield import HilbertBaseField
 
 __all__ = ['base_field_lookup', 'indexed_space', 'qubit', 'qudit']
 
@@ -62,12 +63,16 @@ def base_field_lookup(dtype):
     Returns the HilbertBaseField for the given data type.
 
     :param dtype: the base field data type
-    :type dtype: python type or Sage CommutativeRing; default complex
+    :type dtype: python type or Sage CommutativeRing or HilbertBaseField;
+        default complex
 
     >>> from qitensor import base_field_lookup
     >>> base_field_lookup(complex).__class__
     <class 'qitensor.basefield.HilbertBaseField'>
     """
+
+    if isinstance(dtype, HilbertBaseField):
+        return dtype
 
     for f in _base_field_factories:
         ret = f(dtype)
@@ -85,7 +90,8 @@ def indexed_space(label, indices, dtype=complex, latex_label=None, group_op=None
     :param label: a unique label for this Hilbert space
     :param indices: a sequence defining the index set
     :param dtype: the base field data type
-    :type dtype: python type or Sage CommutativeRing; default complex
+    :type dtype: python type or Sage CommutativeRing or HilbertBaseField;
+        default complex
     :param latex_label: an optional latex representation of the label
     :param group_op: group operation
 
@@ -121,7 +127,8 @@ def qudit(label, dim, dtype=complex, latex_label=None):
     :param label: a unique label for this Hilbert space
     :param dim: the dimension of the Hilbert space
     :param dtype: the base field data type
-    :type dtype: python type or Sage CommutativeRing; default complex
+    :type dtype: python type or Sage CommutativeRing or HilbertBaseField;
+        default complex
     :param latex_label: an optional latex representation of the label
 
     This is really just a shortcut for 
@@ -149,7 +156,8 @@ def qubit(label, dtype=complex, latex_label=None):
 
     :param label: a unique label for this Hilbert space
     :param dtype: the base field data type
-    :type dtype: python type or Sage CommutativeRing; default complex
+    :type dtype: python type or Sage CommutativeRing or HilbertBaseField;
+        default complex
     :param latex_label: an optional latex representation of the label
 
     This is really just a shortcut for 

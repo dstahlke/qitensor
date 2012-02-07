@@ -15,6 +15,7 @@ class HilbertArrayFormatter(object):
         self.precision = 6
         self.suppress = True
         self.suppress_thresh = 1e-12
+        self.zero_color_latex = 'Silver'
 
     def py_scalar_latex_formatter(self, data):
         if data.dtype == complex:
@@ -39,7 +40,7 @@ class HilbertArrayFormatter(object):
         else:
             return 'HilbertArray('+repr(arr.space)+',\n'+repr(arr.nparray)+')'
 
-    def array_latex_block_table(self, arr, use_mathjax):
+    def array_latex_block_table(self, arr, use_hline=False):
         """Formats array in Latex.  Used by both Sage and IPython."""
 
 # Alternative way to do it:
@@ -79,9 +80,9 @@ class HilbertArrayFormatter(object):
         ht += "}\n"
 
         if spc.bra_set:
+            if use_hline: ht += r'\hline' + "\n"
             if spc.ket_set:
                 ht += '&'
-            if use_mathjax: ht += r'\hline' + "\n"
             for (b_idx_n, b_idx) in enumerate(bra_indices):
                 if b_idx_n:
                     ht += ' & '
@@ -95,7 +96,7 @@ class HilbertArrayFormatter(object):
         last_k = None
         for k_idx in ket_indices:
             if k_idx is None or k_idx[0] != last_k:
-                if use_mathjax: ht += r'\hline' + "\n"
+                if use_hline: ht += r'\hline' + "\n"
                 if k_idx is not None:
                     last_k = k_idx[0]
             if k_idx is not None:
@@ -115,7 +116,10 @@ class HilbertArrayFormatter(object):
                     idx = k_idx + b_idx
                 v = arr[idx]
                 if self.suppress and abs(v) < self.suppress_thresh:
-                    vs = r'\color{Silver}{0}'
+                    if self.zero_color_latex:
+                        vs = r'\color{'+self.zero_color_latex+'}{0}'
+                    else:
+                        vs = '0'
                 else:
                     vs = fmt(v)
                 if b_idx_n:
@@ -123,11 +127,11 @@ class HilbertArrayFormatter(object):
                 ht += vs
             ht += r' \\' + "\n"
 
-        if use_mathjax: ht += r'\hline' + "\n"
+        if use_hline: ht += r'\hline' + "\n"
         ht += r"\end{array}" + "\n"
         ht += '}' # small
 
-        return '$$'+ht+'$$' if use_mathjax else ht
+        return ht
 
     def array_html_block_table(self, arr):
         st_tab   = "style='border: 2px solid black;'"

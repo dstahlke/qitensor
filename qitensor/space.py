@@ -268,7 +268,7 @@ class HilbertSpace(object):
         return str(self)
 
     def _repr_latex_(self): # for IPython
-        if not FORMATTER.ipy_format_mode == 'latex':
+        if not FORMATTER.ipy_space_format_mode == 'latex':
             return None
         return '$'+self._latex_()+'$'
 

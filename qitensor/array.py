@@ -1592,12 +1592,12 @@ class HilbertArray(object):
     ########## IPython stuff ##########
 
     def _repr_latex_(self):
-        if not FORMATTER.ipy_format_mode == 'latex':
+        if not FORMATTER.ipy_table_format_mode == 'latex':
             return None
         latex = FORMATTER.array_latex_block_table(self, use_hline=True)
         return '$$'+latex+'$$'
 
     def _repr_html_(self):
-        if not FORMATTER.ipy_format_mode == 'html':
+        if not FORMATTER.ipy_table_format_mode == 'html':
             return None
         return FORMATTER.array_html_block_table(self)

@@ -15,7 +15,8 @@ class HilbertArrayFormatter(object):
         self.zero_color_latex = 'Silver'
         self.zero_color_html = '#cccccc'
         self.use_latex_label_in_html = True
-        self.ipy_format_mode = 'html'
+        self.ipy_table_format_mode = 'html'
+        self.ipy_space_format_mode = 'latex'
 
     def _get_suppress(self):
         suppress = np.get_printoptions()['suppress']
@@ -244,9 +245,13 @@ class HilbertArrayFormatter(object):
 
     def set_printoptions(
         self,
-        repr_use_sage=None, str_use_sage=None,
-        zero_color_latex=None, zero_color_html=None,
-        use_latex_label_in_html=None, ipy_format_mode=None
+        repr_use_sage=None,
+        str_use_sage=None,
+        zero_color_latex=None,
+        zero_color_html=None,
+        use_latex_label_in_html=None,
+        ipy_table_format_mode=None,
+        ipy_space_format_mode=None
     ):
         """FIXME - docstring"""
 
@@ -260,9 +265,12 @@ class HilbertArrayFormatter(object):
             self.zero_color_html = str(zero_color_html)
         if use_latex_label_in_html is not None:
             self.use_latex_label_in_html = bool(use_latex_label_in_html)
-        if ipy_format_mode is not None:
-            assert ipy_format_mode in ['html', 'latex', 'plain']
-            self.ipy_format_mode = ipy_format_mode
+        if ipy_table_format_mode is not None:
+            assert ipy_table_format_mode in ['html', 'latex', 'plain']
+            self.ipy_table_format_mode = ipy_table_format_mode
+        if ipy_space_format_mode is not None:
+            assert ipy_space_format_mode in ['latex', 'plain']
+            self.ipy_space_format_mode = ipy_space_format_mode
 
     def get_printoptions(self):
         """FIXME - docstring"""
@@ -273,7 +281,8 @@ class HilbertArrayFormatter(object):
             "zero_color_latex"        : self.zero_color_latex,
             "zero_color_html"         : self.zero_color_html,
             "use_latex_label_in_html" : self.use_latex_label_in_html,
-            "ipy_format_mode"         : self.ipy_format_mode,
+            "ipy_table_format_mode"   : self.ipy_table_format_mode,
+            "ipy_space_format_mode"   : self.ipy_space_format_mode,
         }
 
 FORMATTER = HilbertArrayFormatter()

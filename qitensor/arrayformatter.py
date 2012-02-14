@@ -12,17 +12,21 @@ class HilbertArrayFormatter(object):
     def __init__(self):
         self.str_use_sage = False
         self.repr_use_sage = False
-        self.precision = 6
-        self.suppress = True
-        self.suppress_thresh = 1e-12
         self.zero_color_latex = 'Silver'
         self.zero_color_html = '#cccccc'
+        self.use_latex_label_in_html = True
+
+    def _get_suppress(self):
+        suppress = np.get_printoptions()['suppress']
+        suppress_thresh = 0.1 ** (np.get_printoptions()['precision'] + 0.5)
+        return (suppress, suppress_thresh)
 
     def py_scalar_latex_formatter(self, data):
         if data.dtype == complex:
+            precision = np.get_printoptions()['precision']
             # suppress=False here since supression is done elsewhere
             return np.core.arrayprint.ComplexFormat( \
-                data, self.precision, False)
+                data, precision=precision, suppress_small=False)
         else:
             return str
 
@@ -59,6 +63,8 @@ class HilbertArrayFormatter(object):
 #            sage.all.latex(self.space)+' \\\\\n'+ \
 #            sage.all.latex(self.sage_block_matrix())+ \
 #            '\\end{array}'
+
+        (suppress, suppress_thresh) = self._get_suppress()
 
         spc = arr.space
         if len(spc.ket_set):
@@ -121,7 +127,7 @@ class HilbertArrayFormatter(object):
                 else:
                     idx = k_idx + b_idx
                 v = arr[idx]
-                if self.suppress and abs(v) < self.suppress_thresh:
+                if suppress and abs(v) < suppress_thresh:
                     if self.zero_color_latex != '':
                         vs = r'\color{'+self.zero_color_latex+'}{0}'
                     else:
@@ -140,6 +146,8 @@ class HilbertArrayFormatter(object):
         return ht
 
     def array_html_block_table(self, arr):
+        (suppress, suppress_thresh) = self._get_suppress()
+
         st_tab   = "style='border: 2px solid black;'"
         st_tr    = "style='border: 1px dotted; padding: 2px;'"
         st_th    = "style='border: 1px dotted; padding: 2px; text-align: center;'"
@@ -175,13 +183,15 @@ class HilbertArrayFormatter(object):
 
             for b_idx in bra_indices:
                 ht += '<td '+st_th+'><nobr>'
-                #ht += r'$\left< '
-                #for (x, y) in zip(b_idx, spc.sorted_bras):
-                #    ht += str(x) + '_{' + y.latex_label + '}'
-                #ht += r' \right|$'
-                ht += '&lt;'
-                ht += ','.join(y.label+'='+str(x) for (x, y) in zip(b_idx, spc.sorted_bras))
-                ht += '|'
+                if self.use_latex_label_in_html:
+                    ht += r'$\left< '
+                    for (x, y) in zip(b_idx, spc.sorted_bras):
+                        ht += str(x) + '_{' + y.latex_label + '}'
+                    ht += r' \right|$'
+                else:
+                    ht += '&lt;'
+                    ht += ','.join(y.label+'='+str(x) for (x, y) in zip(b_idx, spc.sorted_bras))
+                    ht += '|'
                 ht += '</nobr></td>'
 
             ht += '</tr>\n'
@@ -197,13 +207,15 @@ class HilbertArrayFormatter(object):
             ht += '<tr '+st_tr+'>'
             if spc.ket_set:
                 ht += '<td '+st_th+'><nobr>'
-                #ht += r'$\left| '
-                #for (x, y) in zip(k_idx, spc.sorted_kets):
-                #    ht += str(x) + '_{' + y.latex_label + '}'
-                #ht += r' \right>$'
-                ht += '|'
-                ht += ','.join(y.label+'='+str(x) for (x, y) in zip(k_idx, spc.sorted_kets))
-                ht += '&gt;'
+                if self.use_latex_label_in_html:
+                    ht += r'$\left| '
+                    for (x, y) in zip(k_idx, spc.sorted_kets):
+                        ht += str(x) + '_{' + y.latex_label + '}'
+                    ht += r' \right>$'
+                else:
+                    ht += '|'
+                    ht += ','.join(y.label+'='+str(x) for (x, y) in zip(k_idx, spc.sorted_kets))
+                    ht += '&gt;'
                 ht += '</nobr></td>'
             for b_idx in bra_indices:
                 if k_idx is None and b_idx is None:
@@ -215,7 +227,7 @@ class HilbertArrayFormatter(object):
                 else:
                     idx = k_idx + b_idx
                 v = arr[idx]
-                if self.suppress and abs(v) < self.suppress_thresh:
+                if suppress and abs(v) < suppress_thresh:
                     if self.zero_color_html != '':
                         vs = "<font color='"+self.zero_color_html+"'>0</font>"
                     else:
@@ -229,23 +241,23 @@ class HilbertArrayFormatter(object):
 
         return ht
 
-FORMATTER = HilbertArrayFormatter()
+    # FIXME - option for html vs. latex vs. none for ipython pretty printing
+    def set_printoptions(
+        self,
+        use_sage=None, zero_color_latex=None, zero_color_html=None,
+        use_latex_label_in_html=None
+    ):
+        """FIXME - docstring"""
 
-# FIXME - option for html vs. latex vs. none for ipython pretty printing
-def set_qitensor_printoptions(
-    precision=None, suppress=None, suppress_thresh=None,
-    use_sage=None, zero_color_latex=None, zero_color_html=None
-):
-    if precision is not None:
-        FORMATTER.precision = float(precision)
-    if suppress is not None:
-        FORMATTER.suppress = bool(suppress)
-    if suppress_thresh is not None:
-        FORMATTER.suppress_thresh = float(suppress_thresh)
-    if use_sage is not None:
-        FORMATTER.str_use_sage  = bool(use_sage)
-        FORMATTER.repr_use_sage = bool(use_sage)
-    if zero_color_latex is not None:
-        FORMATTER.zero_color_latex = str(zero_color_latex)
-    if zero_color_html is not None:
-        FORMATTER.zero_color_html = str(zero_color_html)
+        if use_sage is not None:
+            self.str_use_sage  = bool(use_sage)
+            self.repr_use_sage = bool(use_sage)
+        if zero_color_latex is not None:
+            self.zero_color_latex = str(zero_color_latex)
+        if zero_color_html is not None:
+            self.zero_color_html = str(zero_color_html)
+        if use_latex_label_in_html is not None:
+            self.use_latex_label_in_html = bool(use_latex_label_in_html)
+
+FORMATTER = HilbertArrayFormatter()
+set_qitensor_printoptions = FORMATTER.set_printoptions

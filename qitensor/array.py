@@ -1591,10 +1591,13 @@ class HilbertArray(object):
 
     ########## IPython stuff ##########
 
-    # latex seems to slow the browser too much, even in chrome
-    #def _repr_latex_(self):
-    #    latex = FORMATTER.array_latex_block_table(self, use_hline=True)
-    #    return '$$'+latex+'$$'
+    def _repr_latex_(self):
+        if not FORMATTER.ipy_format_mode == 'latex':
+            return None
+        latex = FORMATTER.array_latex_block_table(self, use_hline=True)
+        return '$$'+latex+'$$'
 
     def _repr_html_(self):
+        if not FORMATTER.ipy_format_mode == 'html':
+            return None
         return FORMATTER.array_html_block_table(self)

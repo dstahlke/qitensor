@@ -6,5 +6,5 @@ FINISH DOCS
     * better way to run Sage doctests?
     * example: random quantum channel
 
-FEATURES
-    * selection of array formatters for ipy html notebook, qt notebook, sage notebook, sage console
+BUGS
+    * redeclaring HilbertAtom can't change latex label

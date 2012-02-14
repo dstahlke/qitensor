@@ -6,7 +6,7 @@ import numpy as np
 
 from qitensor import have_sage
 
-__all__ = ['set_qitensor_printoptions']
+__all__ = ['set_qitensor_printoptions', 'get_qitensor_printoptions']
 
 class HilbertArrayFormatter(object):
     def __init__(self):
@@ -15,6 +15,7 @@ class HilbertArrayFormatter(object):
         self.zero_color_latex = 'Silver'
         self.zero_color_html = '#cccccc'
         self.use_latex_label_in_html = True
+        self.ipy_format_mode = 'html'
 
     def _get_suppress(self):
         suppress = np.get_printoptions()['suppress']
@@ -241,23 +242,40 @@ class HilbertArrayFormatter(object):
 
         return ht
 
-    # FIXME - option for html vs. latex vs. none for ipython pretty printing
     def set_printoptions(
         self,
-        use_sage=None, zero_color_latex=None, zero_color_html=None,
-        use_latex_label_in_html=None
+        repr_use_sage=None, str_use_sage=None,
+        zero_color_latex=None, zero_color_html=None,
+        use_latex_label_in_html=None, ipy_format_mode=None
     ):
         """FIXME - docstring"""
 
-        if use_sage is not None:
-            self.str_use_sage  = bool(use_sage)
-            self.repr_use_sage = bool(use_sage)
+        if repr_use_sage is not None:
+            self.repr_use_sage  = bool(repr_use_sage)
+        if str_use_sage is not None:
+            self.str_use_sage = bool(str_use_sage)
         if zero_color_latex is not None:
             self.zero_color_latex = str(zero_color_latex)
         if zero_color_html is not None:
             self.zero_color_html = str(zero_color_html)
         if use_latex_label_in_html is not None:
             self.use_latex_label_in_html = bool(use_latex_label_in_html)
+        if ipy_format_mode is not None:
+            assert ipy_format_mode in ['html', 'latex', 'plain']
+            self.ipy_format_mode = ipy_format_mode
+
+    def get_printoptions(self):
+        """FIXME - docstring"""
+
+        return {
+            "str_use_sage"            : self.str_use_sage,
+            "repr_use_sage"           : self.repr_use_sage,
+            "zero_color_latex"        : self.zero_color_latex,
+            "zero_color_html"         : self.zero_color_html,
+            "use_latex_label_in_html" : self.use_latex_label_in_html,
+            "ipy_format_mode"         : self.ipy_format_mode,
+        }
 
 FORMATTER = HilbertArrayFormatter()
 set_qitensor_printoptions = FORMATTER.set_printoptions
+get_qitensor_printoptions = FORMATTER.get_printoptions

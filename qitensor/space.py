@@ -12,6 +12,7 @@ from qitensor import have_sage, shape_product
 from qitensor.exceptions import DuplicatedSpaceError, HilbertError, \
     HilbertIndexError, HilbertShapeError, NotKetSpaceError
 import qitensor.atom
+from qitensor.arrayformatter import FORMATTER
 
 __all__ = ['HilbertSpace']
 
@@ -267,6 +268,8 @@ class HilbertSpace(object):
         return str(self)
 
     def _repr_latex_(self): # for IPython
+        if not FORMATTER.ipy_format_mode == 'latex':
+            return None
         return '$'+self._latex_()+'$'
 
     def _latex_(self): # for Sage

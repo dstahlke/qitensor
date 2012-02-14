@@ -23,7 +23,7 @@ class HilbertArrayFormatter(object):
         suppress_thresh = 0.1 ** (np.get_printoptions()['precision'] + 0.5)
         return (suppress, suppress_thresh)
 
-    def py_scalar_latex_formatter(self, data):
+    def py_scalar_latex_formatter(self, data, dollar_if_tex):
         if data.dtype == complex:
             precision = np.get_printoptions()['precision']
             # suppress=False here since supression is done elsewhere
@@ -32,13 +32,16 @@ class HilbertArrayFormatter(object):
         else:
             return str
 
-    def sage_scalar_latex_formatter(self, data):
+    def sage_scalar_latex_formatter(self, data, dollar_if_tex):
         if not have_sage:
             raise HilbertError('This is only available under Sage')
 
         import sage.all
 
-        return lambda x: sage.all.latex(x)
+        if dollar_if_tex:
+            return lambda x: '$'+sage.all.latex(x)+'$'
+        else:
+            return lambda x: sage.all.latex(x)
 
     def array_str(self, arr):
         if self.str_use_sage:
@@ -78,7 +81,7 @@ class HilbertArrayFormatter(object):
         else:
             bra_indices = [None]
 
-        fmt = spc.base_field.latex_formatter(arr.nparray.flatten())
+        fmt = spc.base_field.latex_formatter(arr.nparray.flatten(), dollar_if_tex=False)
 
         ht = r'\scriptsize{'
         ht += r'\begin{array}{|'
@@ -101,10 +104,10 @@ class HilbertArrayFormatter(object):
                 if b_idx_n:
                     ht += ' & '
                 if b_idx is not None:
-                    ht += r'\mathbf{\left< '
+                    ht += r'\left< '
                     for (x, y) in zip(b_idx, spc.sorted_bras):
                         ht += str(x) + '_{' + y.latex_label + '}'
-                    ht += r' \right|}'
+                    ht += r' \right|'
             ht += r' \\' + "\n"
 
         last_k = None
@@ -114,10 +117,10 @@ class HilbertArrayFormatter(object):
                 if k_idx is not None:
                     last_k = k_idx[0]
             if k_idx is not None:
-                ht += r'\mathbf{\left| '
+                ht += r'\left| '
                 for (x, y) in zip(k_idx, spc.sorted_kets):
                     ht += str(x) + '_{' + y.latex_label + '}'
-                ht += r' \right>}'
+                ht += r' \right>'
                 ht += ' & '
             for (b_idx_n, b_idx) in enumerate(bra_indices):
                 if k_idx is None and b_idx is None:
@@ -163,8 +166,7 @@ class HilbertArrayFormatter(object):
             bra_indices = list(spc.bra_space().index_iter())
         else:
             bra_indices = [None]
-        # FIXME - if this really returns latex, then dollar signs need to be added
-        fmt = spc.base_field.latex_formatter(arr.nparray.flatten())
+        fmt = spc.base_field.latex_formatter(arr.nparray.flatten(), dollar_if_tex=True)
 
         ht = "<table style='margin: 0px 0px;'>\n"
 
@@ -186,10 +188,10 @@ class HilbertArrayFormatter(object):
             for b_idx in bra_indices:
                 ht += '<td '+st_th+'><nobr>'
                 if self.use_latex_label_in_html:
-                    ht += r'$\left< '
+                    ht += r'$\scriptsize{\left< '
                     for (x, y) in zip(b_idx, spc.sorted_bras):
                         ht += str(x) + '_{' + y.latex_label + '}'
-                    ht += r' \right|$'
+                    ht += r' \right|}$'
                 else:
                     ht += '&lt;'
                     ht += ','.join(y.label+'='+str(x) for (x, y) in zip(b_idx, spc.sorted_bras))
@@ -210,10 +212,10 @@ class HilbertArrayFormatter(object):
             if spc.ket_set:
                 ht += '<td '+st_th+'><nobr>'
                 if self.use_latex_label_in_html:
-                    ht += r'$\left| '
+                    ht += r'$\scriptsize{\left| '
                     for (x, y) in zip(k_idx, spc.sorted_kets):
                         ht += str(x) + '_{' + y.latex_label + '}'
-                    ht += r' \right>$'
+                    ht += r' \right>}$'
                 else:
                     ht += '|'
                     ht += ','.join(y.label+'='+str(x) for (x, y) in zip(k_idx, spc.sorted_kets))
@@ -253,8 +255,6 @@ class HilbertArrayFormatter(object):
         ipy_table_format_mode=None,
         ipy_space_format_mode=None
     ):
-        """FIXME - docstring"""
-
         if repr_use_sage is not None:
             self.repr_use_sage  = bool(repr_use_sage)
         if str_use_sage is not None:
@@ -273,8 +273,6 @@ class HilbertArrayFormatter(object):
             self.ipy_space_format_mode = ipy_space_format_mode
 
     def get_printoptions(self):
-        """FIXME - docstring"""
-
         return {
             "str_use_sage"            : self.str_use_sage,
             "repr_use_sage"           : self.repr_use_sage,

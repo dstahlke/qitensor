@@ -37,8 +37,8 @@ class SageHilbertBaseField(HilbertBaseField):
     def complex_unit(self):
         return self.sage_ring(sage.all.I)
 
-    def latex_formatter(self, data):
-        return FORMATTER.sage_scalar_latex_formatter(data)
+    def latex_formatter(self, data, dollar_if_tex):
+        return FORMATTER.sage_scalar_latex_formatter(data, dollar_if_tex)
 
     def input_cast_function(self):
         return self.sage_ring

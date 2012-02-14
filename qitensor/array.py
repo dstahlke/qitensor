@@ -1544,7 +1544,7 @@ class HilbertArray(object):
     def _latex_(self):
         return FORMATTER.array_latex_block_table(self, use_hline=False)
 
-    def sage_block_matrix(self):
+    def sage_block_matrix(self, R=None):
         if not have_sage:
             raise HilbertError('This is only available under Sage')
 
@@ -1564,8 +1564,7 @@ class HilbertArray(object):
             blocks = [m[{h: i}] for m in blocks for i in h.indices]
             ncols = len(h.indices)
 
-        # FIXME - use matrix_np_to_sage here?
-        blocks = [x.sage_matrix() for x in blocks]
+        blocks = [x.sage_matrix(R=R) for x in blocks]
 
         import sage.all
 

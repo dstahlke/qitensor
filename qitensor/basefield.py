@@ -74,8 +74,8 @@ class HilbertBaseField(object):
         np_mat = np.matrix(sage_mat, dtype=self.dtype)
         return np_mat
 
-    def latex_formatter(self, data):
-        return FORMATTER.py_scalar_latex_formatter(data)
+    def latex_formatter(self, data, dollar_if_tex):
+        return FORMATTER.py_scalar_latex_formatter(data, dollar_if_tex)
 
     def input_cast_function(self):
         return None

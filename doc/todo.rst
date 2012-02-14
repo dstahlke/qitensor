@@ -8,4 +8,3 @@ FINISH DOCS
 
 FEATURES
     * selection of array formatters for ipy html notebook, qt notebook, sage notebook, sage console
-    * don't doctest the 'experimental' submodule by default

@@ -16,6 +16,7 @@ class HilbertArrayFormatter(object):
         self.suppress = True
         self.suppress_thresh = 1e-12
         self.zero_color_latex = 'Silver'
+        self.zero_color_html = '#cccccc'
 
     def py_scalar_latex_formatter(self, data):
         if data.dtype == complex:
@@ -26,6 +27,11 @@ class HilbertArrayFormatter(object):
             return str
 
     def sage_scalar_latex_formatter(self, data):
+        if not have_sage:
+            raise HilbertError('This is only available under Sage')
+
+        import sage.all
+
         return lambda x: sage.all.latex(x)
 
     def array_str(self, arr):
@@ -116,7 +122,7 @@ class HilbertArrayFormatter(object):
                     idx = k_idx + b_idx
                 v = arr[idx]
                 if self.suppress and abs(v) < self.suppress_thresh:
-                    if self.zero_color_latex:
+                    if self.zero_color_latex != '':
                         vs = r'\color{'+self.zero_color_latex+'}{0}'
                     else:
                         vs = '0'
@@ -210,7 +216,10 @@ class HilbertArrayFormatter(object):
                     idx = k_idx + b_idx
                 v = arr[idx]
                 if self.suppress and abs(v) < self.suppress_thresh:
-                    vs = "<font color='#cccccc'>0</font>"
+                    if self.zero_color_html != '':
+                        vs = "<font color='"+self.zero_color_html+"'>0</font>"
+                    else:
+                        vs = "0"
                 else:
                     vs = "<nobr><tt>"+fmt(v)+"</tt></nobr>"
                 ht += '<td '+st_tdval+'>'+vs+'</td>'
@@ -223,10 +232,20 @@ class HilbertArrayFormatter(object):
 FORMATTER = HilbertArrayFormatter()
 
 # FIXME - option for html vs. latex vs. none for ipython pretty printing
-def set_qitensor_printoptions(precision=None, suppress=None, suppress_thresh=None):
+def set_qitensor_printoptions(
+    precision=None, suppress=None, suppress_thresh=None,
+    use_sage=None, zero_color_latex=None, zero_color_html=None
+):
     if precision is not None:
-        FORMATTER.precision = precision
+        FORMATTER.precision = float(precision)
     if suppress is not None:
-        FORMATTER.suppress = suppress
+        FORMATTER.suppress = bool(suppress)
     if suppress_thresh is not None:
-        FORMATTER.suppress_thresh = suppress_thresh
+        FORMATTER.suppress_thresh = float(suppress_thresh)
+    if use_sage is not None:
+        FORMATTER.str_use_sage  = bool(use_sage)
+        FORMATTER.repr_use_sage = bool(use_sage)
+    if zero_color_latex is not None:
+        FORMATTER.zero_color_latex = str(zero_color_latex)
+    if zero_color_html is not None:
+        FORMATTER.zero_color_html = str(zero_color_html)

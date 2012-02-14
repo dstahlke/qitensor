@@ -4,6 +4,7 @@ import numpy as np
 
 import sage.all
 from qitensor import HilbertBaseField
+from qitensor.arrayformatter import FORMATTER
 
 _base_field_cache = {}
 

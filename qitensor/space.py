@@ -458,8 +458,7 @@ class HilbertSpace(object):
         """
         Returns a ``HilbertArray`` with random values.
 
-        The real and complex components each have uniform distribution in the
-        ``[-1, 1]`` range.
+        The values are complex numbers drawn from a standard normal distribution.
 
         >>> from qitensor import qubit
         >>> ha = qubit('a')
@@ -478,6 +477,11 @@ class HilbertSpace(object):
         is used to form an operator space (i.e. ``self.O``).  If both the
         bra and ket spaces are nonempty, they must be of the same dimension
         since a unitary matrix must be square.
+
+        The returned unitary is drawn from a distribution uniform with respect
+        to the Haar measure, using the algorithm by Mezzadri, "How to Generate
+        Random Matrices from the Classical Compact Groups", Notices of the AMS
+        54, 592 (2007).
 
         >>> from qitensor import qubit
         >>> ha = qubit('a')
@@ -503,7 +507,12 @@ class HilbertSpace(object):
 
         self.assert_square()
 
-        return self.random_array().QR()[0]
+        z = self.random_array().as_np_matrix()
+        (q, r) = self.base_field.mat_qr(z)
+        d = np.diag(r)
+        ph = d/np.abs(d)
+        ret = np.multiply(q, ph)
+        return self.reshaped_np_matrix(ret)
 
     def random_isometry(self):
         """

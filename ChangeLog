@@ -3,6 +3,8 @@ Version 0.8.1 (ongoing):
 	doctest fixes for sage
 	can pass HilbertBaseField for dtype
 	array formatting fixes
+	random_array uses normal distribution
+	random_unitary is uniform w.r.t. Haar measure
 
 Version 0.8 (2011-12-01):
 	as_np_matrix take {row,col}_space args

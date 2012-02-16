@@ -6,6 +6,7 @@ created using the factory functions in :mod:`qitensor.factory`.
 """
 
 import weakref
+import numpy as np
 
 from qitensor.exceptions import MismatchedIndexSetError,HilbertError
 from qitensor.space import HilbertSpace
@@ -392,6 +393,27 @@ class HilbertAtom(HilbertSpace):
         if len(self.indices) != 2:
             raise HilbertError('z_minus only available for qubits')
         return self.array([0, 1])
+
+    def bloch(self, theta, phi):
+        """
+        Returns a qubit state given its Bloch sphere representation (in radians).
+
+        >>> import numpy as np
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> ha.bloch(0, 123) == ha.z_plus()
+        True
+        >>> ha.bloch(np.pi, 0).closeto(ha.z_minus())
+        True
+        >>> ha.bloch(np.pi/2, 0).closeto(ha.x_plus())
+        True
+        >>> ha.bloch(np.pi/2, np.pi/2).closeto(ha.y_plus())
+        True
+        """
+
+        if len(self.indices) != 2:
+            raise HilbertError('bloch only available for qubits')
+        return self.array([np.cos(theta/2), np.exp(1j*phi)*np.sin(theta/2)])
 
     # Special operators
 

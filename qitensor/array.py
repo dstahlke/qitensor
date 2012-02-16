@@ -392,6 +392,12 @@ class HilbertArray(object):
         arr = np.vectorize(fn, otypes=[dtype])(self.nparray)
         return self.space.array(arr)
 
+    def closeto(self, other):
+        if not isinstance(other, HilbertArray):
+            raise TypeError('other must be HilbertArray')
+        self._assert_same_axes(other)
+        return np.allclose(self.nparray, other.nparray)
+
     def __eq__(self, other):
         if not isinstance(other, HilbertArray):
             return False

@@ -307,6 +307,18 @@ class TensorBasis(object):
         return self.__class__(b_b, b_b_p, **self._config_kw)
 
     def map(self, f):
+        b_new = [f(m) for m in self]
+        if self._hilb_space is not None:
+            cfg = self._config_kw.copy()
+            cfg['hilb_space'] = b_new[0].space
+        else:
+            cfg = self._config_kw
+        return self.__class__.from_span(b_new, **cfg)
+
+    def _nomath_map(self, f):
+        """
+        Like map, but assumes the operation preserves orthogonality.
+        """
         b_new  = np.array([f(m) for m in self._basis])
         bp_new = np.array([f(m) for m in self._perp_basis])
         return self.__class__(b_new, bp_new, **self._config_kw)
@@ -315,13 +327,13 @@ class TensorBasis(object):
         if self._hilb_space is not None:
             raise NotImplementedError()
         else:
-            return self.map(lambda m: m.transpose(axes))
+            return self._nomath_map(lambda m: m.transpose(axes))
 
     def reshape(self, shape):
         if self._hilb_space is not None:
             raise NotImplementedError()
         else:
-            return self.map(lambda m: m.reshape(shape))
+            return self._nomath_map(lambda m: m.reshape(shape))
 
     def dim(self):
         return self._dim

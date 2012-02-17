@@ -5,6 +5,7 @@ numpy.array.  HilbertArray's are to be created using the
 """
 
 import numpy as np
+import collections
 
 from qitensor import have_sage, shape_product
 from qitensor.exceptions import BraKetMixtureError, DuplicatedSpaceError, \
@@ -385,6 +386,8 @@ class HilbertArray(object):
             mapping = from_spaces
             HilbertSpace._assert_nodup_space(mapping.values(), "an output space was listed twice")
         else:
+            assert isinstance(from_spaces, collections.Sequence)
+            assert isinstance(to_spaces, collections.Sequence)
             from_spaces = HilbertSpace._expand_list_to_atoms(from_spaces)
             to_spaces   = HilbertSpace._expand_list_to_atoms(to_spaces)
             assert len(from_spaces) == len(to_spaces)

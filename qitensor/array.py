@@ -399,7 +399,7 @@ class HilbertArray(object):
             assert isinstance(k, HilbertAtom)
             assert isinstance(v, HilbertAtom)
             if not k in self.space.bra_ket_set:
-                raise MismatchedIndexSetError("not in input space: "+k)
+                raise MismatchedIndexSetError("not in input space: "+repr(k))
 
         xlate_list = [ mapping[x] if x in mapping else x for x in self.axes ]
         HilbertSpace._assert_nodup_space(xlate_list, "relabling would cause a duplicated space")
@@ -975,6 +975,8 @@ class HilbertArray(object):
         """
         Returns the (full or partial) trace of this array.
 
+        FIXME - update docs with advanced trace features
+
         :param axes: axes to trace over, all axes if None (in which case the bra
             space must be the same as the ket space)
         :type axes: HilbertSpace; default None
@@ -1012,47 +1014,74 @@ class HilbertArray(object):
         True
         >>> ( (x*z.H).trace(ha) - x.trace() * z.H ).norm() < 1e-14
         True
+
+        >>> # trace between a pair of ket spaces (map-state duality stuff)
+        >>> n = hb.random_array().normalized()
+        >>> w = n.H.relabel({ hb.H: hb.prime }) * n * z
+        >>> w.space
+        |b,b',c>
+        >>> w.trace({ hb: hb.prime }).space
+        |c>
+        >>> w.trace({ hb: hb.prime }).closeto(z)
+        True
+        >>> m = ha.random_array().normalized()
+        >>> v = w * m * m.H.relabel(ha.H, hc.H)
+        >>> v.space
+        |a,b,b',c><c|
+        >>> v.trace({ hb: hb.prime, hc.H: ha }).space
+        |c>
+        >>> v.trace({ hb: hb.prime, hc.H: ha }).closeto(z)
+        True
         """
 
         if axes is None:
             if self.space != self.space.H:
                 raise HilbertError('bra space does not equal ket space; '+
                     'please specify axes')
-            space_set = self.space.ket_set
-        else:
-            if not isinstance(axes, HilbertSpace):
-                raise TypeError('axes must be a HilbertSpace')
-            # union of ket space and bra space (converted to kets)
-            space_set = axes.ket_set | axes.H.ket_set
+            axes = self.space
+            # and then process further in the next if block
+
+        if isinstance(axes, HilbertSpace):
+            axes = axes.bra_ket_set
+            # and then process further in the next if block
+
+        if not isinstance(axes, dict):
+            axes_set = set()
+            for s in HilbertSpace._expand_list_to_atoms(list(axes)):
+                if not s in self.space.bra_ket_set:
+                    raise HilbertIndexError('not in ket set: '+repr(s))
+                axes_set.add(s.H if s.is_dual else s)
+            axes = {s: s.H for s in axes_set}
+
+        assert isinstance(axes, dict)
+
+        HilbertSpace._assert_nodup_space(axes.keys()+axes.values(), "a space was listed twice")
+
+        for (k, v) in axes.iteritems():
+            if not k in self.space.bra_ket_set:
+                raise HilbertIndexError("not in this array's space: "+repr(k))
+            if not v in self.space.bra_ket_set:
+                raise HilbertIndexError("not in this array's space: "+repr(v))
 
         # The full trace is handled specially here, for efficiency.
-        if space_set == self.space.ket_set and space_set == self.space.H.bra_set:
+        if frozenset(axes.keys()+axes.values()) == self.space.bra_ket_set:
             return np.trace( self.as_np_matrix() )
-
-        space_list = list(space_set)
-
-        for s in space_list:
-            if not s in self.space.ket_set:
-                raise HilbertIndexError('not in ket set: '+repr(s))
-            if not s.H in self.space.bra_set:
-                raise HilbertIndexError('not in bra set: '+repr(s.H))
 
         working = self
 
-        for s in space_list:
-            axis1 = working.get_dim(s)
-            axis2 = working.get_dim(s.H)
+        for (s1, s2) in axes.iteritems():
+            axis1 = working.get_dim(s1)
+            axis2 = working.get_dim(s2)
 
             arr = np.trace( working.nparray, axis1=axis1, axis2=axis2 )
 
-            out_ket = working.space.ket_set - frozenset([s])
-            out_bra = working.space.bra_set - frozenset([s.H])
+            out_space = working.space.bra_ket_set - frozenset((s1, s2))
 
-            if len(out_bra) + len(out_ket) == 0:
+            if len(out_space) == 0:
                 # arr should be a scalar
                 working = arr
             else:
-                out_space = self.space.base_field.create_space2(out_ket, out_bra)
+                out_space = self.space.base_field.create_space1(out_space)
                 working = out_space.array(arr)
 
         return working

@@ -77,6 +77,8 @@ class TensorBasis(object):
 
     @classmethod
     def from_span(cls, X, tol=1e-10, hilb_space=None, use_qr=False):
+        # FIXME - accept list of HilbertArray, and auto-set hilb_space accordingly
+
         X = np.array(X)
         assert len(X.shape) >= 2
 
@@ -113,6 +115,7 @@ class TensorBasis(object):
 
     @classmethod
     def empty(cls, col_shp, tol=1e-10, hilb_space=None):
+        # FIXME - col_shp not needed if hilb_space given
         n = np.product(col_shp)
         basis = np.zeros((0,)+col_shp)
         perp_basis = np.eye(n).reshape((n,)+col_shp)
@@ -120,6 +123,7 @@ class TensorBasis(object):
 
     @classmethod
     def full(cls, col_shp, tol=1e-10, hilb_space=None):
+        # FIXME - col_shp not needed if hilb_space given
         return cls.empty(col_shp, tol=tol, hilb_space=hilb_space).perp()
 
     def assert_compatible(self, other):
@@ -281,10 +285,16 @@ class TensorBasis(object):
         return self.__class__(b_new, bp_new, **self._config_kw)
 
     def transpose(self, axes):
-        return self.map(lambda m: m.transpose(axes))
+        if self.hilb_space is not None:
+            raise NotImplementedError()
+        else:
+            return self.map(lambda m: m.transpose(axes))
 
     def reshape(self, shape):
-        return self.map(lambda m: m.reshape(shape))
+        if self.hilb_space is not None:
+            raise NotImplementedError()
+        else:
+            return self.map(lambda m: m.reshape(shape))
 
     def __len__(self):
         return self.basis.shape[0]
@@ -305,17 +315,22 @@ if __name__ == "__main__":
 # FIXME - code to assist development via ipython
 ################################################
 
+def col_space(self):
+    ncols = self.space.bra_space().dim()
+    col_hilbspace = self.space.ket_space()
+    cols = self.nparray.reshape(col_hilbspace.shape+(ncols,))
+    cols = np.rollaxis(cols, cols.ndim-1)
+    return TensorBasis.from_span(cols, hilb_space=col_hilbspace)
+
+def row_space(self):
+    nrows = self.space.ket_space().dim()
+    row_hilbspace = self.space.bra_space()
+    rows = self.nparray.reshape((nrows,)+row_hilbspace.shape)
+    return TensorBasis.from_span(rows, hilb_space=row_hilbspace)
+
 ha = qudit('a', 2)
 hb = qudit('b', 3)
 hc = qudit('c', 3)
 iso = (hb*ha.H).random_isometry()
 proj = iso * iso.H
 bigop = proj * ha.random_array() * hc.H.random_array()
-
-ncols = bigop.space.bra_space().dim()
-col_space = bigop.space.ket_space()
-cols = bigop.nparray.reshape(col_space.shape+(ncols,))
-cols = np.rollaxis(cols, cols.ndim-1)
-print col_space
-tb = TensorBasis.from_span(cols, hilb_space=col_space)
-print tb

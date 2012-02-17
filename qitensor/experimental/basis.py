@@ -26,9 +26,9 @@ class TensorBasis(object):
     <TensorBasis of dim 4 over space (5, 10)>
     >>> x.dim()
     4
-    >>> x.contains(x[0])
+    >>> x[0] in x
     True
-    >>> x.contains(x.perp()[0])
+    >>> x.perp()[0] in x
     False
     >>> y = TensorBasis.from_span(np.random.randn(30,5,10))
     >>> y
@@ -42,11 +42,11 @@ class TensorBasis(object):
     <TensorBasis of dim 50 over space (5, 10)>
     >>> y & z
     <TensorBasis of dim 10 over space (5, 10)>
-    >>> y.contains(x & y)
+    >>> y > x&y
     True
-    >>> y.contains(x | y)
+    >>> y > x|y
     False
-    >>> (x | y).contains(y)
+    >>> x|y > y
     True
     >>> y - x
     <TensorBasis of dim 26 over space (5, 10)>
@@ -92,7 +92,19 @@ class TensorBasis(object):
 
     @classmethod
     def from_span(cls, X, tol=1e-10, hilb_space=None, use_qr=False):
-        # FIXME - accept list of HilbertArray, and auto-set hilb_space accordingly
+        if not isinstance(X, np.ndarray):
+            X = list(X)
+            try:
+                import qitensor.array
+                if isinstance(X[0], qitensor.array.HilbertArray):
+                    assert hilb_space is None or hilb_space == X[0].space
+                    hilb_space = X[0].space
+                    for op in X:
+                        assert isinstance(op, qitensor.array.HilbertArray)
+                        assert op.space == hilb_space
+                    X = [op.nparray for op in X]
+            except ImportError:
+                pass
 
         X = np.array(X)
         assert len(X.shape) >= 2
@@ -143,7 +155,7 @@ class TensorBasis(object):
 
     def assert_compatible(self, other):
         if not isinstance(other, self.__class__):
-            raise TypeError('TensorBasis can only add another TensorBasis')
+            raise TypeError('other object is not a TensorBasis')
 
         if self._hilb_space is not None and other._hilb_space is not None:
             assert self._hilb_space == other._hilb_space
@@ -323,7 +335,23 @@ class TensorBasis(object):
         else:
             return self._hilb_space.array(self._basis[i])
 
-    # FIXME - define gt, lt operators
+    def __contains__(self, other):
+        """
+        Alias for self.contains(other).
+        """
+        return self.contains(other)
+
+    def __gt__(self, other):
+        """
+        Alias for self.contains(other).
+        """
+        return self.contains(other)
+
+    def __lt__(self, other):
+        """
+        Alias for other.contains(self).
+        """
+        return other.contains(self)
 
 if __name__ == "__main__":
     import doctest

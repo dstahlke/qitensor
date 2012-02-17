@@ -6,9 +6,19 @@ import numpy.linalg as linalg
 # This is the only thing that is exported.
 __all__ = ['TensorBasis']
 
-# FIXME - docs: note how this is normally used from qitensor
 class TensorBasis(object):
     """
+    Represents a basis of a tensor space.  Methods are available for projecting
+    to this basis, computing span and intersection of bases, etc.  This module
+    can be used independently of qitensor, and the doctest below reflects this.
+    However, if you are using qitensor then typically a basis would be created
+    using one of the following methods:
+
+    * :func:`qitensor.array.HilbertArray.col_space_basis`
+    * :func:`qitensor.array.HilbertArray.row_space_basis`
+    * :func:`qitensor.space.HilbertSpace.full_space`
+    * :func:`qitensor.space.HilbertSpace.empty_space`
+
     >>> import numpy as np
     >>> from qitensor.experimental.basis import TensorBasis
     >>> x = TensorBasis.from_span(np.random.randn(4,5,10))

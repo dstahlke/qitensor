@@ -5,7 +5,6 @@ numpy.array.  HilbertArray's are to be created using the
 """
 
 import numpy as np
-import collections
 
 from qitensor import have_sage, shape_product
 from qitensor.exceptions import BraKetMixtureError, DuplicatedSpaceError, \
@@ -326,6 +325,7 @@ class HilbertArray(object):
         return ret
 
     def relabel(self, from_spaces, to_spaces=None):
+        # FIXME - update for new features
         """
         Changes the HilbertSpace of this array without changing data.
 
@@ -334,7 +334,7 @@ class HilbertArray(object):
         :param to_space: the new space (or list of spaces)
         :type to_space: HilbertSpace, list
 
-        # FIXME - update docs
+        FIXME - does it return a view? should it?
 
         >>> import numpy
         >>> from qitensor import qubit
@@ -386,10 +386,13 @@ class HilbertArray(object):
             mapping = from_spaces
             HilbertSpace._assert_nodup_space(mapping.values(), "an output space was listed twice")
         else:
-            assert isinstance(from_spaces, collections.Sequence)
-            assert isinstance(to_spaces, collections.Sequence)
+            # Cast to list, in case we were given a generator.  Throw error if not list-like.
+            from_spaces = list(from_spaces)
+            to_spaces = list(to_spaces)
+
             from_spaces = HilbertSpace._expand_list_to_atoms(from_spaces)
             to_spaces   = HilbertSpace._expand_list_to_atoms(to_spaces)
+
             assert len(from_spaces) == len(to_spaces)
             HilbertSpace._assert_nodup_space(from_spaces, "an input space was listed twice")
             HilbertSpace._assert_nodup_space(to_spaces, "an output space was listed twice")
@@ -406,6 +409,24 @@ class HilbertArray(object):
         new_space = self.space.base_field.create_space1(xlate_list)
 
         return new_space.array(data=self.nparray, input_axes=xlate_list)
+
+    def relabel_prime(self):
+        """
+        Returns a relabeled array with primed spaces.
+
+        See also: :func:`relabel`, :func:`qitensor.atom.HilbertAtom.prime`
+
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> hb = qubit('b')
+        >>> x = (ha*hb).array()
+        >>> x.relabel_prime().space
+        |a',b'>
+        >>> (x * x.relabel_prime()).space
+        |a,a',b,b'>
+        """
+
+        return self.relabel(self.axes, [x.prime for x in self.axes])
 
     def apply_map(self, fn):
         """

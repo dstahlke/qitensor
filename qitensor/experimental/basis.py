@@ -310,27 +310,3 @@ class TensorBasis(object):
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
-
-################################################
-# FIXME - code to assist development via ipython
-################################################
-
-def col_space(self):
-    ncols = self.space.bra_space().dim()
-    col_hilbspace = self.space.ket_space()
-    cols = self.nparray.reshape(col_hilbspace.shape+(ncols,))
-    cols = np.rollaxis(cols, cols.ndim-1)
-    return TensorBasis.from_span(cols, hilb_space=col_hilbspace)
-
-def row_space(self):
-    nrows = self.space.ket_space().dim()
-    row_hilbspace = self.space.bra_space()
-    rows = self.nparray.reshape((nrows,)+row_hilbspace.shape)
-    return TensorBasis.from_span(rows, hilb_space=row_hilbspace)
-
-ha = qudit('a', 2)
-hb = qudit('b', 3)
-hc = qudit('c', 3)
-iso = (hb*ha.H).random_isometry()
-proj = iso * iso.H
-bigop = proj * ha.random_array() * hc.H.random_array()

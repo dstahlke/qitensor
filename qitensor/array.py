@@ -1629,6 +1629,47 @@ class HilbertArray(object):
 
         return (Q, R)
 
+    def col_space_basis(self):
+        # FIXME - doctest
+        """
+        Returns a TensorBasis for the column space of this array (EXPERIMENTAL).
+
+        >>> ha = qudit('a', 2)
+        >>> hb = qudit('b', 3)
+        >>> hc = qudit('c', 3)
+        >>> iso = (hb*ha.H).random_isometry()
+        >>> proj = iso * iso.H
+        >>> bigop = proj * ha.random_array() * hc.H.random_array()
+        """
+
+        import qitensor.experimental.basis
+        spc = self.space
+        assert spc.ket_set
+        col_hilbspace = spc.ket_space()
+        if spc.bra_set:
+            ncols = spc.bra_space().dim()
+            cols = self.nparray.reshape(col_hilbspace.shape+(ncols,))
+            cols = np.rollaxis(cols, cols.ndim-1)
+            return qitensor.experimental.basis.TensorBasis.from_span(cols, hilb_space=col_hilbspace)
+        else:
+            return qitensor.experimental.basis.TensorBasis.from_span([self.nparray], hilb_space=col_hilbspace)
+
+    def row_space_basis(self):
+        """
+        Returns a TensorBasis for the row space of this array (EXPERIMENTAL).
+        """
+
+        import qitensor.experimental.basis
+        spc = self.space
+        assert spc.bra_set
+        row_hilbspace = spc.bra_space()
+        if spc.ket_set:
+            nrows = spc.ket_space().dim()
+            rows = self.nparray.reshape((nrows,)+row_hilbspace.shape)
+            return qitensor.experimental.basis.TensorBasis.from_span(rows, hilb_space=row_hilbspace)
+        else:
+            return qitensor.experimental.basis.TensorBasis.from_span([self.nparray], hilb_space=row_hilbspace)
+
     ########## stuff that only works in Sage ##########
 
     def n(self, prec=None, digits=None):

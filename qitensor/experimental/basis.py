@@ -167,16 +167,24 @@ class TensorBasis(object):
         return self & other.perp()
 
     def to_basis(self, x):
-        # FIXME - allow HilbertArray
+        if self.hilb_space is not None:
+            import qitensor.array
+            if isinstance(x, qitensor.array.HilbertArray):
+                assert x.space == self.hilb_space
+                return self.to_basis(x.nparray)
+
         assert x.shape == self.col_shp
         nd = len(x.shape)
         return np.tensordot(self.basis.conjugate(), x, axes=(range(1, nd+1), range(nd)))
 
     def from_basis(self, v):
-        # FIXME - return HilbertArray
         assert len(v.shape) == 1
         assert v.shape[0] == self.dim
-        return np.tensordot(v, self.basis, axes=((0,),(0,)))
+        ret = np.tensordot(v, self.basis, axes=((0,),(0,)))
+        if self.hilb_space is None:
+            return ret
+        else:
+            return self.hilb_space.array(ret)
 
     def project(self, x):
         return self.from_basis(self.to_basis(x))
@@ -240,8 +248,13 @@ class TensorBasis(object):
             # correct for numerical error and make it exactly Hermitian
             x_to_S_reduced[:, :, i] = (s + sH)/2
 
-        # FIXME - return HilbertArray
-        return x_to_S_reduced.transpose([2, 0, 1])
+        ret = x_to_S_reduced.transpose([2, 0, 1])
+
+        if self.hilb_space is None:
+            return ret
+        else:
+            # FIXME - untested
+            return [self.hilb_space.array(x) for x in ret]
 
     def tensor_prod(self, other):
         n = len(self.basis.shape)
@@ -273,6 +286,17 @@ class TensorBasis(object):
     def reshape(self, shape):
         return self.map(lambda m: m.reshape(shape))
 
+    def __len__(self):
+        return self.basis.shape[0]
+
+    def __getitem__(self, i):
+        if self.hilb_space is None:
+            return self.basis[i]
+        else:
+            return self.hilb_space.array(self.basis[i])
+
+    # FIXME - define gt, lt operators
+
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
@@ -295,6 +319,3 @@ cols = np.rollaxis(cols, cols.ndim-1)
 print col_space
 tb = TensorBasis.from_span(cols, hilb_space=col_space)
 print tb
-
-def column_space(op):
-    pass

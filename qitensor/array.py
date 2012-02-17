@@ -1038,8 +1038,8 @@ class HilbertArray(object):
             if self.space != self.space.H:
                 raise HilbertError('bra space does not equal ket space; '+
                     'please specify axes')
-            axes = self.space
-            # and then process further in the next if block
+            # The full trace is handled specially here, for efficiency.
+            return np.trace( self.as_np_matrix() )
 
         if isinstance(axes, HilbertSpace):
             axes = axes.bra_ket_set

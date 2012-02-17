@@ -80,6 +80,42 @@ class HilbertSpace(object):
     def __reduce__(self):
         return _unreduce_v1, (self.ket_set, self.bra_set)
 
+    @classmethod
+    def _expand_list_to_atoms(cls, list_in):
+        """
+        Expands a list of HilbertSpaces to a list of HilbertAtoms.
+
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> hb = qubit('b')
+        >>> hc = qubit('c')
+        >>> HilbertSpace._expand_list_to_atoms([ha, ha*hb.H*hc, ha])
+        [|a>, |a,c><b|, |a>]
+        """
+
+        list_out = []
+        for x in list_in:
+            assert isinstance(x, HilbertSpace)
+            list_out += x.ket_set
+            list_out += x.bra_set
+        return list_out
+
+    @classmethod
+    def _assert_nodup_space(cls, spaces, msg):
+        # FIXME - use this more often
+        seen = set()
+        dupes = set()
+        for s in cls._expand_list_to_atoms(spaces):
+            assert isinstance(s, qitensor.atom.HilbertAtom)
+            if s in seen:
+                dupes.add(s)
+            seen.add(s)
+        if dupes:
+            common_kets = frozenset(x for x in dupes if not x.is_dual)
+            common_bras = frozenset(x for x in dupes if x.is_dual)
+            raise DuplicatedSpaceError(msg, 
+                self.base_field.create_space2(common_kets, common_bras))
+
     def bra_space(self):
         """
         Returns a ``HilbertSpace`` consisting of only the bra space of this

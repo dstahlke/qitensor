@@ -324,17 +324,16 @@ class HilbertArray(object):
 
         return ret
 
-    def relabel(self, from_space, to_space):
+    def relabel(self, from_spaces, to_spaces=None):
         """
         Changes the HilbertSpace of this array without changing data.
 
-        :param from_space: the old space
-        :type from_space: HilbertSpace
-        :param to_space: the new space
-        :type to_space: HilbertSpace
+        :param from_space: the old space, or list of spaces, or dict mapping old->new
+        :type from_space: HilbertSpace, list, dict
+        :param to_space: the new space (or list of spaces)
+        :type to_space: HilbertSpace, list
 
-        Either ``from_space`` and ``to_space`` should both be bra spaces
-        or both should be ket spaces.
+        # FIXME - update docs
 
         >>> import numpy
         >>> from qitensor import qubit
@@ -361,20 +360,49 @@ class HilbertArray(object):
         >>> # relabeling is needed because |a,a> is not allowed
         >>> y.relabel(ha.H, ha.prime.H).transpose(ha.prime).space
         |a,a'>
+        >>> z = (ha*hb.H*hc.O).random_array()
+        >>> z.space
+        |a,c><b,c|
+        >>> z1 = z.relabel((ha, hc.H), (ha.H, hc.prime))
+        >>> z1.space
+        |c,c'><a,b|
+        >>> z2 = z.relabel({ha: ha.H, hc.H: hc.prime})
+        >>> z2.space
+        |c,c'><a,b|
+        >>> z1 == z2
+        True
+        >>> z == z1.relabel({ha.H: ha, hc.prime: hc.H})
+        True
         """
 
-        # FIXME - this could be made a lot more efficient by not doing a
-        # multiplication operation.
-        if len(from_space.ket_set) == 0 and len(to_space.ket_set) == 0:
-            # we were given bra spaces
-            return self * (from_space.H * to_space).eye()
-        elif len(from_space.bra_set) == 0 and len(to_space.bra_set) == 0:
-            # we were given ket spaces
-            return (to_space * from_space.H).eye() * self
+        if isinstance(from_spaces, HilbertSpace):
+            from_spaces = (from_spaces, )
+        if isinstance(to_spaces, HilbertSpace):
+            to_spaces = (to_spaces, )
+
+        if isinstance(from_spaces, dict):
+            assert to_spaces is None
+            mapping = from_spaces
+            HilbertSpace._assert_nodup_space(mapping.values(), "an output space was listed twice")
         else:
-            # Maybe the mixed bra/ket case could do a partial transpose.
-            raise BraKetMixtureError('from_space and to_space must both be '+
-                'bras or both be kets')
+            from_spaces = HilbertSpace._expand_list_to_atoms(from_spaces)
+            to_spaces   = HilbertSpace._expand_list_to_atoms(to_spaces)
+            assert len(from_spaces) == len(to_spaces)
+            HilbertSpace._assert_nodup_space(from_spaces, "an input space was listed twice")
+            HilbertSpace._assert_nodup_space(to_spaces, "an output space was listed twice")
+            mapping = dict(zip(from_spaces, to_spaces))
+
+        for (k,v) in mapping.iteritems():
+            assert isinstance(k, HilbertAtom)
+            assert isinstance(v, HilbertAtom)
+            if not k in self.space.bra_ket_set:
+                raise MismatchedIndexSetError("not in input space: "+k)
+
+        xlate_list = [ mapping[x] if x in mapping else x for x in self.axes ]
+        HilbertSpace._assert_nodup_space(xlate_list, "relabling would cause a duplicated space")
+        new_space = self.space.base_field.create_space1(xlate_list)
+
+        return new_space.array(data=self.nparray, input_axes=xlate_list)
 
     def apply_map(self, fn):
         """

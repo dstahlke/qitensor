@@ -5,6 +5,7 @@ Version 0.8.1 (ongoing):
 	array formatting fixes/improvements
 	API CHANGE: random_array uses normal distribution
 	random_unitary is uniform w.r.t. Haar measure
+	much better HilbertArray.relabel method
 
 Version 0.8 (2011-12-01):
 	as_np_matrix take {row,col}_space args

@@ -288,6 +288,11 @@ class TensorBasis(object):
             return [self._hilb_space.array(x) for x in ret]
 
     def tensor_prod(self, other):
+        # FIXME - implement this.  It involves reshuffling the indices and
+        # making sure the spaces aren't duplicated.
+        if self._hilb_space is not None:
+            raise NotImplementedError()
+
         n = len(self._basis.shape)
         m = len(other._basis.shape)
 

@@ -44,7 +44,7 @@ class HilbertArray(object):
             # make sure given array is the right size
             if reshape:
                 if shape_product(self.nparray.shape) != shape_product(data_shape):
-                    raise HilbertShapeError(shape_product(data.shape), 
+                    raise HilbertShapeError(shape_product(data.shape),
                         shape_product(data_shape))
                 self.nparray = self.nparray.reshape(data_shape)
             if self.nparray.shape != data_shape:
@@ -1623,55 +1623,57 @@ class HilbertArray(object):
                 inner_space = hs.bra_space().H
 
         inner_space.assert_ket_space()
-        
+
         Q = (hs.ket_space() * inner_space.H).reshaped_np_matrix(q)
         R = (inner_space * hs.bra_space()).reshaped_np_matrix(r)
 
         return (Q, R)
 
-    def col_space_basis(self):
+    def span(self, axes='all'):
         """
-        Returns a TensorBasis for the column space of this array (EXPERIMENTAL).
+        Returns a TensorBasis for the column/row/mixed space of this array (EXPERIMENTAL).
+
+        :param axes: the axes to take the span of
+        :type new_data: string ('all', 'col', 'row') or HilbertSpace
 
         >>> ha = qudit('a', 2)
         >>> hb = qudit('b', 3)
         >>> hc = qudit('c', 3)
         >>> iso = (hb*ha.H).random_isometry()
         >>> proj = iso * iso.H
-        >>> proj.col_space_basis()
+        >>> proj.span('col')
         <TensorBasis of dim 2 over space (|b>)>
         >>> bigop = proj * ha.random_array() * hc.H.random_array()
-        >>> bigop.col_space_basis()
+        >>> bigop.space
+        |a,b><b,c|
+        >>> bigop.span('col')
         <TensorBasis of dim 2 over space (|a,b>)>
+        >>> bigop.span(hb.O)
+        <TensorBasis of dim 1 over space (|b><b|)>
         """
+        # FIXME - not implemented
+        # >>> bigop.span(hb.O).tensor_prod(bigop.span(ha))
+        # <TensorBasis of dim 2 over space (|a,b><b|)>
 
+        if axes == 'all':
+            axes = self.space
+        elif axes == 'col':
+            axes = self.space.ket_space()
+        elif axes == 'row':
+            axes = self.space.bra_space()
+
+        assert isinstance(axes, HilbertSpace)
+        assert axes.bra_ket_set <= self.space.bra_ket_set
+
+        space_axes = [i for (i,s) in enumerate(self.axes) if s in axes.bra_ket_set]
+        group_axes = [i for (i,s) in enumerate(self.axes) if s not in axes.bra_ket_set]
+        group_dim = self.space.dim() // axes.dim()
+        assert len(group_axes) + len(space_axes) == len(self.axes)
+
+        v = self.nparray.transpose(group_axes+space_axes)
+        v = v.reshape((group_dim,) + axes.shape)
         import qitensor.experimental.basis
-        spc = self.space
-        assert spc.ket_set
-        col_hilbspace = spc.ket_space()
-        if spc.bra_set:
-            ncols = spc.bra_space().dim()
-            cols = self.nparray.reshape(col_hilbspace.shape+(ncols,))
-            cols = np.rollaxis(cols, cols.ndim-1)
-            return qitensor.experimental.basis.TensorBasis.from_span(cols, hilb_space=col_hilbspace)
-        else:
-            return qitensor.experimental.basis.TensorBasis.from_span([self.nparray], hilb_space=col_hilbspace)
-
-    def row_space_basis(self):
-        """
-        Returns a TensorBasis for the row space of this array (EXPERIMENTAL).
-        """
-
-        import qitensor.experimental.basis
-        spc = self.space
-        assert spc.bra_set
-        row_hilbspace = spc.bra_space()
-        if spc.ket_set:
-            nrows = spc.ket_space().dim()
-            rows = self.nparray.reshape((nrows,)+row_hilbspace.shape)
-            return qitensor.experimental.basis.TensorBasis.from_span(rows, hilb_space=row_hilbspace)
-        else:
-            return qitensor.experimental.basis.TensorBasis.from_span([self.nparray], hilb_space=row_hilbspace)
+        return qitensor.experimental.basis.TensorBasis.from_span(v, hilb_space=axes)
 
     ########## stuff that only works in Sage ##########
 
@@ -1715,7 +1717,7 @@ class HilbertArray(object):
             raise HilbertError('This is only available under Sage')
 
         hs = self.space
-        
+
         blocks = [self]
         nrows = 1
         ncols = 1

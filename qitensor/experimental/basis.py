@@ -40,8 +40,9 @@ class TensorBasis(object):
     True
     """
 
-    def __init__(self, basis, perp_basis, tol=1e-10, validate=False):
+    def __init__(self, basis, perp_basis, tol, hilb_space, validate=False):
         self.tol = tol
+        self.hilb_space = hilb_space
         self.basis = basis
         self.perp_basis = perp_basis
         self.dim = basis.shape[0]
@@ -49,6 +50,13 @@ class TensorBasis(object):
         self.col_shp = basis.shape[1:]
         self.col_dim = np.product(self.col_shp)
         self._perp_cache = None
+        # can be passed to constructor to make a space with similar configuration
+        self._config_kw = { 'tol': tol, 'hilb_space': hilb_space }
+
+        if hilb_space is not None:
+            import qitensor.space
+            assert isinstance(hilb_space, qitensor.space.HilbertSpace)
+            assert hilb_space.shape == basis.shape[1:]
 
         if validate:
             assert basis.shape[1:] == perp_basis.shape[1:]
@@ -68,7 +76,7 @@ class TensorBasis(object):
             assert linalg.norm(foo) < self.tol
 
     @classmethod
-    def from_span(cls, X, tol=1e-10, use_qr=False):
+    def from_span(cls, X, tol=1e-10, hilb_space=None, use_qr=False):
         X = np.array(X)
         assert len(X.shape) >= 2
 
@@ -76,8 +84,11 @@ class TensorBasis(object):
         m = X.shape[0]
         n = np.product(col_shp)
 
+        if hilb_space is not None:
+            assert col_shp == hilb_space.shape
+
         if m==0:
-            return cls.empty(col_shp)
+            return cls.empty(col_shp, tol=tol, hilb_space=hilb_space)
 
         X = X.reshape(m, n)
 
@@ -98,33 +109,41 @@ class TensorBasis(object):
             basis      = V[:dim, :].reshape((dim,)+col_shp)
             perp_basis = V[dim:, :].reshape((n-dim,)+col_shp)
 
-        return cls(basis, perp_basis, tol=tol)
+        return cls(basis, perp_basis, tol=tol, hilb_space=hilb_space)
 
     @classmethod
-    def empty(cls, col_shp, tol=1e-10):
+    def empty(cls, col_shp, tol=1e-10, hilb_space=None):
         n = np.product(col_shp)
         basis = np.zeros((0,)+col_shp)
         perp_basis = np.eye(n).reshape((n,)+col_shp)
-        return cls(basis, perp_basis, tol=tol)
+        return cls(basis, perp_basis, tol=tol, hilb_space=hilb_space)
 
     @classmethod
-    def full(cls, col_shp, tol=1e-10):
-        return cls.empty(col_shp, tol=tol).perp()
+    def full(cls, col_shp, tol=1e-10, hilb_space=None):
+        return cls.empty(col_shp, tol=tol, hilb_space=hilb_space).perp()
 
     def assert_compatible(self, other):
         if not isinstance(other, self.__class__):
             raise TypeError('TensorBasis can only add another TensorBasis')
+
+        if self.hilb_space is not None and other.hilb_space is not None:
+            assert self.hilb_space == other.hilb_space
+
         assert self.col_shp == other.col_shp
 
     def perp(self):
         """Returns orthogonal complement of this space."""
         if self._perp_cache is None:
-            self._perp_cache = self.__class__(self.perp_basis, self.basis, tol=self.tol)
+            self._perp_cache = self.__class__(self.perp_basis, self.basis, **self._config_kw)
             self._perp_cache._perp_cache = self
         return self._perp_cache
 
     def __str__(self):
-        return "<TensorBasis of dim "+str(self.dim)+" over space "+str(self.col_shp)+">"
+        if self.hilb_space is None:
+            spc_str = str(self.col_shp)
+        else:
+            spc_str = repr(self.hilb_space)
+        return "<TensorBasis of dim "+str(self.dim)+" over space ("+spc_str+")>"
 
     def __repr__(self):
         return str(self)
@@ -137,7 +156,7 @@ class TensorBasis(object):
         """Span of union of spaces."""
         self.assert_compatible(other)
         b_cat = np.concatenate((self.basis, other.basis), axis=0)
-        return self.from_span(b_cat, tol=self.tol)
+        return self.from_span(b_cat, **self._config_kw)
 
     def __and__(self, other):
         """Intersection of spaces."""
@@ -148,11 +167,13 @@ class TensorBasis(object):
         return self & other.perp()
 
     def to_basis(self, x):
+        # FIXME - allow HilbertArray
         assert x.shape == self.col_shp
         nd = len(x.shape)
         return np.tensordot(self.basis.conjugate(), x, axes=(range(1, nd+1), range(nd)))
 
     def from_basis(self, v):
+        # FIXME - return HilbertArray
         assert len(v.shape) == 1
         assert v.shape[0] == self.dim
         return np.tensordot(v, self.basis, axes=((0,),(0,)))
@@ -219,6 +240,7 @@ class TensorBasis(object):
             # correct for numerical error and make it exactly Hermitian
             x_to_S_reduced[:, :, i] = (s + sH)/2
 
+        # FIXME - return HilbertArray
         return x_to_S_reduced.transpose([2, 0, 1])
 
     def tensor_prod(self, other):
@@ -233,17 +255,17 @@ class TensorBasis(object):
 
         b_b = tp(self.basis, other.basis)
         # this is simpler, but computing perp_basis manually avoids an svd/qr call
-        #return self.__class__.from_span(b_b)
+        #return self.__class__.from_span(b_b, **self._config_kw)
         bp_b  = tp(self.perp_basis, other.basis)
         b_bp  = tp(self.basis,  other.perp_basis)
         bp_bp = tp(self.perp_basis, other.perp_basis)
         b_b_p = np.concatenate((bp_b, b_bp, bp_bp), axis=0)
-        return self.__class__(b_b, b_b_p)
+        return self.__class__(b_b, b_b_p, **self._config_kw)
 
     def map(self, f):
         b_new  = np.array([f(m) for m in self.basis])
         bp_new = np.array([f(m) for m in self.perp_basis])
-        return self.__class__(b_new, bp_new, self.tol)
+        return self.__class__(b_new, bp_new, **self._config_kw)
 
     def transpose(self, axes):
         return self.map(lambda m: m.transpose(axes))
@@ -251,39 +273,28 @@ class TensorBasis(object):
     def reshape(self, shape):
         return self.map(lambda m: m.reshape(shape))
 
-##################################################
-# Test code
-#
-#def from_adjmat(adj_mat):
-#    assert len(adj_mat.shape) == 2
-#    assert adj_mat.shape[0] == adj_mat.shape[1]
-#    assert np.all(adj_mat == adj_mat.transpose())
-#    n = adj_mat.shape[0]
-#    basis = []
-#
-#    # copy and cast to numpy
-#    adj_mat = np.array(adj_mat)
-#    # make sure diagonal is set
-#    for i in xrange(n): adj_mat[i, i] = 1
-#
-#    for (i, j) in np.transpose(adj_mat.nonzero()):
-#        m = np.zeros((n, n), dtype=complex)
-#        m[i, j] = 1
-#        basis.append(m)
-#
-#    return TensorBasis.from_span(basis)
-#
-## The 5-cycle graph
-#adj_mat = np.array([
-#    [0, 1, 0, 0, 1],
-#    [1, 0, 1, 0, 0],
-#    [0, 1, 0, 1, 0],
-#    [0, 0, 1, 0, 1],
-#    [1, 0, 0, 1, 0]
-#])
-#
-#b = from_adjmat(adj_mat)
-
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
+
+################################################
+# FIXME - code to assist development via ipython
+################################################
+
+ha = qudit('a', 2)
+hb = qudit('b', 3)
+hc = qudit('c', 3)
+iso = (hb*ha.H).random_isometry()
+proj = iso * iso.H
+bigop = proj * ha.random_array() * hc.H.random_array()
+
+ncols = bigop.space.bra_space().dim()
+col_space = bigop.space.ket_space()
+cols = bigop.nparray.reshape(col_space.shape+(ncols,))
+cols = np.rollaxis(cols, cols.ndim-1)
+print col_space
+tb = TensorBasis.from_span(cols, hilb_space=col_space)
+print tb
+
+def column_space(op):
+    pass

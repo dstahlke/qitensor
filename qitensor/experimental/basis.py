@@ -1,19 +1,25 @@
 #!/usr/bin/python
 
-# Code by Dan Stahlke (2012).
-
 import numpy as np
 import numpy.linalg as linalg
 
 # This is the only thing that is exported.
 __all__ = ['TensorBasis']
 
+# FIXME - docs: note how this is normally used from qitensor
 class TensorBasis(object):
     """
-    >>> from tensor_basis import *
+    >>> import numpy as np
+    >>> from qitensor.experimental.basis import TensorBasis
     >>> x = TensorBasis.from_span(np.random.randn(4,5,10))
     >>> x
     <TensorBasis of dim 4 over space (5, 10)>
+    >>> x.dim()
+    4
+    >>> x.contains(x[0])
+    True
+    >>> x.contains(x.perp()[0])
+    False
     >>> y = TensorBasis.from_span(np.random.randn(30,5,10))
     >>> y
     <TensorBasis of dim 30 over space (5, 10)>
@@ -36,7 +42,7 @@ class TensorBasis(object):
     <TensorBasis of dim 26 over space (5, 10)>
     >>> (y & z).equiv(~(~y | ~z))
     True
-    >>> (y-(y-x)).equiv(TensorBasis.from_span([ y.project(v) for v in x.basis ]))
+    >>> (y-(y-x)).equiv(TensorBasis.from_span([ y.project(v) for v in x ]))
     True
     """
 
@@ -145,8 +151,8 @@ class TensorBasis(object):
         if self._hilb_space is None:
             spc_str = str(self._col_shp)
         else:
-            spc_str = repr(self._hilb_space)
-        return "<TensorBasis of dim "+str(self._dim)+" over space ("+spc_str+")>"
+            spc_str = '('+repr(self._hilb_space)+')'
+        return "<TensorBasis of dim "+str(self._dim)+" over space "+spc_str+">"
 
     def __repr__(self):
         return str(self)
@@ -295,8 +301,11 @@ class TensorBasis(object):
         else:
             return self.map(lambda m: m.reshape(shape))
 
+    def dim(self):
+        return self._dim
+
     def __len__(self):
-        return self._basis.shape[0]
+        return self._dim
 
     def __getitem__(self, i):
         if self._hilb_space is None:

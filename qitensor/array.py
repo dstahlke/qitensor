@@ -1630,7 +1630,6 @@ class HilbertArray(object):
         return (Q, R)
 
     def col_space_basis(self):
-        # FIXME - doctest
         """
         Returns a TensorBasis for the column space of this array (EXPERIMENTAL).
 
@@ -1639,7 +1638,11 @@ class HilbertArray(object):
         >>> hc = qudit('c', 3)
         >>> iso = (hb*ha.H).random_isometry()
         >>> proj = iso * iso.H
+        >>> proj.col_space_basis()
+        <TensorBasis of dim 2 over space (|b>)>
         >>> bigop = proj * ha.random_array() * hc.H.random_array()
+        >>> bigop.col_space_basis()
+        <TensorBasis of dim 2 over space (|a,b>)>
         """
 
         import qitensor.experimental.basis

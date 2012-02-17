@@ -9,7 +9,7 @@ import numpy as np
 from qitensor import have_sage, shape_product
 from qitensor.exceptions import BraKetMixtureError, DuplicatedSpaceError, \
     HilbertError, HilbertIndexError, HilbertShapeError, HilbertSliceError, \
-    NotKetSpaceError
+    NotKetSpaceError, MismatchedIndexSetError
 from qitensor.space import HilbertSpace
 from qitensor.atom import HilbertAtom
 from qitensor.arrayformatter import FORMATTER

@@ -1461,6 +1461,41 @@ class HilbertArray(object):
 
         return w
 
+    def sqrt(self):
+        """
+        Return the square root of this matrix.
+
+        >>> from qitensor import qubit, qudit
+        >>> ha = qubit('a')
+        >>> hb = qudit('b', 3)
+        >>> P = (ha*hb).O.random_array()
+        >>> # make a positive operator
+        >>> P = P.H * P
+        >>> P.space
+        |a,b><a,b|
+        >>> Q = P.sqrt()
+        >>> Q.space
+        |a,b><a,b|
+        >>> P.closeto(Q.H * Q)
+        True
+        >>> P.closeto(Q * Q.H)
+        True
+        """
+
+        if not self.space.is_symmetric():
+            raise HilbertError('bra space must be the same as ket space '+
+                '(space was '+repr(self.space)+')')
+
+        if not self.closeto(self.H):
+            raise HilbertError('matrix was not Hermitian')
+
+        (W, V) = self.eig(hermit=True)
+        W = np.diag(W.as_np_matrix())
+        if not np.all(W >= 0):
+            raise HilbertError('matrix was not positive')
+        W = self.space.diag(np.sqrt(W))
+        return V * W * V.H
+
     def entropy(self, normalize=False, checks=True):
         """
         Returns the von Neumann entropy of a density operator, in bits.

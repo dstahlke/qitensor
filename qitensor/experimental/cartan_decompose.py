@@ -17,7 +17,8 @@ def unitary_to_cartan(U):
     >>> U = (ha*hb).O.random_unitary()
     >>> (UA, UB, VA, VB, alpha) = unitary_to_cartan(U)
     >>> Ud = unitary_from_cartan(ha*hb, alpha)
-    >>> (UA * UB * Ud * VA * VB - U).norm() < 1e-12 # doctest: +SKIP (experimental module doesn't always work)
+    >>> # experimental module doesn't always work, so skip doctest
+    >>> (UA * UB * Ud * VA * VB - U).norm() < 1e-12 # doctest: +SKIP
     True
     """
 

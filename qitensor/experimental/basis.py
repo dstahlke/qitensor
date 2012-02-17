@@ -41,14 +41,13 @@ class TensorBasis(object):
     """
 
     def __init__(self, basis, perp_basis, tol, hilb_space, validate=False):
-        self.tol = tol
-        self.hilb_space = hilb_space
-        self.basis = basis
-        self.perp_basis = perp_basis
-        self.dim = basis.shape[0]
-        self.perp_dim = perp_basis.shape[0]
-        self.col_shp = basis.shape[1:]
-        self.col_dim = np.product(self.col_shp)
+        self._tol = tol
+        self._hilb_space = hilb_space
+        self._basis = basis
+        self._perp_basis = perp_basis
+        self._dim = basis.shape[0]
+        self._col_shp = basis.shape[1:]
+        self._col_dim = np.product(self._col_shp)
         self._perp_cache = None
         # can be passed to constructor to make a space with similar configuration
         self._config_kw = { 'tol': tol, 'hilb_space': hilb_space }
@@ -60,20 +59,20 @@ class TensorBasis(object):
 
         if validate:
             assert basis.shape[1:] == perp_basis.shape[1:]
-            assert self.dim + self.perp_dim == self.col_dim
+            assert self._dim + perp_basis.shape[0] == self._col_dim
 
-        self.basis_flat = basis.reshape((self.dim, self.col_dim))
-        self.perp_basis_flat = perp_basis.reshape(((self.col_dim-self.dim), self.col_dim))
+        self._basis_flat = basis.reshape((self._dim, self._col_dim))
+        self._perp_basis_flat = perp_basis.reshape(((self._col_dim-self._dim), self._col_dim))
 
         if validate:
-            foo = np.tensordot(self.basis_flat.conjugate(), self.basis_flat, axes=((1,),(1,)))
-            assert linalg.norm(foo - np.eye(self.dim)) < self.tol
+            foo = np.tensordot(self._basis_flat.conjugate(), self._basis_flat, axes=((1,),(1,)))
+            assert linalg.norm(foo - np.eye(self._dim)) < self._tol
 
-            foo = np.tensordot(self.perp_basis_flat.conjugate(), self.perp_basis_flat, axes=((1,),(1,)))
-            assert linalg.norm(foo - np.eye(self.col_dim - self.dim)) < self.tol
+            foo = np.tensordot(self._perp_basis_flat.conjugate(), self._perp_basis_flat, axes=((1,),(1,)))
+            assert linalg.norm(foo - np.eye(self._col_dim - self._dim)) < self._tol
 
-            foo = np.tensordot(self.basis_flat.conjugate(), self.perp_basis_flat, axes=((1,),(1,)))
-            assert linalg.norm(foo) < self.tol
+            foo = np.tensordot(self._basis_flat.conjugate(), self._perp_basis_flat, axes=((1,),(1,)))
+            assert linalg.norm(foo) < self._tol
 
     @classmethod
     def from_span(cls, X, tol=1e-10, hilb_space=None, use_qr=False):
@@ -130,24 +129,24 @@ class TensorBasis(object):
         if not isinstance(other, self.__class__):
             raise TypeError('TensorBasis can only add another TensorBasis')
 
-        if self.hilb_space is not None and other.hilb_space is not None:
-            assert self.hilb_space == other.hilb_space
+        if self._hilb_space is not None and other._hilb_space is not None:
+            assert self._hilb_space == other._hilb_space
 
-        assert self.col_shp == other.col_shp
+        assert self._col_shp == other._col_shp
 
     def perp(self):
         """Returns orthogonal complement of this space."""
         if self._perp_cache is None:
-            self._perp_cache = self.__class__(self.perp_basis, self.basis, **self._config_kw)
+            self._perp_cache = self.__class__(self._perp_basis, self._basis, **self._config_kw)
             self._perp_cache._perp_cache = self
         return self._perp_cache
 
     def __str__(self):
-        if self.hilb_space is None:
-            spc_str = str(self.col_shp)
+        if self._hilb_space is None:
+            spc_str = str(self._col_shp)
         else:
-            spc_str = repr(self.hilb_space)
-        return "<TensorBasis of dim "+str(self.dim)+" over space ("+spc_str+")>"
+            spc_str = repr(self._hilb_space)
+        return "<TensorBasis of dim "+str(self._dim)+" over space ("+spc_str+")>"
 
     def __repr__(self):
         return str(self)
@@ -159,7 +158,7 @@ class TensorBasis(object):
     def __or__(self, other):
         """Span of union of spaces."""
         self.assert_compatible(other)
-        b_cat = np.concatenate((self.basis, other.basis), axis=0)
+        b_cat = np.concatenate((self._basis, other._basis), axis=0)
         return self.from_span(b_cat, **self._config_kw)
 
     def __and__(self, other):
@@ -171,24 +170,24 @@ class TensorBasis(object):
         return self & other.perp()
 
     def to_basis(self, x):
-        if self.hilb_space is not None:
+        if self._hilb_space is not None:
             import qitensor.array
             if isinstance(x, qitensor.array.HilbertArray):
-                assert x.space == self.hilb_space
+                assert x.space == self._hilb_space
                 return self.to_basis(x.nparray)
 
-        assert x.shape == self.col_shp
+        assert x.shape == self._col_shp
         nd = len(x.shape)
-        return np.tensordot(self.basis.conjugate(), x, axes=(range(1, nd+1), range(nd)))
+        return np.tensordot(self._basis.conjugate(), x, axes=(range(1, nd+1), range(nd)))
 
     def from_basis(self, v):
         assert len(v.shape) == 1
-        assert v.shape[0] == self.dim
-        ret = np.tensordot(v, self.basis, axes=((0,),(0,)))
-        if self.hilb_space is None:
+        assert v.shape[0] == self._dim
+        ret = np.tensordot(v, self._basis, axes=((0,),(0,)))
+        if self._hilb_space is None:
             return ret
         else:
-            return self.hilb_space.array(ret)
+            return self._hilb_space.array(ret)
 
     def project(self, x):
         return self.from_basis(self.to_basis(x))
@@ -197,10 +196,10 @@ class TensorBasis(object):
         """Tests whether the given TensorBasis or vector is perpendicular to this space."""
         if isinstance(other, self.__class__):
             self.assert_compatible(other)
-            foo = np.tensordot(self.basis_flat.conjugate(), other.basis_flat, axes=((1,),(1,)))
-            return linalg.norm(foo) < self.tol
+            foo = np.tensordot(self._basis_flat.conjugate(), other._basis_flat, axes=((1,),(1,)))
+            return linalg.norm(foo) < self._tol
         else:
-            return linalg.norm(self.to_basis(other)) < self.tol
+            return linalg.norm(self.to_basis(other)) < self._tol
 
     def contains(self, other):
         """Tests whether the given TensorBasis or vector is contained in this space."""
@@ -210,9 +209,9 @@ class TensorBasis(object):
         return self.contains(other) and other.contains(self)
 
     def is_hermitian(self):
-        assert len(self.col_shp) == 2
-        assert self.col_shp[0] == self.col_shp[1]
-        for x in self.basis:
+        assert len(self._col_shp) == 2
+        assert self._col_shp[0] == self._col_shp[1]
+        for x in self._basis:
             if not self.contains(x.conjugate().transpose()):
                 return False
         return True
@@ -223,13 +222,13 @@ class TensorBasis(object):
         this basis is intended to map real vectors to complex operators.
         """
 
-        assert len(self.col_shp) == 2
-        assert self.col_shp[0] == self.col_shp[1]
-        n = self.col_shp[0]
+        assert len(self._col_shp) == 2
+        assert self._col_shp[0] == self._col_shp[1]
+        n = self._col_shp[0]
 
         # x_to_S = [ |a>, <a| ; Si ]
-        x_to_S = np.zeros((n,n, self.dim), dtype=complex)
-        for (S_i, Sv) in enumerate(self.basis):
+        x_to_S = np.zeros((n,n, self._dim), dtype=complex)
+        for (S_i, Sv) in enumerate(self._basis):
             x_to_S[:, :, S_i] = Sv
         # project onto Hermitian space while simulating complex values with
         # reals on the x side
@@ -238,9 +237,9 @@ class TensorBasis(object):
         x_to_S = np.concatenate((x_to_S_1, x_to_S_1j), axis=2)
 
         # decrease parameters by only taking linearly independent subspace
-        sqrmat = np.array([x_to_S.real, x_to_S.imag]).reshape(2*(n**2), 2*self.dim)
+        sqrmat = np.array([x_to_S.real, x_to_S.imag]).reshape(2*(n**2), 2*self._dim)
         (U, s, V) = linalg.svd(sqrmat)
-        n_indep = np.sum(s > self.tol)
+        n_indep = np.sum(s > self._tol)
         S_basis = U[:, :n_indep]
         x_to_S_reduced_real = S_basis.reshape(2,n,n, n_indep)
         x_to_S_reduced = x_to_S_reduced_real[0] + 1j*x_to_S_reduced_real[1]
@@ -254,15 +253,15 @@ class TensorBasis(object):
 
         ret = x_to_S_reduced.transpose([2, 0, 1])
 
-        if self.hilb_space is None:
+        if self._hilb_space is None:
             return ret
         else:
             # FIXME - untested
-            return [self.hilb_space.array(x) for x in ret]
+            return [self._hilb_space.array(x) for x in ret]
 
     def tensor_prod(self, other):
-        n = len(self.basis.shape)
-        m = len(other.basis.shape)
+        n = len(self._basis.shape)
+        m = len(other._basis.shape)
 
         def tp(a, b):
             foo = np.tensordot(a, b, axes=([], []))
@@ -270,40 +269,40 @@ class TensorBasis(object):
             foo = foo.reshape((foo.shape[0]*foo.shape[1],) + foo.shape[2:])
             return foo
 
-        b_b = tp(self.basis, other.basis)
+        b_b = tp(self._basis, other._basis)
         # this is simpler, but computing perp_basis manually avoids an svd/qr call
         #return self.__class__.from_span(b_b, **self._config_kw)
-        bp_b  = tp(self.perp_basis, other.basis)
-        b_bp  = tp(self.basis,  other.perp_basis)
-        bp_bp = tp(self.perp_basis, other.perp_basis)
+        bp_b  = tp(self._perp_basis, other._basis)
+        b_bp  = tp(self._basis,  other._perp_basis)
+        bp_bp = tp(self._perp_basis, other._perp_basis)
         b_b_p = np.concatenate((bp_b, b_bp, bp_bp), axis=0)
         return self.__class__(b_b, b_b_p, **self._config_kw)
 
     def map(self, f):
-        b_new  = np.array([f(m) for m in self.basis])
-        bp_new = np.array([f(m) for m in self.perp_basis])
+        b_new  = np.array([f(m) for m in self._basis])
+        bp_new = np.array([f(m) for m in self._perp_basis])
         return self.__class__(b_new, bp_new, **self._config_kw)
 
     def transpose(self, axes):
-        if self.hilb_space is not None:
+        if self._hilb_space is not None:
             raise NotImplementedError()
         else:
             return self.map(lambda m: m.transpose(axes))
 
     def reshape(self, shape):
-        if self.hilb_space is not None:
+        if self._hilb_space is not None:
             raise NotImplementedError()
         else:
             return self.map(lambda m: m.reshape(shape))
 
     def __len__(self):
-        return self.basis.shape[0]
+        return self._basis.shape[0]
 
     def __getitem__(self, i):
-        if self.hilb_space is None:
-            return self.basis[i]
+        if self._hilb_space is None:
+            return self._basis[i]
         else:
-            return self.hilb_space.array(self.basis[i])
+            return self._hilb_space.array(self._basis[i])
 
     # FIXME - define gt, lt operators
 

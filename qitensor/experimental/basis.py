@@ -14,8 +14,7 @@ class TensorBasis(object):
     However, if you are using qitensor then typically a basis would be created
     using one of the following methods:
 
-    * :func:`qitensor.array.HilbertArray.col_space_basis`
-    * :func:`qitensor.array.HilbertArray.row_space_basis`
+    * :func:`qitensor.array.HilbertArray.span`
     * :func:`qitensor.space.HilbertSpace.full_space`
     * :func:`qitensor.space.HilbertSpace.empty_space`
 

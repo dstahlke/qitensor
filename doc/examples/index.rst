@@ -6,6 +6,7 @@ Examples
 
    slices
    entangling_power
+   map_state_duality
    group_indices
    symbolic
    graph_codes

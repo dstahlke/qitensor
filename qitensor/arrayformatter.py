@@ -11,7 +11,6 @@ __all__ = ['set_qitensor_printoptions', 'get_qitensor_printoptions']
 class HilbertArrayFormatter(object):
     def __init__(self):
         self.str_use_sage = False
-        self.repr_use_sage = False
         self.zero_color_latex = 'Silver'
         self.zero_color_html = '#cccccc'
         self.use_latex_label_in_html = True
@@ -50,7 +49,7 @@ class HilbertArrayFormatter(object):
             return str(arr.space)+'\n'+str(arr.nparray)
 
     def array_repr(self, arr):
-        if self.repr_use_sage:
+        if self.str_use_sage:
             return 'HilbertArray('+repr(arr.space)+',\n'+repr(arr.sage_block_matrix())+')'
         else:
             return 'HilbertArray('+repr(arr.space)+',\n'+repr(arr.nparray)+')'
@@ -247,7 +246,6 @@ class HilbertArrayFormatter(object):
 
     def set_printoptions(
         self,
-        repr_use_sage=None,
         str_use_sage=None,
         zero_color_latex=None,
         zero_color_html=None,
@@ -255,8 +253,6 @@ class HilbertArrayFormatter(object):
         ipy_table_format_mode=None,
         ipy_space_format_mode=None
     ):
-        if repr_use_sage is not None:
-            self.repr_use_sage  = bool(repr_use_sage)
         if str_use_sage is not None:
             self.str_use_sage = bool(str_use_sage)
         if zero_color_latex is not None:
@@ -275,7 +271,6 @@ class HilbertArrayFormatter(object):
     def get_printoptions(self):
         return {
             "str_use_sage"            : self.str_use_sage,
-            "repr_use_sage"           : self.repr_use_sage,
             "zero_color_latex"        : self.zero_color_latex,
             "zero_color_html"         : self.zero_color_html,
             "use_latex_label_in_html" : self.use_latex_label_in_html,

@@ -8,6 +8,8 @@ Phys. Rev. A 78, 042303 (2008).
 
     >>> from qitensor import * # doctest: +SKIP
     >>> import numpy as np # doctest: +SKIP
+    >>> # use Sage's nice array formatting
+    >>> set_qitensor_printoptions(str_use_sage=True) # doctest: +SKIP
 
     >>> #graph = graphs.CycleGraph(4)
     >>> #graph.allow_multiple_edges(True)

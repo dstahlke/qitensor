@@ -2,7 +2,10 @@ Sage: pickling
 ====================================
 
     >>> from sage.all import * # doctest: +SKIP
-    >>> from qitensor import qubit # doctest: +SKIP
+    >>> from qitensor import qubit, set_qitensor_printoptions # doctest: +SKIP
+    >>> # use Sage's nice array formatting
+    >>> set_qitensor_printoptions(str_use_sage=True) # doctest: +SKIP
+
     >>> ha = qubit('a', dtype=SR) # doctest: +SKIP
     >>> hb = qubit('b', dtype=SR) # doctest: +SKIP
     >>> (x, y) = var('x y') # doctest: +SKIP
@@ -10,21 +13,21 @@ Sage: pickling
     >>> t = hb.array([1, y]) # doctest: +SKIP
     >>> Q = s*t # doctest: +SKIP
     >>> Q # doctest: +SKIP
-    |a,b>
+    HilbertArray(|a,b>,
     [  1]
     [  y]
     [---]
     [  x]
-    [x*y]
+    [x*y])
 
     >>> R = loads(dumps(Q)) # doctest: +SKIP
     >>> R # doctest: +SKIP
-    |a,b>
+    HilbertArray(|a,b>,
     [  1]
     [  y]
     [---]
     [  x]
-    [x*y]
+    [x*y])
 
     >>> Q == R # doctest: +SKIP
     True

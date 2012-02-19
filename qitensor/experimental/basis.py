@@ -64,6 +64,7 @@ class TensorBasis(object):
         self._col_shp = basis.shape[1:]
         self._col_dim = np.product(self._col_shp)
         self._perp_cache = None
+        self._hermit_cache = None
         # can be passed to constructor to make a space with similar configuration
         self._config_kw = { 'tol': tol, 'hilb_space': hilb_space }
 
@@ -249,6 +250,10 @@ class TensorBasis(object):
         this basis is intended to map real vectors to complex operators.
         """
 
+        if self._hermit_cache is not None:
+            return self._hermit_cache
+
+        assert self.is_hermitian()
         assert len(self._col_shp) == 2
         assert self._col_shp[0] == self._col_shp[1]
         n = self._col_shp[0]
@@ -278,13 +283,15 @@ class TensorBasis(object):
             # correct for numerical error and make it exactly Hermitian
             x_to_S_reduced[:, :, i] = (s + sH)/2
 
-        ret = x_to_S_reduced.transpose([2, 0, 1])
+        hbasis = x_to_S_reduced.transpose([2, 0, 1])
 
         if self._hilb_space is None:
-            return ret
+            self._hermit_cache = hbasis
         else:
             # FIXME - untested
-            return [self._hilb_space.array(x) for x in ret]
+            self._hermit_cache = [self._hilb_space.array(x) for x in hbasis]
+
+        return self._hermit_cache
 
     def tensor_prod(self, other):
         # FIXME - implement this.  It involves reshuffling the indices and
@@ -338,6 +345,31 @@ class TensorBasis(object):
             raise NotImplementedError()
         else:
             return self._nomath_map(lambda m: m.reshape(shape))
+
+    def random_vec(self):
+        """
+        Returns a random vector in this basis.
+
+        >>> import numpy as np
+        >>> from qitensor.experimental.basis import TensorBasis
+        >>> x = TensorBasis.from_span(np.random.randn(4,5,10))
+        >>> x
+        <TensorBasis of dim 4 over space (5, 10)>
+        >>> v = x.random_vec()
+        >>> v in x
+        True
+        >>> np.linalg.norm(v)
+        1.0
+        """
+
+        if self._basis.dtype.kind == 'c':
+            v = np.random.randn(self._dim) + 1j*np.random.randn(self._dim)
+        else:
+            # if it is not complex or float, then how to make a random number?
+            assert self._basis.dtype.kind == 'f'
+            v = np.random.randn(self._dim)
+        v /= linalg.norm(v)
+        return self.from_basis(v)
 
     def dim(self):
         return self._dim

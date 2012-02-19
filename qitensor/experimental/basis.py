@@ -359,8 +359,10 @@ class TensorBasis(object):
         >>> v = x.random_vec()
         >>> v in x
         True
-        >>> np.linalg.norm(v)
-        1.0
+        >>> abs(1 - np.linalg.norm(v)) < 1e-13
+        True
+        >>> x.equiv(TensorBasis.from_span([ x.random_vec() for i in range(x.dim()) ]))
+        True
         """
 
         if self._basis.dtype.kind == 'c':

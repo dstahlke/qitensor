@@ -735,31 +735,31 @@ class HilbertSpace(object):
 
     def full_space(self):
         """
-        Returns a TensorBasis corresponding to the entire space (EXPERIMENTAL).
+        Returns a TensorSubspace corresponding to the entire space (EXPERIMENTAL).
 
         >>> ha = qubit('a')
         >>> ha.full_space()
-        <TensorBasis of dim 2 over space (|a>)>
+        <TensorSubspace of dim 2 over space (|a>)>
         >>> ha.O.full_space()
-        <TensorBasis of dim 4 over space (|a><a|)>
+        <TensorSubspace of dim 4 over space (|a><a|)>
         """
 
-        import qitensor.experimental.basis
-        return qitensor.experimental.basis.TensorBasis.full(self.shape, hilb_space=self)
+        import qitensor.experimental.subspace
+        return qitensor.experimental.subspace.TensorSubspace.full(self.shape, hilb_space=self)
 
     def empty_space(self):
         """
-        Returns a TensorBasis corresponding to the empty space (EXPERIMENTAL).
+        Returns a TensorSubspace corresponding to the empty space (EXPERIMENTAL).
 
         >>> ha = qubit('a')
         >>> ha.empty_space()
-        <TensorBasis of dim 0 over space (|a>)>
+        <TensorSubspace of dim 0 over space (|a>)>
         >>> ha.O.empty_space()
-        <TensorBasis of dim 0 over space (|a><a|)>
+        <TensorSubspace of dim 0 over space (|a><a|)>
         """
 
-        import qitensor.experimental.basis
-        return qitensor.experimental.basis.TensorBasis.empty(self.shape, hilb_space=self)
+        import qitensor.experimental.subspace
+        return qitensor.experimental.subspace.TensorSubspace.empty(self.shape, hilb_space=self)
 
     def dim(self):
         """

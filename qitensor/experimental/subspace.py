@@ -4,14 +4,14 @@ import numpy as np
 import numpy.linalg as linalg
 
 # This is the only thing that is exported.
-__all__ = ['TensorBasis']
+__all__ = ['TensorSubspace']
 
-class TensorBasis(object):
+class TensorSubspace(object):
     """
-    Represents a basis of a tensor space.  Methods are available for projecting
-    to this basis, computing span and intersection of bases, etc.  This module
+    Represents a basis of a tensor subspace.  Methods are available for projecting
+    to this basis, computing span and intersection of subspaces, etc.  This module
     can be used independently of qitensor, and the doctest below reflects this.
-    However, if you are using qitensor then typically a basis would be created
+    However, if you are using qitensor then typically a subspace would be created
     using one of the following methods:
 
     * :func:`qitensor.array.HilbertArray.span`
@@ -19,28 +19,28 @@ class TensorBasis(object):
     * :func:`qitensor.space.HilbertSpace.empty_space`
 
     >>> import numpy as np
-    >>> from qitensor.experimental.basis import TensorBasis
-    >>> x = TensorBasis.from_span(np.random.randn(4,5,10))
+    >>> from qitensor.experimental.subspace import TensorSubspace
+    >>> x = TensorSubspace.from_span(np.random.randn(4,5,10))
     >>> x
-    <TensorBasis of dim 4 over space (5, 10)>
+    <TensorSubspace of dim 4 over space (5, 10)>
     >>> x.dim()
     4
     >>> x[0] in x
     True
     >>> x.perp()[0] in x
     False
-    >>> y = TensorBasis.from_span(np.random.randn(30,5,10))
+    >>> y = TensorSubspace.from_span(np.random.randn(30,5,10))
     >>> y
-    <TensorBasis of dim 30 over space (5, 10)>
-    >>> z = TensorBasis.from_span(np.random.randn(30,5,10))
+    <TensorSubspace of dim 30 over space (5, 10)>
+    >>> z = TensorSubspace.from_span(np.random.randn(30,5,10))
     >>> z
-    <TensorBasis of dim 30 over space (5, 10)>
+    <TensorSubspace of dim 30 over space (5, 10)>
     >>> x | y
-    <TensorBasis of dim 34 over space (5, 10)>
+    <TensorSubspace of dim 34 over space (5, 10)>
     >>> y | z
-    <TensorBasis of dim 50 over space (5, 10)>
+    <TensorSubspace of dim 50 over space (5, 10)>
     >>> y & z
-    <TensorBasis of dim 10 over space (5, 10)>
+    <TensorSubspace of dim 10 over space (5, 10)>
     >>> y > x&y
     True
     >>> y > x|y
@@ -48,10 +48,10 @@ class TensorBasis(object):
     >>> x|y > y
     True
     >>> y - x
-    <TensorBasis of dim 26 over space (5, 10)>
+    <TensorSubspace of dim 26 over space (5, 10)>
     >>> (y & z).equiv(~(~y | ~z))
     True
-    >>> (y-(y-x)).equiv(TensorBasis.from_span([ y.project(v) for v in x ]))
+    >>> (y-(y-x)).equiv(TensorSubspace.from_span([ y.project(v) for v in x ]))
     True
     """
 
@@ -156,7 +156,7 @@ class TensorBasis(object):
 
     def assert_compatible(self, other):
         if not isinstance(other, self.__class__):
-            raise TypeError('other object is not a TensorBasis')
+            raise TypeError('other object is not a TensorSubspace')
 
         if self._hilb_space is not None and other._hilb_space is not None:
             assert self._hilb_space == other._hilb_space
@@ -175,7 +175,7 @@ class TensorBasis(object):
             spc_str = str(self._col_shp)
         else:
             spc_str = '('+repr(self._hilb_space)+')'
-        return "<TensorBasis of dim "+str(self._dim)+" over space "+spc_str+">"
+        return "<TensorSubspace of dim "+str(self._dim)+" over space "+spc_str+">"
 
     def __repr__(self):
         return str(self)
@@ -222,7 +222,7 @@ class TensorBasis(object):
         return self.from_basis(self.to_basis(x))
 
     def is_perp(self, other):
-        """Tests whether the given TensorBasis or vector is perpendicular to this space."""
+        """Tests whether the given TensorSubspace or vector is perpendicular to this space."""
         if isinstance(other, self.__class__):
             self.assert_compatible(other)
             foo = np.tensordot(self._basis_flat.conjugate(), other._basis_flat, axes=((1,),(1,)))
@@ -231,7 +231,7 @@ class TensorBasis(object):
             return linalg.norm(self.to_basis(other)) < self._tol
 
     def contains(self, other):
-        """Tests whether the given TensorBasis or vector is contained in this space."""
+        """Tests whether the given TensorSubspace or vector is contained in this space."""
         return self.perp().is_perp(other)
 
     def equiv(self, other):
@@ -348,19 +348,19 @@ class TensorBasis(object):
 
     def random_vec(self):
         """
-        Returns a random vector in this basis.
+        Returns a random vector in this subspace.
 
         >>> import numpy as np
-        >>> from qitensor.experimental.basis import TensorBasis
-        >>> x = TensorBasis.from_span(np.random.randn(4,5,10))
+        >>> from qitensor.experimental.subspace import TensorSubspace
+        >>> x = TensorSubspace.from_span(np.random.randn(4,5,10))
         >>> x
-        <TensorBasis of dim 4 over space (5, 10)>
+        <TensorSubspace of dim 4 over space (5, 10)>
         >>> v = x.random_vec()
         >>> v in x
         True
         >>> abs(1 - np.linalg.norm(v)) < 1e-13
         True
-        >>> x.equiv(TensorBasis.from_span([ x.random_vec() for i in range(x.dim()) ]))
+        >>> x.equiv(TensorSubspace.from_span([ x.random_vec() for i in range(x.dim()) ]))
         True
         """
 
@@ -375,7 +375,7 @@ class TensorBasis(object):
 
     def random_hermit(self):
         """
-        Returns a random Hermitian vector in this basis.
+        Returns a random Hermitian vector in this subspace.
         """
 
         hb = self.hermitian_basis()

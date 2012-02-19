@@ -1631,7 +1631,7 @@ class HilbertArray(object):
 
     def span(self, axes='all'):
         """
-        Returns a TensorBasis for the column/row/mixed space of this array (EXPERIMENTAL).
+        Returns a TensorSubspace for the column/row/mixed space of this array (EXPERIMENTAL).
 
         :param axes: the axes to take the span of
         :type new_data: string ('all', 'col', 'row') or HilbertSpace
@@ -1642,18 +1642,18 @@ class HilbertArray(object):
         >>> iso = (hb*ha.H).random_isometry()
         >>> proj = iso * iso.H
         >>> proj.span('col')
-        <TensorBasis of dim 2 over space (|b>)>
+        <TensorSubspace of dim 2 over space (|b>)>
         >>> bigop = proj * ha.random_array() * hc.H.random_array()
         >>> bigop.space
         |a,b><b,c|
         >>> bigop.span('col')
-        <TensorBasis of dim 2 over space (|a,b>)>
+        <TensorSubspace of dim 2 over space (|a,b>)>
         >>> bigop.span(hb.O)
-        <TensorBasis of dim 1 over space (|b><b|)>
+        <TensorSubspace of dim 1 over space (|b><b|)>
         """
         # FIXME - not implemented
         # >>> bigop.span(hb.O).tensor_prod(bigop.span(ha))
-        # <TensorBasis of dim 2 over space (|a,b><b|)>
+        # <TensorSubspace of dim 2 over space (|a,b><b|)>
 
         if axes == 'all':
             axes = self.space
@@ -1672,8 +1672,8 @@ class HilbertArray(object):
 
         v = self.nparray.transpose(group_axes+space_axes)
         v = v.reshape((group_dim,) + axes.shape)
-        import qitensor.experimental.basis
-        return qitensor.experimental.basis.TensorBasis.from_span(v, hilb_space=axes)
+        import qitensor.experimental.subspace
+        return qitensor.experimental.subspace.TensorSubspace.from_span(v, hilb_space=axes)
 
     ########## stuff that only works in Sage ##########
 

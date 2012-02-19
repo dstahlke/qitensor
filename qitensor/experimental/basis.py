@@ -289,7 +289,6 @@ class TensorBasis(object):
         if self._hilb_space is None:
             self._hermit_cache = hbasis
         else:
-            # FIXME - untested
             self._hermit_cache = [self._hilb_space.array(x) for x in hbasis]
 
         return self._hermit_cache
@@ -373,6 +372,17 @@ class TensorBasis(object):
             v = np.random.randn(self._dim)
         v /= linalg.norm(v)
         return self.from_basis(v)
+
+    def random_hermit(self):
+        """
+        Returns a random Hermitian vector in this basis.
+        """
+
+        hb = self.hermitian_basis()
+        v = np.random.randn(len(hb))
+        v /= linalg.norm(v)
+        # works for both numpy and qitensor return values
+        return np.dot(v, hb)
 
     def dim(self):
         return self._dim

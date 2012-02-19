@@ -602,7 +602,7 @@ class HilbertArray(object):
         True
         >>> (q+q).closeto(q*2)
         True
-        >>> q+r
+        >>> q+r # FIXME - in __add__
         Traceback (most recent call last):
             ...
         HilbertIndexError: 'Mismatched HilbertSpaces: |a><b,c| vs. |c,x><y|'
@@ -645,9 +645,35 @@ class HilbertArray(object):
         return self
 
     def __rmul__(self, other):
+        """
+        Reflected multiplication.
+
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> x = ha.random_array()
+        >>> (x*2).closeto(2*x)
+        True
+        """
+
         return self * other
 
     def __add__(self, other):
+        """
+        Adds two arrays.
+
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> hb = qubit('b')
+        >>> x = ha.random_array()
+        >>> y = hb.random_array()
+        >>> (x+x).closeto(2*x)
+        True
+        >>> x+y
+        Traceback (most recent call last):
+            ...
+        HilbertIndexError: 'Mismatched HilbertSpaces: |a> vs. |b>'
+        """
+
         if not isinstance(other, HilbertArray):
             raise TypeError('HilbertArray can only add another HilbertArray')
         ret = self.copy()
@@ -655,6 +681,24 @@ class HilbertArray(object):
         return ret
 
     def __iadd__(self, other):
+        """
+        In-place addition.
+
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> x = ha.random_array()
+        >>> y = ha.random_array()
+        >>> x_copy = x.copy()
+        >>> x_ref  = x
+        >>> x += y
+        >>> x is x_ref
+        True
+        >>> x is x_copy
+        False
+        >>> x.closeto(x_copy+y)
+        True
+        """
+
         if not isinstance(other, HilbertArray):
             raise TypeError('HilbertArray can only add another HilbertArray')
         self._assert_same_axes(other)
@@ -662,6 +706,22 @@ class HilbertArray(object):
         return self
 
     def __sub__(self, other):
+        """
+        Subtracts two arrays.
+
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> hb = qubit('b')
+        >>> x = ha.random_array()
+        >>> y = hb.random_array()
+        >>> (2*x-x).closeto(x)
+        True
+        >>> x-y
+        Traceback (most recent call last):
+            ...
+        HilbertIndexError: 'Mismatched HilbertSpaces: |a> vs. |b>'
+        """
+
         if not isinstance(other, HilbertArray):
             raise TypeError('HilbertArray can only subtract '+
                 'another HilbertArray')
@@ -670,9 +730,38 @@ class HilbertArray(object):
         return ret
 
     def __neg__(self):
+        """
+        Returns negation of this array.
+
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> x = ha.random_array()
+        >>> y = -x
+        >>> (x+y).norm() == 0
+        True
+        """
+
         return self * -1
 
     def __isub__(self, other):
+        """
+        In-place subtraction.
+
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> x = ha.random_array()
+        >>> y = ha.random_array()
+        >>> x_copy = x.copy()
+        >>> x_ref  = x
+        >>> x -= y
+        >>> x is x_ref
+        True
+        >>> x is x_copy
+        False
+        >>> x.closeto(x_copy-y)
+        True
+        """
+
         if not isinstance(other, HilbertArray):
             raise TypeError('HilbertArray can only subtract '+
                 'another HilbertArray')
@@ -681,20 +770,84 @@ class HilbertArray(object):
         return self
 
     def __div__(self, other):
+        """
+        Divide by a scalar.
+
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> x = ha.random_array()
+        >>> (x/2).closeto(x*0.5)
+        True
+        >>> # the following exception is thrown from within numpy
+        >>> x / x
+        Traceback (most recent call last):
+            ...
+        TypeError: unsupported operand type(s) for /: 'complex' and 'HilbertArray'
+        """
+
         ret = self.copy()
         ret /= other
         return ret
 
     def __idiv__(self, other):
+        """
+        In-place division by a scalar.
+
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> x = ha.random_array()
+        >>> x_copy = x.copy()
+        >>> x_ref  = x
+        >>> x /= 2
+        >>> x is x_ref
+        True
+        >>> x is x_copy
+        False
+        >>> x.closeto(x_copy*0.5)
+        True
+        """
+
         self.nparray /= other
         return self
 
     def __truediv__(self, other):
+        """
+        Divide by a scalar.
+
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> x = ha.random_array()
+        >>> (x/2).closeto(x*0.5)
+        True
+        >>> # the following exception is thrown from within numpy
+        >>> x / x
+        Traceback (most recent call last):
+            ...
+        TypeError: unsupported operand type(s) for /: 'complex' and 'HilbertArray'
+        """
+
         ret = self.copy()
         ret.__itruediv__(other)
         return ret
 
     def __itruediv__(self, other):
+        """
+        In-place division by a scalar.
+
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> x = ha.random_array()
+        >>> x_copy = x.copy()
+        >>> x_ref  = x
+        >>> x /= 2
+        >>> x is x_ref
+        True
+        >>> x is x_copy
+        False
+        >>> x.closeto(x_copy*0.5)
+        True
+        """
+
         self.nparray.__itruediv__(other)
         return self
 

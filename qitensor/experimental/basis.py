@@ -91,7 +91,7 @@ class TensorBasis(object):
             assert linalg.norm(foo) < self._tol
 
     @classmethod
-    def from_span(cls, X, tol=1e-10, hilb_space=None, use_qr=False):
+    def from_span(cls, X, tol=1e-10, hilb_space=None, dtype=None):
         if not isinstance(X, np.ndarray):
             X = list(X)
             try:
@@ -106,7 +106,7 @@ class TensorBasis(object):
             except ImportError:
                 pass
 
-        X = np.array(X)
+        X = np.array(X, dtype=dtype)
         assert len(X.shape) >= 2
 
         col_shp = X.shape[1:]
@@ -121,6 +121,7 @@ class TensorBasis(object):
 
         X = X.reshape(m, n)
 
+        use_qr = False
         if use_qr:
             # I think that sometimes QR doesn't do exactly what I want.  The code
             # below potentially includes extra vectors into the basis.
@@ -141,17 +142,17 @@ class TensorBasis(object):
         return cls(basis, perp_basis, tol=tol, hilb_space=hilb_space)
 
     @classmethod
-    def empty(cls, col_shp, tol=1e-10, hilb_space=None):
+    def empty(cls, col_shp, tol=1e-10, hilb_space=None, dtype=complex):
         # FIXME - col_shp not needed if hilb_space given
         n = np.product(col_shp)
-        basis = np.zeros((0,)+col_shp)
+        basis = np.zeros((0,)+col_shp, dtype=dtype)
         perp_basis = np.eye(n).reshape((n,)+col_shp)
         return cls(basis, perp_basis, tol=tol, hilb_space=hilb_space)
 
     @classmethod
-    def full(cls, col_shp, tol=1e-10, hilb_space=None):
+    def full(cls, col_shp, tol=1e-10, hilb_space=None, dtype=complex):
         # FIXME - col_shp not needed if hilb_space given
-        return cls.empty(col_shp, tol=tol, hilb_space=hilb_space).perp()
+        return cls.empty(col_shp, tol=tol, hilb_space=hilb_space, dtype=dtype).perp()
 
     def assert_compatible(self, other):
         if not isinstance(other, self.__class__):

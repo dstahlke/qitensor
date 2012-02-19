@@ -1072,7 +1072,7 @@ class HilbertArray(object):
                 if not s in self.space.bra_ket_set:
                     raise HilbertIndexError('not in ket set: '+repr(s))
                 axes_set.add(s.H if s.is_dual else s)
-            axes = {s: s.H for s in axes_set}
+            axes = dict((s, s.H) for s in axes_set)
 
         assert isinstance(axes, dict)
 

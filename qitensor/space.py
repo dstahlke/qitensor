@@ -85,19 +85,19 @@ class HilbertSpace(object):
         """
         Expands a list of HilbertSpaces to a list of HilbertAtoms.
 
-        >>> from qitensor import qubit
+        >>> from qitensor import qubit, HilbertSpace
         >>> ha = qubit('a')
         >>> hb = qubit('b')
         >>> hc = qubit('c')
         >>> HilbertSpace._expand_list_to_atoms([ha, ha*hb.H*hc, ha])
-        [|a>, |a,c><b|, |a>]
+        [|a>, |a>, |c>, <b|, |a>]
         """
 
         list_out = []
         for x in list_in:
             assert isinstance(x, HilbertSpace)
-            list_out += x.ket_set
-            list_out += x.bra_set
+            list_out += sorted(x.ket_set)
+            list_out += sorted(x.bra_set)
         return list_out
 
     @classmethod
@@ -737,6 +737,7 @@ class HilbertSpace(object):
         """
         Returns a TensorSubspace corresponding to the entire space (EXPERIMENTAL).
 
+        >>> from qitensor import qubit
         >>> ha = qubit('a')
         >>> ha.full_space()
         <TensorSubspace of dim 2 over space (|a>)>
@@ -751,6 +752,7 @@ class HilbertSpace(object):
         """
         Returns a TensorSubspace corresponding to the empty space (EXPERIMENTAL).
 
+        >>> from qitensor import qubit
         >>> ha = qubit('a')
         >>> ha.empty_space()
         <TensorSubspace of dim 0 over space (|a>)>

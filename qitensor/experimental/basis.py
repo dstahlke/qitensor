@@ -381,8 +381,10 @@ class TensorBasis(object):
         hb = self.hermitian_basis()
         v = np.random.randn(len(hb))
         v /= linalg.norm(v)
-        # works for both numpy and qitensor return values
-        return np.dot(v, hb)
+        if self._hilb_space is not None:
+            return np.dot(v, hb)
+        else:
+            return np.tensordot(v, hb, axes=([0],[0]))
 
     def dim(self):
         return self._dim

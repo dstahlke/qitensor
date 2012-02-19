@@ -84,6 +84,19 @@ class HilbertArray(object):
         return ret
 
     def _reassign(self, other):
+        """
+        Used internally to change the contents of a HilbertArray without creating a new object.
+
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> x = ha.random_unitary()
+        >>> y = ha.random_unitary()
+        >>> z = x
+        >>> x *= y
+        >>> x is z
+        True
+        """
+
         self.space = other.space
         self.nparray = other.nparray
         self.axes = other.axes
@@ -109,6 +122,23 @@ class HilbertArray(object):
         return self.axes.index(simple_hilb)
 
     def _assert_same_axes(self, other):
+        """
+        Throws an exception if self.axes != other.axes.  Used when determining whether
+        two arrays are compatible for certain operations (such as addition).
+
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> hb = qubit('b')
+        >>> x = ha.array()
+        >>> y = ha.array()
+        >>> z = hb.array()
+        >>> x._assert_same_axes(y)
+        >>> x._assert_same_axes(z)
+        Traceback (most recent call last):
+            ...
+        HilbertIndexError: 'Mismatched HilbertSpaces: |a> vs. |b>'
+        """
+
         if self.axes != other.axes:
             raise HilbertIndexError('Mismatched HilbertSpaces: '+
                 repr(self.space)+' vs. '+repr(other.space))
@@ -325,14 +355,28 @@ class HilbertArray(object):
         return ret
 
     def relabel(self, from_spaces, to_spaces=None):
-        # FIXME - update for new features
         """
-        Changes the HilbertSpace of this array without changing data.
+        Returns a HilbertArray with the same data as this one, but with axes relabelled.
 
         :param from_space: the old space, or list of spaces, or dict mapping old->new
         :type from_space: HilbertSpace, list, dict
         :param to_space: the new space (or list of spaces)
         :type to_space: HilbertSpace, list
+
+        This method changes the labels of the axes of this array.  It is permitted to
+        change a bra to a ket or vice-versa, in which case the effect is equivalent to
+        doing a partial transpose.  There are three ways to call this method:
+
+        * You can pass two HilbertSpaces, in which case the first space will be
+          relabeled to the second one.  If the passed spaces are not HilbertAtoms
+          (i.e. they are composites like ``|a,b>``) then the mapping from atom to
+          atom is done using the same alphabetical sorting that is used when
+          displaying the name of the space.  In this case, the other two ways of
+          calling relabel would probably be clearer.
+        * You can pass a pair of tuples of HilbertAtoms.  In this case the first
+          space from the first list gets renamed to the first space from the second
+          list, and so on.
+        * You can pass a dictionary of HilbertAtoms of the form {from_atom => to_atom, ...}.
 
         FIXME - does it return a view? should it?
 
@@ -444,13 +488,48 @@ class HilbertArray(object):
         arr = np.vectorize(fn, otypes=[dtype])(self.nparray)
         return self.space.array(arr)
 
-    def closeto(self, other):
+    def closeto(self, other, rtol=1e-05, atol=1e-08):
+        """
+        Checks whether two arrays are nearly equal, similar to numpy.allclose.
+
+        For details, see the numpy.allclose documentation.
+
+        >>> from qitensor import qudit
+        >>> ha = qudit('a', 10)
+        >>> x = ha.random_array()
+        >>> y = ha.random_array()
+        >>> x.closeto(y)
+        False
+        >>> x.closeto(x * (1+1e-10))
+        True
+        >>> x == x * (1+1e-10)
+        False
+        """
+
         if not isinstance(other, HilbertArray):
             raise TypeError('other must be HilbertArray')
         self._assert_same_axes(other)
-        return np.allclose(self.nparray, other.nparray)
+        return np.allclose(self.nparray, other.nparray, rtol=rtol, atol=atol)
 
     def __eq__(self, other):
+        """
+        Checks whether two arrays are equal.
+
+        >>> from qitensor import qudit
+        >>> ha = qudit('a', 10)
+        >>> hb = qudit('b', 10)
+        >>> x = ha.array()
+        >>> y = ha.random_array()
+        >>> x == x and y == y
+        True
+        >>> x == y
+        False
+        >>> x == y * 0
+        True
+        >>> x == x.relabel({ ha: hb })
+        False
+        """
+
         if not isinstance(other, HilbertArray):
             return False
         elif self.space != other.space:
@@ -459,6 +538,24 @@ class HilbertArray(object):
             return np.all(self.nparray == other.nparray)
 
     def __ne__(self, other):
+        """
+        Checks whether two arrays are not equal.
+
+        >>> from qitensor import qudit
+        >>> ha = qudit('a', 10)
+        >>> hb = qudit('b', 10)
+        >>> x = ha.array()
+        >>> y = ha.random_array()
+        >>> x != x or y != y
+        False
+        >>> x != y
+        True
+        >>> x != y * 0
+        False
+        >>> x != x.relabel({ ha: hb })
+        True
+        """
+
         return not (self == other)
 
     def lmul(self, other):
@@ -478,6 +575,39 @@ class HilbertArray(object):
         return other * self
 
     def __mul__(self, other):
+        """
+        Multiplies two arrays, or an array and a scalar.
+        
+        Given two arrays, contracts between the common bra spaces of the left
+        argument and ket spaces of the right argument.  This is equivalent to
+        calling self.tensordot(other).
+
+        Given an array and scalar, does the obvious thing.
+
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> hb = qubit('b')
+        >>> hc = qubit('c')
+        >>> hx = qubit('x')
+        >>> hy = qubit('y')
+        >>> q = (ha*hb.H*hc.H).random_array()
+        >>> q.space
+        |a><b,c|
+        >>> r = (hc*hx*hy.H).random_array()
+        >>> r.space
+        |c,x><y|
+        >>> (q*r).space
+        |a,x><b,y|
+        >>> (q+q).closeto(2*q)
+        True
+        >>> (q+q).closeto(q*2)
+        True
+        >>> q+r
+        Traceback (most recent call last):
+            ...
+        HilbertIndexError: 'Mismatched HilbertSpaces: |a><b,c| vs. |c,x><y|'
+        """
+
         if isinstance(other, HilbertArray):
             return self.tensordot(other)
         else:
@@ -486,6 +616,27 @@ class HilbertArray(object):
             return ret
 
     def __imul__(self, other):
+        """
+        In-place multiplication.
+
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> x = ha.random_unitary()
+        >>> y = ha.random_unitary()
+        >>> x_copy = x.copy()
+        >>> x_ref  = x
+        >>> x *= y
+        >>> x is x_ref
+        True
+        >>> x is x_copy
+        False
+        >>> x *= 2
+        >>> x is x_ref
+        True
+        >>> x.closeto(x_copy*y*2)
+        True
+        """
+
         if isinstance(other, HilbertArray):
             self._reassign(self * other)
         else:
@@ -1636,6 +1787,7 @@ class HilbertArray(object):
         :param axes: the axes to take the span of
         :type new_data: string ('all', 'col', 'row') or HilbertSpace
 
+        >>> from qitensor import qudit
         >>> ha = qudit('a', 2)
         >>> hb = qudit('b', 3)
         >>> hc = qudit('c', 3)
@@ -1768,3 +1920,7 @@ class HilbertArray(object):
         if not FORMATTER.ipy_table_format_mode == 'html':
             return None
         return FORMATTER.array_html_block_table(self)
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()

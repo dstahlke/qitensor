@@ -24,7 +24,7 @@ class HilbertArray(object):
 
         hs = space
         self.space = hs
-        self.axes = hs.sorted_kets + hs.sorted_bras
+        self.axes = hs._array_axes
 
         if noinit_data:
             assert data is None
@@ -101,7 +101,7 @@ class HilbertArray(object):
         self.nparray = other.nparray
         self.axes = other.axes
 
-    def get_dim(self, simple_hilb):
+    def get_dim(self, atom):
         """
         Returns the axis corresponding to the given HilbertAtom.
 
@@ -119,7 +119,7 @@ class HilbertArray(object):
         array([  3.+0.j,  12.+0.j])
         """
 
-        return self.axes.index(simple_hilb)
+        return self.space._array_axes_lookup[atom]
 
     def _assert_same_axes(self, other):
         """
@@ -211,6 +211,12 @@ class HilbertArray(object):
         (1+0j)
         >>> (ha.bra(0) * hb.bra(0)) * (ha.ket(0) * hb.ket(1))
         0j
+        >>> xa = ha.O.random_array()
+        >>> xb = hb.O.random_array()
+        >>> ((xa*xa)*(xb*xb)).space
+        |a,b><a,b|
+        >>> ((xa*xa)*(xb*xb)).closeto((xa*xb)*(xa*xb))
+        True
         """
 
         hs = self.space
@@ -218,6 +224,10 @@ class HilbertArray(object):
         #print str(hs)+'*'+str(ohs)
 
         hs.base_field.assert_same(ohs.base_field)
+
+        # shortcut for common case
+        if (contraction_spaces is None) and (hs._is_simple_dyad) and (hs == ohs) and (hs == hs.H):
+            return self.space.array(np.dot(self.nparray, other.nparray))
 
         if contraction_spaces is None:
             mul_space = frozenset([x.H for x in hs.bra_set]) & ohs.ket_set
@@ -245,8 +255,9 @@ class HilbertArray(object):
         mul_H = frozenset([x.H for x in mul_space])
         #print mul_space
 
-        axes_self  = [self.get_dim(x.H) for x in sorted(mul_space)]
-        axes_other = [other.get_dim(x)  for x in sorted(mul_space)]
+        mul_space_sorted = sorted(mul_space)
+        axes_self  = [self.get_dim(x.H) for x in mul_space_sorted]
+        axes_other = [other.get_dim(x)  for x in mul_space_sorted]
         #print axes_self, axes_other
         td = np.tensordot(self.nparray, other.nparray,
             axes=(axes_self, axes_other))
@@ -258,11 +269,11 @@ class HilbertArray(object):
         #print "ohs.b", ohs.sorted_bras
         #print "cH", mul_H
         #print "c", mul_space
-        td_axes = []
-        td_axes += [x for x in hs.sorted_kets]
-        td_axes += [x for x in hs.sorted_bras if not x in mul_H]
-        td_axes += [x for x in ohs.sorted_kets if not x in mul_space]
-        td_axes += [x for x in ohs.sorted_bras]
+        td_axes = \
+            hs.sorted_kets + \
+            [x for x in hs.sorted_bras if not x in mul_H] + \
+            [x for x in ohs.sorted_kets if not x in mul_space] + \
+            ohs.sorted_bras
         #print td_axes
         #print td.shape
         assert len(td_axes) == len(td.shape)
@@ -1025,8 +1036,8 @@ class HilbertArray(object):
         rowcol_kw = { 'row_space': row_space, 'col_space': col_space }
         (row_space, col_space) = self._get_row_col_spaces(**rowcol_kw)
 
-        col_size = shape_product((x.dim() for x in col_space))
-        row_size = shape_product((x.dim() for x in row_space))
+        col_size = shape_product([x.dim() for x in col_space])
+        row_size = shape_product([x.dim() for x in row_space])
         axes = [self.get_dim(x) for x in col_space + row_space]
 
         #print col_size, row_size, axes

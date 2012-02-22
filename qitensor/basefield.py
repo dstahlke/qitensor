@@ -209,12 +209,12 @@ class HilbertBaseField(object):
         """
 
         # Just return the atoms if possible:
-        if len(ket_set) == 0 and len(bra_set) == 0:
+        if not ket_set and not bra_set:
             raise HilbertError('tried to create empty HilbertSpace')
-        elif len(ket_set) == 1 and len(bra_set) == 0:
-            return list(ket_set)[0]
-        elif len(ket_set) == 0 and len(bra_set) == 1:
-            return list(bra_set)[0]
+        elif len(ket_set) == 1 and not bra_set:
+            return ket_set.__iter__().next()
+        elif not ket_set and len(bra_set) == 1:
+            return bra_set.__iter__().next()
         else:
             return self._space_factory(ket_set, bra_set)
 

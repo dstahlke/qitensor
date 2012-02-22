@@ -80,6 +80,9 @@ class HilbertAtom(HilbertSpace):
         self._dim = len(indices)
         self._is_simple_dyad = False
 
+        self._array_axes = [self]
+        self._array_axes_lookup = {self: 0}
+
         if dual:
             self._H = dual
         else:
@@ -119,7 +122,7 @@ class HilbertAtom(HilbertSpace):
         if not isinstance(other, HilbertAtom):
             return HilbertSpace.__eq__(self, other)
         else:
-            return 0 == self._mycmp(other)
+            return self._hashval == other._hashval and 0 == self._mycmp(other)
 
     def __ne__(self, other):
         return not (self == other)

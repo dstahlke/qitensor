@@ -9,6 +9,7 @@ Version 0.8.1 (ongoing):
 	HilbertArray.trace between arbitrary spaces
 	HilbertArray.sqrt
 	TensorSubspace module
+	better performance
 
 Version 0.8 (2011-12-01):
 	as_np_matrix take {row,col}_space args

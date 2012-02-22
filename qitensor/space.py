@@ -79,6 +79,9 @@ class HilbertSpace(object):
             self._dim = shape_product(self.shape)
             self._is_simple_dyad = len(bra_set)==1 and len(ket_set)==1
 
+            self._array_axes = self.sorted_kets + self.sorted_bras
+            self._array_axes_lookup = dict((s, self._array_axes.index(s)) for s in self._array_axes)
+
     def __reduce__(self):
         return _unreduce_v1, (self.ket_set, self.bra_set)
 

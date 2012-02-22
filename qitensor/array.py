@@ -613,10 +613,6 @@ class HilbertArray(object):
         True
         >>> (q+q).closeto(q*2)
         True
-        >>> q+r # FIXME - in __add__
-        Traceback (most recent call last):
-            ...
-        HilbertIndexError: 'Mismatched HilbertSpaces: |a><b,c| vs. |c,x><y|'
         """
 
         if isinstance(other, HilbertArray):

@@ -1018,11 +1018,15 @@ class HilbertArray(object):
         True
         """
 
+        # shortcut for common case
+        if self.space._is_simple_dyad:
+            return np.matrix(self.nparray, dtype=dtype)
+
         rowcol_kw = { 'row_space': row_space, 'col_space': col_space }
         (row_space, col_space) = self._get_row_col_spaces(**rowcol_kw)
 
-        col_size = shape_product([x.dim() for x in col_space])
-        row_size = shape_product([x.dim() for x in row_space])
+        col_size = shape_product((x.dim() for x in col_space))
+        row_size = shape_product((x.dim() for x in row_space))
         axes = [self.get_dim(x) for x in col_space + row_space]
 
         #print col_size, row_size, axes

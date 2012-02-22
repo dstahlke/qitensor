@@ -26,6 +26,7 @@ space tensor product structure.
 __version__ = "0.8.1"
 
 import numpy as np
+import operator
 
 ########################################
 
@@ -38,7 +39,8 @@ except ImportError:
 ########################################
 
 def shape_product(l):
-    return np.prod(l, dtype=int)
+    # faster than np.prod(l, dtype=int)
+    return reduce(operator.mul, l, 1)
 
 ########################################
 

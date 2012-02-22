@@ -76,6 +76,8 @@ class HilbertSpace(object):
             ket_shape = [len(x.indices) for x in self.sorted_kets]
             bra_shape = [len(x.indices) for x in self.sorted_bras]
             self.shape = tuple(ket_shape + bra_shape)
+            self._dim = shape_product(self.shape)
+            self._is_simple_dyad = len(bra_set)==1 and len(ket_set)==1
 
     def __reduce__(self):
         return _unreduce_v1, (self.ket_set, self.bra_set)
@@ -772,11 +774,13 @@ class HilbertSpace(object):
         >>> hb = qudit('b', 5)
         >>> hc = indexed_space('c', ['x', 'y', 'z'])
         
+        >>> ha.dim()
+        2
         >>> (ha*hb*hc.H).dim()
         30
         """
 
-        return np.product([len(s.indices) for s in self.bra_ket_set])
+        return self._dim
 
     def index_iter(self):
         """

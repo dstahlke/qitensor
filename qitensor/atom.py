@@ -76,9 +76,9 @@ class HilbertAtom(HilbertSpace):
 
         self.base_field = base_field
 
-        ket_shape = [len(x.indices) for x in self.sorted_kets]
-        bra_shape = [len(x.indices) for x in self.sorted_bras]
-        self.shape = tuple(ket_shape + bra_shape)
+        self.shape = (len(indices), )
+        self._dim = len(indices)
+        self._is_simple_dyad = False
 
         if dual:
             self._H = dual

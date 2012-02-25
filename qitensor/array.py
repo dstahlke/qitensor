@@ -870,6 +870,36 @@ class HilbertArray(object):
         return self
 
     def _index_key_to_map(self, key):
+        """
+        Converts indices to a standard form, for use by _get_set_item.
+
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> hb = qubit('b')
+        >>> x = ha.array()
+        >>> y = (ha.O*hb).array()
+        >>> x._index_key_to_map(2)
+        {|a>: 2}
+        >>> y._index_key_to_map(2)
+        Traceback (most recent call last):
+            ...
+        HilbertIndexError: 'Wrong number of indices given (1 for |a,b><a|)'
+        >>> y._index_key_to_map((1,2,3))
+        {|b>: 2, <a|: 3, |a>: 1}
+        >>> y._index_key_to_map([1,2,3])
+        {|b>: 2, <a|: 3, |a>: 1}
+        >>> y._index_key_to_map((1,2,3,4))
+        Traceback (most recent call last):
+            ...
+        HilbertIndexError: 'Wrong number of indices given (4 for |a,b><a|)'
+        >>> y._index_key_to_map({ ha: 1, ha.H: 2})
+        {<a|: 2, |a>: 1}
+        >>> y._index_key_to_map({ ha: 1, hb.H: 2})
+        Traceback (most recent call last):
+            ...
+        HilbertIndexError: 'Hilbert space not part of this array: <b|'
+        """
+
         index_map = {}
         if isinstance(key, dict):
             for (k, v) in key.iteritems():
@@ -921,6 +951,12 @@ class HilbertArray(object):
         return index_map
 
     def _get_set_item(self, key, do_set=False, set_val=None):
+        """
+        The guts for the __getitem__ and __setitem__ methods.
+
+        Doctests are in doc/examples/slices.rst.
+        """
+
         index_map = self._index_key_to_map(key)
 
         out_axes = []
@@ -962,14 +998,63 @@ class HilbertArray(object):
             return ret
 
     def __getitem__(self, key):
+        """
+        Gets an item or slice.
+
+        Doctests are in doc/examples/slices.rst.
+        """
+
         return self._get_set_item(key)
 
     def __setitem__(self, key, val):
+        """
+        Sets an item or slice.
+
+        Doctests are in doc/examples/slices.rst.
+        """
+
         return self._get_set_item(key, True, val)
 
     def _get_row_col_spaces(self, row_space=None, col_space=None):
         """
         Parses the row_space and col_space parameters used by various functions.
+
+        Returns a tuple consisting of a list of row_space atoms and a list of
+        col_space atoms.  For more information, see the documentation for
+        :func:`as_np_matrix`.
+
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> hb = qubit('b')
+        >>> x = (ha.O*hb).array()
+        >>> x._get_row_col_spaces()
+        ([<a|], [|a>, |b>])
+        >>> x._get_row_col_spaces(row_space=ha)
+        ([|a>], [|b>, <a|])
+        >>> x._get_row_col_spaces(row_space=ha*hb)
+        ([|a>, |b>], [<a|])
+        >>> x._get_row_col_spaces(row_space=(ha, hb))
+        ([|a>, |b>], [<a|])
+        >>> x._get_row_col_spaces(row_space=(ha, hb.H))
+        Traceback (most recent call last):
+            ...
+        MismatchedIndexSetError: "not in array's index set: <b|"
+        >>> x._get_row_col_spaces(col_space=ha)
+        ([|b>, <a|], [|a>])
+        >>> x._get_row_col_spaces(col_space=(ha, hb.H))
+        Traceback (most recent call last):
+            ...
+        MismatchedIndexSetError: "not in array's index set: <b|"
+        >>> x._get_row_col_spaces(col_space=(ha, hb*ha.H))
+        ([], [|a>, |b>, <a|])
+        >>> x._get_row_col_spaces(row_space=ha, col_space=hb)
+        Traceback (most recent call last):
+            ...
+        MismatchedIndexSetError: 'all indices must be in col_set or row_set, these were missing: <a|'
+        >>> x._get_row_col_spaces(row_space=ha.O, col_space=hb*ha)
+        Traceback (most recent call last):
+            ...
+        MismatchedIndexSetError: 'space is in both col and row sets: |a>'
         """
 
         def parse_space(s):
@@ -993,17 +1078,37 @@ class HilbertArray(object):
 
         col_set = frozenset(col_space)
         row_set = frozenset(row_space)
-        assert col_set.isdisjoint(row_set)
-        assert row_set <= self.space.bra_ket_set
-        assert col_set <= self.space.bra_ket_set
-        assert col_set | row_set == self.space.bra_ket_set
+
+        def space_string(spc_set):
+            return repr(self.space.base_field.create_space1(spc_set))
+
+        if not col_set.isdisjoint(row_set):
+            raise MismatchedIndexSetError( \
+                'space is in both col and row sets: '+space_string(col_set & row_set))
+        if not row_set <= self.space.bra_ket_set:
+            raise MismatchedIndexSetError( \
+                "not in array's index set: "+space_string(row_set - self.space.bra_ket_set))
+        if not col_set <= self.space.bra_ket_set:
+            raise MismatchedIndexSetError( \
+                "not in array's index set: "+space_string(col_set - self.space.bra_ket_set))
+        if not col_set | row_set == self.space.bra_ket_set:
+            raise MismatchedIndexSetError( \
+                'all indices must be in col_set or row_set, these were missing: '+ \
+                space_string(self.space.bra_ket_set-(col_set | row_set)))
 
         return (row_space, col_space)
 
     def as_np_matrix(self, dtype=None, row_space=None, col_space=None):
-        # FIXME - docs for row_space and col_space params
         """
         Returns the underlying data as a numpy.matrix.  Returns a copy, not a view.
+
+        :param dtype: datatype of returned matrix.
+        :param row_space: the HilbertSpace to use for the row space of the matrix,
+            default is the bra space of the input array.
+        :type row_space: HilbertSpace, list, or tuple
+        :param col_space: the HilbertSpace to use for the column space of the matrix,
+            default is the ket space of the input array.
+        :type col_space: HilbertSpace, list, or tuple
 
         >>> import numpy
         >>> from qitensor import qubit, qudit
@@ -1043,7 +1148,7 @@ class HilbertArray(object):
 
     def np_matrix_transform(self, f, transpose_dims=False):
         """
-        Performs a matrix operation.
+        Performs a numpy matrix operation.
 
         :param f: operation to perform
         :type f: lambda function
@@ -1584,8 +1689,33 @@ class HilbertArray(object):
         return (U, S, V)
 
     def svd_list(self, row_space=None, col_space=None, thresh=0):
-        # FIXME - docs
         """
+        Computes a singular value decomposition or Schmidt decomposition of
+        this array.
+
+        x.svd_list() returns a tuple (U, S, V) such that:
+
+        * U is a list of arrays in the space defined by the ``row_space``
+          parameter (by default the bra space of the input)
+        * V is a list of arrays in the space defined by the ``col_space``
+          parameter (by default the ket space of the input)
+        * S is a 1-d numpy array
+        * :math:`x = \sum_i S_i U_i \otimes V_i`
+        * The U are orthonormal, as are the V
+
+        :param row_space: the HilbertSpace to use for U, default is the bra
+            space of the input array.
+        :type row_space: HilbertSpace, list, or tuple
+        :param col_space: the HilbertSpace to use for V, default is the ket
+            space of the input array.
+        :type col_space: HilbertSpace, list, or tuple
+        :param thresh: threshold below which singular values will be
+            considered to be zero and discarded (default is to keep all
+            singular values)
+        :type thresh: float
+
+        See also: :func:`singular_vals`, :func:`svd`
+
         >>> from qitensor import qubit, qudit
         >>> ha = qudit('a', 3)
         >>> hb = qubit('b')
@@ -1662,6 +1792,9 @@ class HilbertArray(object):
     def singular_vals(self, row_space=None, col_space=None):
         """
         Returns the singular values of this array.
+
+        For the meaning of row_space and col_space, see the documentation
+        for :func:`svd` or :func:`svd_list`.
 
         See also: :func:`svd`, :func:`svd_list`
 
@@ -2016,9 +2149,20 @@ class HilbertArray(object):
         return self.space.base_field.mat_simplify(self, full=True)
 
     def _matrix_(self, R=None):
+        """
+        Returns a Sage Matrix for this array.
+
+        This supports casting to a Matrix in Sage.  You can also use the
+        equivalent :func:`sage_matrix` method.
+        """
+
         return self.sage_matrix(R)
 
     def sage_matrix(self, R=None):
+        """
+        Returns a Sage Matrix for this array.
+        """
+
         if not have_sage:
             raise HilbertError('This is only available under Sage')
 
@@ -2026,9 +2170,18 @@ class HilbertArray(object):
             self.as_np_matrix(), R)
 
     def _latex_(self):
+        """
+        Returns the latex representation of this array, for Sage.
+        """
+
         return FORMATTER.array_latex_block_table(self, use_hline=False)
 
     def sage_block_matrix(self, R=None):
+        """
+        Returns a Sage Matrix for this array, with blocks corresponding to
+        subsystem structure.
+        """
+
         if not have_sage:
             raise HilbertError('This is only available under Sage')
 
@@ -2055,6 +2208,10 @@ class HilbertArray(object):
         return sage.all.block_matrix(blocks, nrows=nrows, ncols=ncols, subdivide=True)
 
     def sage_matrix_transform(self, f, transpose_dims=False):
+        """
+        Just like :func:`np_matrix_transform` but does operations on a Sage Matrix.
+        """
+
         if not have_sage:
             raise HilbertError('This is only available under Sage')
 
@@ -2075,12 +2232,20 @@ class HilbertArray(object):
     ########## IPython stuff ##########
 
     def _repr_latex_(self):
+        """
+        Returns the latex representation, for IPython.
+        """
+
         if not FORMATTER.ipy_table_format_mode == 'latex':
             return None
         latex = FORMATTER.array_latex_block_table(self, use_hline=True)
         return '$$'+latex+'$$'
 
     def _repr_html_(self):
+        """
+        Returns the HTML representation, for IPython.
+        """
+
         if not FORMATTER.ipy_table_format_mode == 'html':
             return None
         return FORMATTER.array_html_block_table(self)

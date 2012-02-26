@@ -36,6 +36,7 @@ Contents:
 
    examples/index
    reference
+   reference_internals
    todo
 
 Indices and tables

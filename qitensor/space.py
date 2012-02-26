@@ -1,7 +1,7 @@
 """
-HilbertSpaces are built of HilbertAtom's.  They represent the spaces that
-HilbertArray's live in.  A HilbertSpace is typically created by applying the
-multiplication operator to HilbertAtom's or other HilbertSpace's.
+HilbertSpaces are built of HilbertAtoms.  They represent the spaces that
+HilbertArrays live in.  A HilbertSpace is typically created by applying the
+multiplication operator to HilbertAtoms or other HilbertSpaces.
 """
 
 import numpy as np
@@ -445,7 +445,7 @@ class HilbertSpace(object):
         The number of rows and columns must match the dimensions of the ket and
         bra spaces.  It is required that ``len(m.shape)==2``.  The input_axes
         parameter gives the storage order of the input data, and is recommended
-        when the input spaces are composites (not ``HilbertAtom``s).
+        when the input spaces are composites (not HilbertAtoms).
 
         :param m: the input matrix.
         :type m: numpy.matrix or numpy.array

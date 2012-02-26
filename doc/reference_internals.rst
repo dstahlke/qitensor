@@ -1,13 +1,12 @@
-Reference
-=========
+Reference (internals)
+=====================
 
 .. toctree::
    :maxdepth: 2
 
-   factory
-   space
-   array
-   circuit
-   experimental
+   basefield
+   atom
+   exceptions
+   arrayformatter
 
 .. sagebasefield can't be here for now because the module only loads from sage

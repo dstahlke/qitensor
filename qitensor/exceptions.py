@@ -27,8 +27,12 @@ class MismatchedIndexSetError(HilbertError):
         HilbertError.__init__(self, msg)
 
 class DuplicatedSpaceError(HilbertError):
-    def __init__(self, spaces):
-        HilbertError.__init__(self, repr(spaces))
+    def __init__(self, spaces, msg=None):
+        if msg is None:
+            msg = repr(spaces)
+        else:
+            msg = msg+': '+repr(spaces)
+        HilbertError.__init__(self, msg)
 
 class BraKetMixtureError(HilbertError):
     def __init__(self, msg):

@@ -14,6 +14,10 @@ from qitensor.space import HilbertSpace
 __all__ = ['HilbertAtom']
 
 def _unreduce_v1(label, latex_label, indices, group_op, base_field, is_dual):
+    """
+    This is the function that handles restoring a pickle.
+    """
+
     atom = base_field._atom_factory(label, latex_label, indices, group_op)
     return atom.H if is_dual else atom
 
@@ -50,8 +54,21 @@ def _assert_all_compatible(collection):
 
 class HilbertAtom(HilbertSpace):
     def __init__(self, label, latex_label, indices, group_op, base_field, dual):
-        """Users should not call this constructor directly, rather use the
-        methods in qitensor.factory."""
+        """
+        Users should not call this constructor directly, rather use the
+        methods in qitensor.factory.
+
+        >>> from qitensor import qubit, qudit
+        >>> ha = qubit('a'); ha
+        |a>
+        >>> hb = qudit('b', 3); hb
+        |b>
+
+        sage: from qitensor import qudit
+        sage: ha = qudit('a', 3); ha
+        |a>
+        sage: TestSuite(ha).run()
+        """
 
         #print "init", label, dual
 
@@ -90,6 +107,9 @@ class HilbertAtom(HilbertSpace):
                 indices, group_op, base_field, self)
 
     def __reduce__(self):
+        """
+        Tells pickle how to store this object.
+        """
         return _unreduce_v1, (self.label, self.latex_label, \
             self.indices, self.group_op, self.base_field, self.is_dual)
 
@@ -98,23 +118,47 @@ class HilbertAtom(HilbertSpace):
         return cmp(self.key, other.key)
 
     def _assert_compatible(self, other):
-        # It is not allowed for HilbertAtom's with the same name but other
-        # properties different to be used together (leniency is given for
-        # latex_label)
+        """
+        It is not allowed for HilbertAtom's with the same name but other
+        properties different to be used together (leniency is given for
+        latex_label).  This performs that consistency check.
+
+        >>> from qitensor import qudit, indexed_space
+        >>> qudit('a', 3)._assert_compatible(qudit('a', 3))
+        >>> qudit('a', 3)._assert_compatible(qudit('a', 4))
+        Traceback (most recent call last):
+            ...
+        MismatchedIndexSetError: 'Two instances of HilbertSpace with label "a" but with different indices: (0, 1, 2) vs. (0, 1, 2, 3)'
+        >>> qudit('a', 3)._assert_compatible(indexed_space('a', (10,20,30)))
+        Traceback (most recent call last):
+            ...
+        MismatchedIndexSetError: 'Two instances of HilbertSpace with label "a" but with different indices: (0, 1, 2) vs. (10, 20, 30)'
+        >>> from qitensor.factory import GroupOpTimes_factory
+        >>> qudit('a', 3)._assert_compatible(indexed_space('a', (0,1,2), group_op=GroupOpTimes_factory())) # doctest: +ELLIPSIS
+        Traceback (most recent call last):
+            ...
+        MismatchedIndexSetError: 'Two instances of HilbertSpace with label "a" but with different group_op: ...
+
+        sage: from qitensor import qudit
+        sage: qudit('a', 3)._assert_compatible(qudit('a', 3, dtype=SR)) # doctest: +ELLIPSIS
+        Traceback (most recent call last):
+            ...
+        MismatchedIndexSetError: 'Two instances of HilbertSpace with label "a" but with different base_field: ...
+        """
 
         if self.indices != other.indices:
             raise MismatchedIndexSetError('Two instances of HilbertSpace '+
-                'with label "'+repr(self.label)+'" but with different '+
+                'with label "'+str(self.label)+'" but with different '+
                 'indices: '+repr(self.indices)+' vs. '+repr(other.indices))
 
         if self.group_op != other.group_op:
             raise MismatchedIndexSetError('Two instances of HilbertSpace '+
-                'with label "'+repr(self.label)+'" but with different '+
+                'with label "'+str(self.label)+'" but with different '+
                 'group_op: '+repr(self.group_op)+' vs. '+repr(other.group_op))
 
         if self.base_field != other.base_field:
             raise MismatchedIndexSetError('Two instances of HilbertSpace '+
-                'with label "'+repr(self.label)+'" but with different '+
+                'with label "'+str(self.label)+'" but with different '+
                 'base_field: '+repr(self.base_field)+' vs. '+
                 repr(other.base_field))
 
@@ -128,24 +172,40 @@ class HilbertAtom(HilbertSpace):
         return not (self == other)
 
     def __lt__(self, other):
+        """
+        Compares two HilbertSpace objects lexicographically.
+        """
+
         if not isinstance(other, HilbertAtom):
             return HilbertSpace.__lt__(self, other)
         else:
             return self._mycmp(other) < 0
 
     def __gt__(self, other):
+        """
+        Compares two HilbertSpace objects lexicographically.
+        """
+
         if not isinstance(other, HilbertAtom):
             return HilbertSpace.__gt__(self, other)
         else:
             return self._mycmp(other) > 0
 
     def __ge__(self, other):
+        """
+        Compares two HilbertSpace objects lexicographically.
+        """
+
         if not isinstance(other, HilbertAtom):
             return HilbertSpace.__ge__(self, other)
         else:
             return self._mycmp(other) >= 0
 
     def __le__(self, other):
+        """
+        Compares two HilbertSpace objects lexicographically.
+        """
+
         if not isinstance(other, HilbertAtom):
             return HilbertSpace.__le__(self, other)
         else:

@@ -20,6 +20,18 @@ class HilbertArray(object):
     def __init__(self, space, data, noinit_data, reshape, input_axes):
         """
         Don't call this constructor yourself, use HilbertSpace.array
+
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> x = ha.array([1, 2]); x
+        HilbertArray(|a>,
+        array([ 1.+0.j,  2.+0.j]))
+
+        sage: from qitensor import qudit
+        sage: ha = qudit('a', 3)
+        sage: hb = qudit('b', 5)
+        sage: x = (ha.O * hb).random_array()
+        sage: TestSuite(x).run()
         """
 
         hs = space
@@ -884,10 +896,10 @@ class HilbertArray(object):
         Traceback (most recent call last):
             ...
         HilbertIndexError: 'Wrong number of indices given (1 for |a,b><a|)'
-        >>> y._index_key_to_map((1,2,3))
-        {|b>: 2, <a|: 3, |a>: 1}
-        >>> y._index_key_to_map([1,2,3])
-        {|b>: 2, <a|: 3, |a>: 1}
+        >>> sorted(list(y._index_key_to_map((1,2,3)).iteritems()))
+        [(|a>, 1), (<a|, 3), (|b>, 2)]
+        >>> sorted(list(y._index_key_to_map([1,2,3]).iteritems()))
+        [(|a>, 1), (<a|, 3), (|b>, 2)]
         >>> y._index_key_to_map((1,2,3,4))
         Traceback (most recent call last):
             ...
@@ -1699,7 +1711,7 @@ class HilbertArray(object):
           parameter (by default the bra space of the input)
         * V is a list of arrays in the space defined by the ``col_space``
           parameter (by default the ket space of the input)
-        * S is a 1-d numpy array
+        * S is a 1-d numpy array of positive numbers (the singular values)
         * :math:`x = \sum_i S_i U_i \otimes V_i`
         * The U are orthonormal, as are the V
 

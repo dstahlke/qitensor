@@ -17,6 +17,10 @@ from qitensor.arrayformatter import FORMATTER
 __all__ = ['HilbertSpace']
 
 def _unreduce_v1(ket_set, bra_set):
+    """
+    This is the function that handles restoring a pickle.
+    """
+
     base_field = list(ket_set | bra_set)[0].base_field
     return base_field._space_factory(ket_set, bra_set)
 
@@ -40,6 +44,21 @@ class HilbertSpace(object):
         """
         Constructor should only be called from :meth:`_cached_space_factory` or
         subclasses.
+
+        >>> from qitensor import qubit, qudit
+        >>> ha = qubit('a'); ha
+        |a>
+        >>> hb = qudit('b', 3); hb
+        |b>
+        >>> ha*hb
+        |a,b>
+
+        sage: from qitensor import qudit
+        sage: ha = qudit('a', 3)
+        sage: hb = qudit('b', 5)
+        sage: ha*hb
+        |a,b>
+        sage: TestSuite(ha*hb).run()
         """
 
         self._H = None
@@ -83,6 +102,9 @@ class HilbertSpace(object):
             self._array_axes_lookup = dict((s, self._array_axes.index(s)) for s in self._array_axes)
 
     def __reduce__(self):
+        """
+        Tells pickle how to store this object.
+        """
         return _unreduce_v1, (self.ket_set, self.bra_set)
 
     @classmethod
@@ -107,6 +129,21 @@ class HilbertSpace(object):
 
     @classmethod
     def _assert_nodup_space(cls, spaces, msg):
+        """
+        Raises a DuplicatedSpaceError if any of the given spaces share a common
+        HilbertAtom.
+
+        >>> from qitensor import qubit, HilbertSpace
+        >>> ha = qubit('a')
+        >>> hb = qubit('b')
+        >>> hc = qubit('c')
+        >>> HilbertSpace._assert_nodup_space([ha, hb*ha.H, hc.O], 'oops')
+        >>> HilbertSpace._assert_nodup_space([ha, hc*ha.H, hc.O], 'oops')
+        Traceback (most recent call last):
+            ...
+        DuplicatedSpaceError: 'oops: |c>'
+        """
+
         # FIXME - use this more often
         seen = set()
         dupes = set()
@@ -118,8 +155,8 @@ class HilbertSpace(object):
         if dupes:
             common_kets = frozenset(x for x in dupes if not x.is_dual)
             common_bras = frozenset(x for x in dupes if x.is_dual)
-            raise DuplicatedSpaceError(msg, 
-                self.base_field.create_space2(common_kets, common_bras))
+            spc = list(dupes)[0].base_field.create_space2(common_kets, common_bras)
+            raise DuplicatedSpaceError(spc, msg)
 
     def bra_space(self):
         """
@@ -262,6 +299,10 @@ class HilbertSpace(object):
         return not (self == other)
 
     def __lt__(self, other):
+        """
+        Compares two HilbertSpace objects lexicographically.
+        """
+
         assert isinstance(other, HilbertSpace)
 
         if self.sorted_kets < other.sorted_kets:
@@ -274,14 +315,26 @@ class HilbertSpace(object):
             return False
 
     def __gt__(self, other):
+        """
+        Compares two HilbertSpace objects lexicographically.
+        """
+
         assert isinstance(other, HilbertSpace)
         return other < self
 
     def __ge__(self, other):
+        """
+        Compares two HilbertSpace objects lexicographically.
+        """
+
         assert isinstance(other, HilbertSpace)
         return not self < other
 
     def __le__(self, other):
+        """
+        Compares two HilbertSpace objects lexicographically.
+        """
+
         assert isinstance(other, HilbertSpace)
         return not other < self
 
@@ -308,12 +361,20 @@ class HilbertSpace(object):
     def __repr__(self):
         return str(self)
 
-    def _repr_latex_(self): # for IPython
+    def _repr_latex_(self):
+        """
+        Returns a latex representation, for IPython.
+        """
+
         if not FORMATTER.ipy_space_format_mode == 'latex':
             return None
         return '$'+self._latex_()+'$'
 
-    def _latex_(self): # for Sage
+    def _latex_(self):
+        """
+        Returns a latex representation, for Sage.
+        """
+
         bra_labels = [x.latex_label for x in self.sorted_bras]
         ket_labels = [x.latex_label for x in self.sorted_kets]
         if len(ket_labels) > 0 and len(bra_labels) > 0:
@@ -378,15 +439,18 @@ class HilbertSpace(object):
         return self.reshaped_np_matrix(diag)
 
     def reshaped_np_matrix(self, m, input_axes=None):
-        # FIXME - docs for input_axes param
         """
         Returns a ``HilbertArray`` created from a given numpy matrix.
 
         The number of rows and columns must match the dimensions of the ket and
-        bra spaces.  It is required that ``len(m.shape)==2``.
+        bra spaces.  It is required that ``len(m.shape)==2``.  The input_axes
+        parameter gives the storage order of the input data, and is recommended
+        when the input spaces are composites (not ``HilbertAtom``s).
 
         :param m: the input matrix.
         :type m: numpy.matrix or numpy.array
+        :param input_axes: the storage order for the input data
+        :type input_axes: list
 
         See also: :func:`array`
 
@@ -420,6 +484,15 @@ class HilbertSpace(object):
         <BLANKLINE>
                 [[ 0.+0.j,  0.+0.j],
                  [ 0.+0.j,  4.+0.j]]]]))
+
+        >>> (ha.H*hb.H).reshaped_np_matrix(numpy.array([[1, 2, 3, 4]]), input_axes=[ha.H, hb.H])
+        HilbertArray(<a,b|,
+        array([[ 1.+0.j,  2.+0.j],
+               [ 3.+0.j,  4.+0.j]]))
+        >>> (ha.H*hb.H).reshaped_np_matrix(numpy.array([[1, 2, 3, 4]]), input_axes=[hb.H, ha.H])
+        HilbertArray(<a,b|,
+        array([[ 1.+0.j,  3.+0.j],
+               [ 2.+0.j,  4.+0.j]]))
         """
 
         ket_size = shape_product([len(x.indices) for x in self.ket_set])
@@ -431,7 +504,6 @@ class HilbertSpace(object):
         return self.array(m, reshape=True, input_axes=input_axes)
 
     def array(self, data=None, noinit_data=False, reshape=False, input_axes=None):
-        # FIXME - docs for input_axes param
         """
         Returns a ``HilbertArray`` created from the given data, or filled with
         zeros if no data is given.
@@ -443,11 +515,13 @@ class HilbertSpace(object):
         must have an axis for each of the components of this Hilbert space.
 
         Since it is not always clear which axes should correspond to which
-        Hilbert space components, it is recommended to specify ``data`` only
-        when there is at most one bra component and at most one ket component.
-        In this case, the first axis will correspond to the ket space (if it
-        exists) and the last axis will correspond ot the bra space (if it
-        exists).
+        Hilbert space components, it is recommended when using the ``data``
+        parameter to also specify ``input_axes`` to tell which HilbertAtom maps
+        to which axis of the input array.  Note that there is no ambiguity if
+        the input and output spaces are both HilbertAtoms (not composite
+        spaces): In this case, the first axis will correspond to the ket space
+        (if it exists) and the last axis will correspond ot the bra space (if
+        it exists).
 
         :param data: the array will be initialized with the data if given,
             otherwise it will be initialized with zeros.
@@ -462,6 +536,11 @@ class HilbertSpace(object):
             be reshaped if needed.  Otherwise, an exception will be raised if
             it is not the proper shape.
         :type reshape: bool; default False
+
+        :param input_axes: Tells how the axes map to the space.  Default is
+            lexicographically based upon the names of the HilbertAtoms (it
+            is not recommended to rely on this ordering).
+        :type input_axes: list of HilbertAtoms
 
         >>> from qitensor import qubit, qudit
         >>> ha = qubit('a')
@@ -488,11 +567,20 @@ class HilbertSpace(object):
         >>> hb = qudit('b', 3)
         >>> hc = qudit('c', 4)
         >>> arr = numpy.zeros((2, 3, 4))
+        >>> arr[1,0,0] = 1
+        >>> arr[0,1,0] = 2
+        >>> arr[0,0,1] = 3
         >>> x = (ha*hb.H*hc).array(arr, input_axes=(ha, hb.H, hc))
         >>> x.space
         |a,c><b|
         >>> x.nparray.shape
         (2, 4, 3)
+        >>> x[{ ha: 1, hb.H: 0, hc: 0 }]
+        (1+0j)
+        >>> x[{ ha: 0, hb.H: 1, hc: 0 }]
+        (2+0j)
+        >>> x[{ ha: 0, hb.H: 0, hc: 1 }]
+        (3+0j)
         """
 
         return self.base_field._array_factory( \
@@ -818,6 +906,10 @@ class HilbertSpace(object):
     ########## stuff that only works in Sage ##########
 
     def reshaped_sage_matrix(self, m, input_axes=None):
+        """
+        Just like :func:`reshaped_np_matrix` but takes a Sage Matrix as input.
+        """
+
         if not have_sage:
             raise HilbertError('This is only available under Sage')
 

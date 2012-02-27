@@ -7,8 +7,8 @@ numpy.array.  HilbertArray's are to be created using the
 import numpy as np
 
 from qitensor import have_sage, _shape_product
-from qitensor.exceptions import BraKetMixtureError, DuplicatedSpaceError, \
-    HilbertError, HilbertIndexError, HilbertShapeError, HilbertSliceError, \
+from qitensor.exceptions import DuplicatedSpaceError, HilbertError, \
+    HilbertIndexError, HilbertShapeError, HilbertSliceError, \
     NotKetSpaceError, MismatchedIndexSetError
 from qitensor.space import HilbertSpace
 from qitensor.atom import HilbertAtom

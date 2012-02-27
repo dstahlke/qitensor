@@ -3,7 +3,6 @@ Various exceptions that can be raised by qitensor functions.
 """
 
 __all__ = [
-    'BraKetMixtureError',
     'DuplicatedSpaceError',
     'HilbertError',
     'HilbertIndexError',
@@ -60,10 +59,6 @@ class DuplicatedSpaceError(HilbertError):
             msg = repr(spaces)
         else:
             msg = msg+': '+repr(spaces)
-        HilbertError.__init__(self, msg)
-
-class BraKetMixtureError(HilbertError):
-    def __init__(self, msg):
         HilbertError.__init__(self, msg)
 
 class HilbertIndexError(HilbertError, LookupError):

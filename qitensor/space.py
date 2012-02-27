@@ -8,7 +8,7 @@ import numpy as np
 import itertools
 import weakref
 
-from qitensor import have_sage, shape_product
+from qitensor import have_sage, _shape_product
 from qitensor.exceptions import DuplicatedSpaceError, HilbertError, \
     HilbertIndexError, HilbertShapeError, NotKetSpaceError
 import qitensor.atom
@@ -95,7 +95,7 @@ class HilbertSpace(object):
             ket_shape = [len(x.indices) for x in self.sorted_kets]
             bra_shape = [len(x.indices) for x in self.sorted_bras]
             self.shape = tuple(ket_shape + bra_shape)
-            self._dim = shape_product(self.shape)
+            self._dim = _shape_product(self.shape)
             self._is_simple_dyad = len(bra_set)==1 and len(ket_set)==1
 
             self._array_axes = self.sorted_kets + self.sorted_bras
@@ -225,8 +225,8 @@ class HilbertSpace(object):
         6
         """
 
-        ket_size = shape_product([len(x.indices) for x in self.ket_set])
-        bra_size = shape_product([len(x.indices) for x in self.bra_set])
+        ket_size = _shape_product([len(x.indices) for x in self.ket_set])
+        bra_size = _shape_product([len(x.indices) for x in self.bra_set])
 
         if bra_size == ket_size:
             return bra_size
@@ -239,8 +239,8 @@ class HilbertSpace(object):
         common dimension.  Otherwise throws a HilbertShapeError.
         """
 
-        ket_size = shape_product([len(x.indices) for x in self.ket_set])
-        bra_size = shape_product([len(x.indices) for x in self.bra_set])
+        ket_size = _shape_product([len(x.indices) for x in self.ket_set])
+        bra_size = _shape_product([len(x.indices) for x in self.bra_set])
 
         if bra_size == ket_size:
             return bra_size
@@ -495,8 +495,8 @@ class HilbertSpace(object):
                [ 2.+0.j,  4.+0.j]]))
         """
 
-        ket_size = shape_product([len(x.indices) for x in self.ket_set])
-        bra_size = shape_product([len(x.indices) for x in self.bra_set])
+        ket_size = _shape_product([len(x.indices) for x in self.ket_set])
+        bra_size = _shape_product([len(x.indices) for x in self.bra_set])
 
         if len(m.shape) != 2 or m.shape[0] != ket_size or m.shape[1] != bra_size:
             raise HilbertShapeError(m.shape, (ket_size, bra_size))

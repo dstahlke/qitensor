@@ -38,7 +38,7 @@ except ImportError:
 
 ########################################
 
-def shape_product(l):
+def _shape_product(l):
     # faster than np.prod(l, dtype=int)
     return reduce(operator.mul, l, 1)
 

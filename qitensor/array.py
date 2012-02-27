@@ -6,7 +6,7 @@ numpy.array.  HilbertArray's are to be created using the
 
 import numpy as np
 
-from qitensor import have_sage, shape_product
+from qitensor import have_sage, _shape_product
 from qitensor.exceptions import BraKetMixtureError, DuplicatedSpaceError, \
     HilbertError, HilbertIndexError, HilbertShapeError, HilbertSliceError, \
     NotKetSpaceError, MismatchedIndexSetError
@@ -55,9 +55,9 @@ class HilbertArray(object):
 
             # make sure given array is the right size
             if reshape:
-                if shape_product(self.nparray.shape) != shape_product(data_shape):
-                    raise HilbertShapeError(shape_product(data.shape),
-                        shape_product(data_shape))
+                if _shape_product(self.nparray.shape) != _shape_product(data_shape):
+                    raise HilbertShapeError(_shape_product(data.shape),
+                        _shape_product(data_shape))
                 self.nparray = self.nparray.reshape(data_shape)
             if self.nparray.shape != data_shape:
                 raise HilbertShapeError(self.nparray.shape, data_shape)
@@ -1149,8 +1149,8 @@ class HilbertArray(object):
         rowcol_kw = { 'row_space': row_space, 'col_space': col_space }
         (row_space, col_space) = self._get_row_col_spaces(**rowcol_kw)
 
-        col_size = shape_product([x.dim() for x in col_space])
-        row_size = shape_product([x.dim() for x in row_space])
+        col_size = _shape_product([x.dim() for x in col_space])
+        row_size = _shape_product([x.dim() for x in row_space])
         axes = [self.get_dim(x) for x in col_space + row_space]
 
         #print col_size, row_size, axes
@@ -1656,8 +1656,8 @@ class HilbertArray(object):
             else:
                 bs = hs.bra_space()
                 ks = hs.ket_space()
-                bra_size = shape_product(bs.shape)
-                ket_size = shape_product(ks.shape)
+                bra_size = _shape_product(bs.shape)
+                ket_size = _shape_product(ks.shape)
                 if ks == bs:
                     inner_space = ks
                 elif bra_size < ket_size:
@@ -1681,8 +1681,8 @@ class HilbertArray(object):
             U = u_space.reshaped_np_matrix(u)
             V = v_space.reshaped_np_matrix(v)
 
-            dim1 = shape_product(inner_space.ket_space().shape)
-            dim2 = shape_product(inner_space.bra_space().shape)
+            dim1 = _shape_product(inner_space.ket_space().shape)
+            dim2 = _shape_product(inner_space.bra_space().shape)
             min_dim = np.min([dim1, dim2])
             Sm = np.zeros((dim1, dim2), dtype=hs.base_field.dtype)
             Sm[:min_dim, :min_dim] = np.diag(s)

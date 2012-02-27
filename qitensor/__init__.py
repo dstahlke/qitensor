@@ -39,6 +39,16 @@ except ImportError:
 ########################################
 
 def _shape_product(l):
+    """
+    Multiplies a tuple of integers together.
+
+    Used to convert shape to dimension.
+
+    >>> from qitensor import _shape_product
+    >>> _shape_product((1,2,3,4))
+    24
+    """
+
     # faster than np.prod(l, dtype=int)
     return reduce(operator.mul, l, 1)
 
@@ -55,11 +65,11 @@ import qitensor.experimental
 from qitensor.arrayformatter import *
 
 __all__ = \
-    exceptions.__all__ + \
-    basefield.__all__ + \
-    space.__all__ + \
-    atom.__all__ + \
-    array.__all__ + \
-    factory.__all__ + \
-    circuit.__all__ + \
-    arrayformatter.__all__
+    qitensor.exceptions.__all__ + \
+    qitensor.basefield.__all__ + \
+    qitensor.space.__all__ + \
+    qitensor.atom.__all__ + \
+    qitensor.array.__all__ + \
+    qitensor.factory.__all__ + \
+    qitensor.circuit.__all__ + \
+    qitensor.arrayformatter.__all__

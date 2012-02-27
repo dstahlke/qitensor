@@ -2141,6 +2141,18 @@ class HilbertArray(object):
     def n(self, prec=None, digits=None):
         """
         Converts symbolic values to numeric values (only useful in Sage).
+
+        sage: from qitensor import qubit
+        sage: ha = qubit('a', dtype=SR)
+        sage: v = ha.array([log(4), log(8)])
+
+        sage: v
+        HilbertArray(|a>,
+        array([log(4), log(8)], dtype=object))
+
+        sage: v.n()
+        HilbertArray(|a>,
+        array([1.38629436111989, 2.07944154167984], dtype=object))
         """
 
         return self.np_matrix_transform( \
@@ -2156,6 +2168,18 @@ class HilbertArray(object):
     def simplify_full(self):
         """
         Simplifies symbolic expressions (only useful in Sage).
+
+        sage: from qitensor import qubit
+        sage: ha = qubit('a', dtype=SR)
+        sage: v = ha.array([log(4), log(8)])
+
+        sage: v / log(2)
+        HilbertArray(|a>,
+        array([log(4)/log(2), log(8)/log(2)], dtype=object))
+
+        sage: (v / log(2)).simplify_full()
+        HilbertArray(|a>,
+        array([2, 3], dtype=object))
         """
 
         return self.space.base_field.mat_simplify(self, full=True)
@@ -2166,6 +2190,13 @@ class HilbertArray(object):
 
         This supports casting to a Matrix in Sage.  You can also use the
         equivalent :func:`sage_matrix` method.
+
+        sage: from qitensor import qubit
+        sage: ha = qubit('a', dtype=SR)
+        sage: v = ha.array([log(4), log(8)])
+        sage: Matrix(v)
+        [log(4)]
+        [log(8)]
         """
 
         return self.sage_matrix(R)
@@ -2173,6 +2204,15 @@ class HilbertArray(object):
     def sage_matrix(self, R=None):
         """
         Returns a Sage Matrix for this array.
+
+        It is probably preferable to just do Matrix(arr).
+
+        sage: from qitensor import qubit
+        sage: ha = qubit('a', dtype=SR)
+        sage: v = ha.array([log(4), log(8)])
+        sage: v.sage_matrix()
+        [log(4)]
+        [log(8)]
         """
 
         if not have_sage:
@@ -2192,6 +2232,17 @@ class HilbertArray(object):
         """
         Returns a Sage Matrix for this array, with blocks corresponding to
         subsystem structure.
+
+        sage: from qitensor import qubit
+        sage: ha = qubit('a', dtype=SR)
+        sage: hb = qubit('b', dtype=SR)
+
+        sage: (ha.X * hb.Z).sage_block_matrix()
+        [ 0  0| 1  0]
+        [ 0  0| 0 -1]
+        [-----+-----]
+        [ 1  0| 0  0]
+        [ 0 -1| 0  0]
         """
 
         if not have_sage:
@@ -2222,6 +2273,14 @@ class HilbertArray(object):
     def sage_matrix_transform(self, f, transpose_dims=False):
         """
         Just like :func:`np_matrix_transform` but does operations on a Sage Matrix.
+
+        sage: from qitensor import qubit
+        sage: ha = qubit('a', dtype=SR)
+
+        sage: ha.Y.sage_matrix_transform(lambda m: m.transpose())
+        HilbertArray(|a><a|,
+        array([[0, I],
+               [-I, 0]], dtype=object))
         """
 
         if not have_sage:

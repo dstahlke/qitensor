@@ -9,5 +9,3 @@ Reference
    array
    circuit
    experimental
-
-.. sagebasefield can't be here for now because the module only loads from sage

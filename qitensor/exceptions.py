@@ -15,6 +15,11 @@ __all__ = [
 ]
 
 class HilbertError(Exception):
+    """
+    The generic exception used by qitensor.  All of this package's other
+    exceptions derive from this one.
+    """
+
     def __init__(self, msg):
         Exception.__init__(self, msg)
         self.msg = msg
@@ -23,10 +28,33 @@ class HilbertError(Exception):
         return repr(self.msg)
 
 class MismatchedIndexSetError(HilbertError):
+    """
+    Raised when two HilbertAtoms have the same label but different properties,
+    or when the HilbertSpace requested for an operation doesn't match that of
+    an array.
+    """
+
     def __init__(self, msg):
         HilbertError.__init__(self, msg)
 
 class DuplicatedSpaceError(HilbertError):
+    """
+    Raised when an operation would result in an output with two copies of a
+    HilbertAtom.
+
+    >>> from qitensor import qubit
+    >>> ha = qubit('a')
+    >>> ha * ha
+    Traceback (most recent call last):
+        ...
+    DuplicatedSpaceError: '|a>'
+    >>> x = ha.array()
+    >>> x * x
+    Traceback (most recent call last):
+        ...
+    DuplicatedSpaceError: '|a>'
+    """
+
     def __init__(self, spaces, msg=None):
         if msg is None:
             msg = repr(spaces)

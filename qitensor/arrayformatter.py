@@ -1,15 +1,27 @@
 """
-FIXME - docstring
+This module handles formatting of arrays.  Everything in here is for internal use only,
+except for the :func:`set_qitensor_printoptions` and :func:`get_qitensor_printoptions`
+functions.
 """
 
 import numpy as np
 
 from qitensor import have_sage
 
-__all__ = ['set_qitensor_printoptions', 'get_qitensor_printoptions']
+__all__ = ['set_qitensor_printoptions', 'get_qitensor_printoptions', 'HilbertArrayFormatter']
 
 class HilbertArrayFormatter(object):
     def __init__(self):
+        """
+        This module handles formatting of arrays.
+
+        Methods of this class are called by methods of HilbertArray, and
+        shouldn't need to be dealt with directly.
+
+        sage: import qitensor.arrayformatter
+        sage: TestSuite(qitensor.arrayformatter.FORMATTER).run()
+        """
+
         self.str_use_sage = False
         self.zero_color_latex = 'Silver'
         self.zero_color_html = '#cccccc'
@@ -18,11 +30,19 @@ class HilbertArrayFormatter(object):
         self.ipy_space_format_mode = 'latex'
 
     def _get_suppress(self):
+        """
+        Gets the current suppression settings (from numpy).
+        """
+
         suppress = np.get_printoptions()['suppress']
         suppress_thresh = 0.1 ** (np.get_printoptions()['precision'] + 0.5)
         return (suppress, suppress_thresh)
 
     def py_scalar_latex_formatter(self, data, dollar_if_tex):
+        """
+        Formats python scalar for latex.
+        """
+
         if data.dtype == complex:
             precision = np.get_printoptions()['precision']
             # suppress=False here since supression is done elsewhere
@@ -32,6 +52,10 @@ class HilbertArrayFormatter(object):
             return str
 
     def sage_scalar_latex_formatter(self, data, dollar_if_tex):
+        """
+        Formats Sage scalar for latex.
+        """
+
         if not have_sage:
             raise HilbertError('This is only available under Sage')
 
@@ -43,19 +67,29 @@ class HilbertArrayFormatter(object):
             return lambda x: sage.all.latex(x)
 
     def array_str(self, arr):
+        """
+        Creates string for HilbertArray.
+        """
+
         if self.str_use_sage:
             return str(arr.space)+'\n'+str(arr.sage_block_matrix())
         else:
             return str(arr.space)+'\n'+str(arr.nparray)
 
     def array_repr(self, arr):
+        """
+        Creates repr for HilbertArray.
+        """
+
         if self.str_use_sage:
             return 'HilbertArray('+repr(arr.space)+',\n'+repr(arr.sage_block_matrix())+')'
         else:
             return 'HilbertArray('+repr(arr.space)+',\n'+repr(arr.nparray)+')'
 
     def array_latex_block_table(self, arr, use_hline=False):
-        """Formats array in Latex.  Used by both Sage and IPython."""
+        """
+        Formats array in Latex.  Used by both Sage and IPython.
+        """
 
 # Alternative way to do it:
 #        if not have_sage:
@@ -150,6 +184,10 @@ class HilbertArrayFormatter(object):
         return ht
 
     def array_html_block_table(self, arr):
+        """
+        Format array in HTML.  Used for IPython.
+        """
+
         (suppress, suppress_thresh) = self._get_suppress()
 
         st_tab   = "style='border: 2px solid black;'"
@@ -244,6 +282,7 @@ class HilbertArrayFormatter(object):
 
         return ht
 
+    # NOTE: this is normally accessed via set_qitensor_printoptions
     def set_printoptions(
         self,
         str_use_sage=None,
@@ -253,6 +292,40 @@ class HilbertArrayFormatter(object):
         ipy_table_format_mode=None,
         ipy_space_format_mode=None
     ):
+        """
+        Sets print options for qitensor.
+
+        Any options passed the ``None`` value won't be changed.
+
+        :param str_use_sage: If true, use Sage's matrix formatting functions
+            when available (this is prettier).
+        :type str_use_sage: bool
+
+        :param zero_color_latex: Color to use for drawing the number zero in latex.
+        :type zero_color_latex: string
+
+        :param zero_color_html: Color to use for drawing the number zero in HTML.
+        :type zero_color_html: string
+
+        :param use_latex_label_in_html: If true, HilbertSpace labels will be
+            shown in latex form when rendering an array in HTML.  Works good with
+            the IPython notebook, but not with qtconsole.
+        :type use_latex_label_in_html: bool
+
+        :param ipy_table_format_mode: Which mode to use for formatting arrays in
+            the IPython notebook.
+        :type ipy_table_format_mode: string ('html', 'latex', 'plain')
+
+        :param ipy_space_format_mode: Which mode to use for formatting HilbertSpace
+            labels in the IPython notebook.
+        :type ipy_space_format_mode: string ('latex', 'plain')
+
+        qitensor also makes use of the ``suppress`` and ``precision`` options from
+        numpy.set_printoptions.
+
+        See also: :func:`get_qitensor_printoptions`
+        """
+
         if str_use_sage is not None:
             self.str_use_sage = bool(str_use_sage)
         if zero_color_latex is not None:
@@ -268,7 +341,14 @@ class HilbertArrayFormatter(object):
             assert ipy_space_format_mode in ['latex', 'plain']
             self.ipy_space_format_mode = ipy_space_format_mode
 
+    # NOTE: this is normally accessed via get_qitensor_printoptions
     def get_printoptions(self):
+        """
+        Gets the current qitensor formatting options.
+
+        See also: :func:`set_qitensor_printoptions`
+        """
+
         return {
             "str_use_sage"            : self.str_use_sage,
             "zero_color_latex"        : self.zero_color_latex,

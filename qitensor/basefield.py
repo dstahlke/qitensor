@@ -35,6 +35,10 @@ def _factory(dtype):
     return _base_field_cache[dtype]
 
 def _unreduce_v1(dtype):
+    """
+    Handles restoring from pickle.
+    """
+
     return _factory(dtype)
 
 class HilbertBaseField(object):
@@ -46,9 +50,17 @@ class HilbertBaseField(object):
         self.sage_ring = None
 
     def __reduce__(self):
+        """
+        Tells pickle how to store this object.
+        """
+
         return _unreduce_v1, (self.dtype, )
 
     def assert_same(self, other):
+        """
+        Asserts that this object is the same as other.
+        """
+
         if self.unique_id != other.unique_id:
             raise IncompatibleBaseFieldError('Different base_fields: '+
                 repr(self.unique_id)+' vs. '+repr(other.unique_id))

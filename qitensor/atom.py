@@ -40,6 +40,20 @@ def _cached_atom_factory(label, latex_label, indices, group_op, base_field):
     return _atom_cache[key]
 
 def _assert_all_compatible(collection):
+    """
+    Make sure that all HilbertAtoms in a collection that have the same label
+    are compatible.
+
+    >>> from qitensor import qudit
+    >>> from qitensor.atom import _assert_all_compatible
+    >>> _assert_all_compatible([qudit('a', 3), qudit('a', 3)])
+    >>> _assert_all_compatible([qudit('a', 3), qudit('b', 4)])
+    >>> _assert_all_compatible([qudit('a', 3), qudit('a', 4)])
+    Traceback (most recent call last):
+        ...
+    MismatchedIndexSetError: 'Two instances of HilbertSpace with label "a" but with different indices: (0, 1, 2) vs. (0, 1, 2, 3)'
+    """
+
     by_label = {}
 
     for x in collection:
@@ -114,6 +128,10 @@ class HilbertAtom(HilbertSpace):
             self.indices, self.group_op, self.base_field, self.is_dual)
 
     def _mycmp(self, other):
+        """
+        Helper function used by __lt__, __gt__, __eq__, etc.
+        """
+
         assert isinstance(other, HilbertAtom)
         return cmp(self.key, other.key)
 

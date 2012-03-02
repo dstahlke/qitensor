@@ -106,6 +106,8 @@ class TensorSubspace(object):
             except ImportError:
                 pass
 
+        # FIXME - make sure none of the vectors is zero
+
         X = np.array(X, dtype=dtype)
         assert len(X.shape) >= 2
 

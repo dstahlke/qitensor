@@ -13,6 +13,7 @@ from qitensor.exceptions import DuplicatedSpaceError, HilbertError, \
     HilbertIndexError, HilbertShapeError, NotKetSpaceError
 import qitensor.atom
 from qitensor.arrayformatter import FORMATTER
+from qitensor.subspace import TensorSubspace
 
 __all__ = ['HilbertSpace']
 
@@ -828,7 +829,7 @@ class HilbertSpace(object):
 
     def full_space(self):
         """
-        Returns a TensorSubspace corresponding to the entire space (EXPERIMENTAL).
+        Returns a TensorSubspace corresponding to the entire space.
 
         >>> from qitensor import qubit
         >>> ha = qubit('a')
@@ -838,12 +839,11 @@ class HilbertSpace(object):
         <TensorSubspace of dim 4 over space (|a><a|)>
         """
 
-        import qitensor.experimental.subspace
-        return qitensor.experimental.subspace.TensorSubspace.full(self.shape, hilb_space=self)
+        return TensorSubspace.full(self.shape, hilb_space=self)
 
     def empty_space(self):
         """
-        Returns a TensorSubspace corresponding to the empty space (EXPERIMENTAL).
+        Returns a TensorSubspace corresponding to the empty space.
 
         >>> from qitensor import qubit
         >>> ha = qubit('a')
@@ -853,8 +853,7 @@ class HilbertSpace(object):
         <TensorSubspace of dim 0 over space (|a><a|)>
         """
 
-        import qitensor.experimental.subspace
-        return qitensor.experimental.subspace.TensorSubspace.empty(self.shape, hilb_space=self)
+        return TensorSubspace.empty(self.shape, hilb_space=self)
 
     def dim(self):
         """

@@ -19,7 +19,7 @@ class TensorSubspace(object):
     * :func:`qitensor.space.HilbertSpace.empty_space`
 
     >>> import numpy as np
-    >>> from qitensor.experimental.subspace import TensorSubspace
+    >>> from qitensor import TensorSubspace
     >>> x = TensorSubspace.from_span(np.random.randn(4,5,10))
     >>> x
     <TensorSubspace of dim 4 over space (5, 10)>
@@ -353,7 +353,7 @@ class TensorSubspace(object):
         Returns a random vector in this subspace.
 
         >>> import numpy as np
-        >>> from qitensor.experimental.subspace import TensorSubspace
+        >>> from qitensor import TensorSubspace
         >>> x = TensorSubspace.from_span(np.random.randn(4,5,10))
         >>> x
         <TensorSubspace of dim 4 over space (5, 10)>

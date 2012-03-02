@@ -63,6 +63,7 @@ from qitensor.factory import *
 from qitensor.circuit import *
 import qitensor.experimental
 from qitensor.arrayformatter import *
+from qitensor.subspace import *
 
 __all__ = \
     qitensor.exceptions.__all__ + \
@@ -72,4 +73,5 @@ __all__ = \
     qitensor.array.__all__ + \
     qitensor.factory.__all__ + \
     qitensor.circuit.__all__ + \
-    qitensor.arrayformatter.__all__
+    qitensor.arrayformatter.__all__ + \
+    qitensor.subspace.__all__

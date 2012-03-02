@@ -8,4 +8,5 @@ Reference
    space
    array
    circuit
+   subspace
    experimental

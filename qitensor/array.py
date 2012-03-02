@@ -13,6 +13,7 @@ from qitensor.exceptions import DuplicatedSpaceError, HilbertError, \
 from qitensor.space import HilbertSpace
 from qitensor.atom import HilbertAtom
 from qitensor.arrayformatter import FORMATTER
+from qitensor.subspace import TensorSubspace
 
 __all__ = ['HilbertArray']
 
@@ -2091,7 +2092,7 @@ class HilbertArray(object):
 
     def span(self, axes='all'):
         """
-        Returns a TensorSubspace for the column/row/mixed space of this array (EXPERIMENTAL).
+        Returns a TensorSubspace for the column/row/mixed space of this array.
 
         :param axes: the axes to take the span of
         :type new_data: string ('all', 'col', 'row') or HilbertSpace
@@ -2133,8 +2134,7 @@ class HilbertArray(object):
 
         v = self.nparray.transpose(group_axes+space_axes)
         v = v.reshape((group_dim,) + axes.shape)
-        import qitensor.experimental.subspace
-        return qitensor.experimental.subspace.TensorSubspace.from_span(v, hilb_space=axes)
+        return TensorSubspace.from_span(v, hilb_space=axes)
 
     ########## stuff that only works in Sage ##########
 

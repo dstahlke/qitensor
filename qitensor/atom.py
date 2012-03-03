@@ -8,6 +8,7 @@ created using the factory functions in :mod:`qitensor.factory`.
 import weakref
 import numpy as np
 
+import qitensor
 from qitensor.exceptions import MismatchedIndexSetError,HilbertError
 from qitensor.space import HilbertSpace
 
@@ -737,3 +738,52 @@ class HilbertAtom(HilbertSpace):
         else:
             ph = self.base_field.fractional_phase(1, 8)
             return self.O.array([[1, 0], [0, ph]])
+
+    def oplus(self, other):
+        """
+        Returns the direct sum of this atom with another, along with a pair
+        of isometries mapping to the sum space.
+
+        >>> from qitensor import qudit
+        >>> ha = qudit('a', 2)
+        >>> hb = qudit('b', 3)
+        >>> (hab, Pa_ab, Pb_ab) = ha.oplus(hb)
+        >>> (hab, Pa_ab.space, Pb_ab.space)
+        (|a+b>, |a+b><a|, |a+b><b|)
+        >>> x = ha.random_array()
+        >>> y = hb.random_array()
+        >>> z = Pa_ab*x + Pb_ab*y
+        >>> x == Pa_ab.H * z
+        True
+        >>> y == Pb_ab.H * z
+        True
+
+        >>> # it is allowed to repeat a space
+        >>> (haa, Pa1_aa, Pa2_aa) = ha.oplus(ha)
+        >>> (haa, Pa1_aa.space, Pa2_aa.space)
+        (|a+a>, |a+a><a|, |a+a><a|)
+        >>> x1 = ha.random_array()
+        >>> x2 = ha.random_array()
+        >>> z = Pa1_aa*x1 + Pa2_aa*x2
+        >>> x1 == Pa1_aa.H * z
+        True
+        >>> x2 == Pa2_aa.H * z
+        True
+        """
+
+        if not isinstance(other, HilbertAtom):
+            raise TypeError('oplus only applies to HilbertAtom')
+        self.base_field.assert_same(other.base_field)
+
+        ket1 = self
+        ket2 = other
+        ket_s = qitensor.qudit( \
+                ket1.label+'+'+ket2.label, \
+                ket1.dim()+ket2.dim(), \
+                dtype=self.base_field, \
+                latex_label=ket1.latex_label+' \\oplus '+ket2.latex_label \
+            )
+        P1 = (ket_s*ket1.H).array(np.eye(ket_s.dim(), ket1.dim()))
+        P2 = (ket_s*ket2.H).array()
+        P2.nparray[ket1.dim():, :] = np.eye(ket2.dim())
+        return (ket_s, P1, P2)

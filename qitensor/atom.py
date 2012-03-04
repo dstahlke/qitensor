@@ -12,14 +12,17 @@ import qitensor
 from qitensor.exceptions import MismatchedIndexSetError,HilbertError
 from qitensor.space import HilbertSpace
 
-__all__ = ['HilbertAtom']
+__all__ = ['HilbertAtom', 'direct_sum']
 
-def _unreduce_v1(label, latex_label, indices, group_op, base_field, is_dual):
+def _unreduce_v1(label, latex_label, indices, group_op, base_field, is_dual, addends=None):
     """
     This is the function that handles restoring a pickle.
     """
 
     atom = base_field._atom_factory(label, latex_label, indices, group_op)
+    atom.addends = addends
+    if atom.addends is not None:
+        atom._create_addend_isoms()
     return atom.H if is_dual else atom
 
 _atom_cache = weakref.WeakValueDictionary()
@@ -126,7 +129,7 @@ class HilbertAtom(HilbertSpace):
         Tells pickle how to store this object.
         """
         return _unreduce_v1, (self.label, self.latex_label, \
-            self.indices, self.group_op, self.base_field, self.is_dual)
+            self.indices, self.group_op, self.base_field, self.is_dual, self.addends)
 
     def _mycmp(self, other):
         """
@@ -739,51 +742,61 @@ class HilbertAtom(HilbertSpace):
             ph = self.base_field.fractional_phase(1, 8)
             return self.O.array([[1, 0], [0, ph]])
 
-    def oplus(self, other):
+    @classmethod
+    def direct_sum(cls, kets):
         """
         Returns the direct sum of this atom with another, along with a pair
         of isometries mapping to the sum space.
 
-        >>> from qitensor import qudit
+        >>> from qitensor import qudit, direct_sum
         >>> ha = qudit('a', 2)
         >>> hb = qudit('b', 3)
-        >>> (hab, Pa_ab, Pb_ab) = ha.oplus(hb)
-        >>> (hab, Pa_ab.space, Pb_ab.space)
+        >>> hab = direct_sum((ha, hb))
+        >>> (hab, hab.P[0].space, hab.P[1].space)
         (|a+b>, |a+b><a|, |a+b><b|)
         >>> x = ha.random_array()
         >>> y = hb.random_array()
-        >>> z = Pa_ab*x + Pb_ab*y
-        >>> x == Pa_ab.H * z
+        >>> z = hab.P[0]*x + hab.P[1]*y
+        >>> x == hab.P[0].H * z
         True
-        >>> y == Pb_ab.H * z
+        >>> y == hab.P[1].H * z
         True
 
         >>> # it is allowed to repeat a space
-        >>> (haa, Pa1_aa, Pa2_aa) = ha.oplus(ha)
-        >>> (haa, Pa1_aa.space, Pa2_aa.space)
+        >>> haa = direct_sum((ha, ha))
+        >>> (haa, haa.P[0].space, haa.P[1].space)
         (|a+a>, |a+a><a|, |a+a><a|)
         >>> x1 = ha.random_array()
         >>> x2 = ha.random_array()
-        >>> z = Pa1_aa*x1 + Pa2_aa*x2
-        >>> x1 == Pa1_aa.H * z
+        >>> z = haa.P[0]*x1 + haa.P[1]*x2
+        >>> x1 == haa.P[0].H * z
         True
-        >>> x2 == Pa2_aa.H * z
+        >>> x2 == haa.P[1].H * z
         True
         """
 
-        if not isinstance(other, HilbertAtom):
-            raise TypeError('oplus only applies to HilbertAtom')
-        self.base_field.assert_same(other.base_field)
+        assert len(kets) > 1
+        for k in kets:
+            if not isinstance(k, HilbertAtom):
+                raise TypeError('direct_sum only applies to HilbertAtoms')
+            k.base_field.assert_same(kets[0].base_field)
 
-        ket1 = self
-        ket2 = other
-        ket_s = qitensor.qudit( \
-                ket1.label+'+'+ket2.label, \
-                ket1.dim()+ket2.dim(), \
-                dtype=self.base_field, \
-                latex_label=ket1.latex_label+' \\oplus '+ket2.latex_label \
-            )
-        P1 = (ket_s*ket1.H).array(np.eye(ket_s.dim(), ket1.dim()))
-        P2 = (ket_s*ket2.H).array()
-        P2.nparray[ket1.dim():, :] = np.eye(ket2.dim())
-        return (ket_s, P1, P2)
+        label = '+'.join([ k.label if k.addends is None else '('+k.label+')' for k in kets ])
+        latex_label = ' \oplus '.join([ k.latex_label if k.addends is None else '('+k.latex_label+')' for k in kets ])
+        dim = np.sum([ k.dim() for k in kets ])
+        ket_sum = qitensor.qudit(label, dim, dtype=kets[0].base_field, latex_label=latex_label)
+        ket_sum.addends = kets
+        ket_sum._create_addend_isoms()
+
+        return ket_sum
+
+    def _create_addend_isoms(self):
+        self.P = []
+        idx = 0
+        for k in self.addends:
+            isom = (self*k.H).array()
+            isom.nparray[idx:idx+k.dim(), :] = np.eye(k.dim())
+            self.P.append(isom)
+            idx += k.dim()
+
+direct_sum = HilbertAtom.direct_sum

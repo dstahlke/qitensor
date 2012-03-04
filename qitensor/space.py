@@ -63,6 +63,7 @@ class HilbertSpace(object):
         """
 
         self._H = None
+        self.addends = None
 
         # If ket_set is None then we are being called from the HilbertAtom
         # subclass constructor.  That constructor will take care of setting up

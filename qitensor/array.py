@@ -36,12 +36,18 @@ class HilbertArray(object):
         """
 
         hs = space
+        # (Sphinx docstring)
+        #: The HilbertSpace of this array.
         self.space = hs
+        # (Sphinx docstring)
+        #: An array telling which HilbertAtom corresponds to each axis of ``self.nparray``.
         self.axes = hs._array_axes
 
         if noinit_data:
             assert data is None
             assert input_axes is None
+            # (Sphinx docstring)
+            #: Provides direct access to the underlying numpy array.
             self.nparray = None
         elif data is None:
             assert input_axes is None

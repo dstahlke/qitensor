@@ -67,6 +67,8 @@ class HilbertSpace(object):
         if not '_H' in self.__dict__:
             self._H = None
 
+        # (Sphinx docstrings)
+        #: In the case of direct sum spaces, this is a list of the components.
         self.addends = None
 
         assert isinstance(ket_set, frozenset)
@@ -77,14 +79,22 @@ class HilbertSpace(object):
         for x in bra_set:
             assert x.is_dual
 
+        #: A frozenset consisting of the ket atoms that this space is made of.
         self.ket_set = ket_set
+        #: A frozenset consisting of the bra atoms that this space is made of.
         self.bra_set = bra_set
+        #: A frozenset consisting of the union of ``self.bra_set`` and ``self.ket_set``.
         self.bra_ket_set = bra_set | ket_set
+        #: A sorted list consisting of the ket atoms that this space is made of.
         self.sorted_kets = sorted(list(ket_set))
+        #: A sorted list consisting of the bra atoms that this space is made of.
         self.sorted_bras = sorted(list(bra_set))
 
         if len(self.bra_ket_set) == 0:
             raise HilbertError('tried to create empty HilbertSpace')
+
+        #: The HilbertBaseField that defines the numerical properties of arrays belonging
+        #: to this space.
         self.base_field = list(self.bra_ket_set)[0].base_field
 
         # Make sure all atoms are compatible, otherwise raise
@@ -96,6 +106,8 @@ class HilbertSpace(object):
         
         ket_shape = [len(x.indices) for x in self.sorted_kets]
         bra_shape = [len(x.indices) for x in self.sorted_bras]
+
+        #: A tuple consisting of the dimensions of the underlying atoms that make up this space.
         self.shape = tuple(ket_shape + bra_shape)
         self._dim = _shape_product(self.shape)
         self._is_simple_dyad = len(bra_set)==1 and len(ket_set)==1

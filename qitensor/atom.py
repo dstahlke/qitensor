@@ -95,16 +95,27 @@ class HilbertAtom(HilbertSpace):
         assert indices is not None
         assert group_op is not None
 
+        # (Sphinx docstrings)
+        #: The text label for this atom (gets displayed as ``|label>`` or ``<label|``).
         self.label = label
+        #: The label used for the latex representation (by default equal to ``self.label``).
         self.latex_label = latex_label
+        #: A list of the tokens used as indices for this space.  By default this consists of
+        #: the integers ``0..dim-1``.
         self.indices = indices
+        #: The group operation associated with the indices.  This is relevant to the
+        #: ``self.pauliX`` operator.  Typically this is modular addition.
         self.group_op = group_op
 
+        #: True if this atom is a bra space.
         self.is_dual = not dual is None
+        #: The unique key used for comparing this atom to other atoms.
         self.key = (label, indices, group_op, base_field, self.is_dual)
         self._hashval = hash(self.key)
         self._prime = None
 
+        #: The HilbertBaseField that defines the numerical properties of arrays belonging
+        #: to this space.
         self.base_field = base_field
 
         if dual:

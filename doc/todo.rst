@@ -10,3 +10,4 @@ BUGS
     * set formatting options on sage examples (including webpage)
     * detect when running under 'ipython qtconsole' and disable mathjax in html
     * sage doctests in python files give sphinx error
+    * wrong exceptions are thrown

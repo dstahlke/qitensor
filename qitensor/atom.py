@@ -195,17 +195,43 @@ class HilbertAtom(HilbertSpace):
                 repr(other.base_field))
 
     def __eq__(self, other):
+        """
+        Compares two HilbertSpace objects for equality.
+
+        >>> from qitensor import qubit, qudit
+        >>> ha = qubit('a')
+        >>> hb = qudit('b', 3)
+        >>> (ha == ha, ha == hb)
+        (True, False)
+        """
+
         if not isinstance(other, HilbertAtom):
             return HilbertSpace.__eq__(self, other)
         else:
             return self._hashval == other._hashval and 0 == self._mycmp(other)
 
     def __ne__(self, other):
+        """
+        Compares two HilbertSpace objects for inequality.
+
+        >>> from qitensor import qubit, qudit
+        >>> ha = qubit('a')
+        >>> hb = qudit('b', 3)
+        >>> (ha != ha, ha != hb)
+        (False, True)
+        """
+
         return not (self == other)
 
     def __lt__(self, other):
         """
         Compares two HilbertSpace objects lexicographically.
+
+        >>> from qitensor import qubit, qudit
+        >>> ha = qubit('a')
+        >>> hb = qudit('b', 3)
+        >>> (ha < ha, ha < hb, hb < ha)
+        (False, True, False)
         """
 
         if not isinstance(other, HilbertAtom):
@@ -216,6 +242,12 @@ class HilbertAtom(HilbertSpace):
     def __gt__(self, other):
         """
         Compares two HilbertSpace objects lexicographically.
+
+        >>> from qitensor import qubit, qudit
+        >>> ha = qubit('a')
+        >>> hb = qudit('b', 3)
+        >>> (ha > ha, ha > hb, hb > ha)
+        (False, False, True)
         """
 
         if not isinstance(other, HilbertAtom):
@@ -226,6 +258,12 @@ class HilbertAtom(HilbertSpace):
     def __ge__(self, other):
         """
         Compares two HilbertSpace objects lexicographically.
+
+        >>> from qitensor import qubit, qudit
+        >>> ha = qubit('a')
+        >>> hb = qudit('b', 3)
+        >>> (ha >= ha, ha >= hb, hb >= ha)
+        (True, False, True)
         """
 
         if not isinstance(other, HilbertAtom):
@@ -236,6 +274,12 @@ class HilbertAtom(HilbertSpace):
     def __le__(self, other):
         """
         Compares two HilbertSpace objects lexicographically.
+
+        >>> from qitensor import qubit, qudit
+        >>> ha = qubit('a')
+        >>> hb = qudit('b', 3)
+        >>> (ha <= ha, ha <= hb, hb <= ha)
+        (True, True, False)
         """
 
         if not isinstance(other, HilbertAtom):

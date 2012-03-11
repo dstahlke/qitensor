@@ -11,6 +11,7 @@ Version 0.8.1 (ongoing):
 	TensorSubspace module
 	better performance
 	direct_sum for HilbertAtom
+	simplified space/atom constructors
 
 Version 0.8 (2011-12-01):
 	as_np_matrix take {row,col}_space args

@@ -62,46 +62,46 @@ class HilbertSpace(object):
         sage: TestSuite(ha*hb).run()
         """
 
-        self._H = None
+        # In the case of the HilbertAtom subclass, ``_H`` will already have
+        # been set.
+        if not '_H' in self.__dict__:
+            self._H = None
+
         self.addends = None
 
-        # If ket_set is None then we are being called from the HilbertAtom
-        # subclass constructor.  That constructor will take care of setting up
-        # these attributes.
-        if not ket_set is None:
-            assert isinstance(ket_set, frozenset)
-            assert isinstance(bra_set, frozenset)
+        assert isinstance(ket_set, frozenset)
+        assert isinstance(bra_set, frozenset)
 
-            for x in ket_set:
-                assert not x.is_dual
-            for x in bra_set:
-                assert x.is_dual
+        for x in ket_set:
+            assert not x.is_dual
+        for x in bra_set:
+            assert x.is_dual
 
-            self.ket_set = ket_set
-            self.bra_set = bra_set
-            self.bra_ket_set = bra_set | ket_set
-            self.sorted_kets = sorted(list(ket_set))
-            self.sorted_bras = sorted(list(bra_set))
+        self.ket_set = ket_set
+        self.bra_set = bra_set
+        self.bra_ket_set = bra_set | ket_set
+        self.sorted_kets = sorted(list(ket_set))
+        self.sorted_bras = sorted(list(bra_set))
 
-            if len(self.bra_ket_set) == 0:
-                raise HilbertError('tried to create empty HilbertSpace')
-            self.base_field = list(self.bra_ket_set)[0].base_field
+        if len(self.bra_ket_set) == 0:
+            raise HilbertError('tried to create empty HilbertSpace')
+        self.base_field = list(self.bra_ket_set)[0].base_field
 
-            # Make sure all atoms are compatible, otherwise raise
-            # a MismatchedIndexSetError
-            qitensor.atom._assert_all_compatible(self.bra_ket_set)
+        # Make sure all atoms are compatible, otherwise raise
+        # a MismatchedIndexSetError
+        qitensor.atom._assert_all_compatible(self.bra_ket_set)
 
-            for x in self.bra_ket_set:
-                self.base_field.assert_same(x.base_field)
-            
-            ket_shape = [len(x.indices) for x in self.sorted_kets]
-            bra_shape = [len(x.indices) for x in self.sorted_bras]
-            self.shape = tuple(ket_shape + bra_shape)
-            self._dim = _shape_product(self.shape)
-            self._is_simple_dyad = len(bra_set)==1 and len(ket_set)==1
+        for x in self.bra_ket_set:
+            self.base_field.assert_same(x.base_field)
+        
+        ket_shape = [len(x.indices) for x in self.sorted_kets]
+        bra_shape = [len(x.indices) for x in self.sorted_bras]
+        self.shape = tuple(ket_shape + bra_shape)
+        self._dim = _shape_product(self.shape)
+        self._is_simple_dyad = len(bra_set)==1 and len(ket_set)==1
 
-            self._array_axes = self.sorted_kets + self.sorted_bras
-            self._array_axes_lookup = dict((s, self._array_axes.index(s)) for s in self._array_axes)
+        self._array_axes = self.sorted_kets + self.sorted_bras
+        self._array_axes_lookup = dict((s, self._array_axes.index(s)) for s in self._array_axes)
 
     def __reduce__(self):
         """

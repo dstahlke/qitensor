@@ -105,24 +105,23 @@ class HilbertAtom(HilbertSpace):
         self._hashval = hash(self.key)
         self._prime = None
 
-        # Many fields that HilbertSpace.__init__ would normally set are instead
-        # implemented as properties (later on in this source file).
-        HilbertSpace.__init__(self, None, None)
-
         self.base_field = base_field
-
-        self.shape = (len(indices), )
-        self._dim = len(indices)
-        self._is_simple_dyad = False
-
-        self._array_axes = [self]
-        self._array_axes_lookup = {self: 0}
 
         if dual:
             self._H = dual
         else:
             self._H = HilbertAtom(label, latex_label,
                 indices, group_op, base_field, self)
+
+        # NOTE: since 'self' is passed in the bra_set/ket_set parameters to the
+        # superclass constructor, it is necessary that some of the properties
+        # are set before the superclass constructor is called (this is done
+        # above).
+
+        if self.is_dual:
+            HilbertSpace.__init__(self, frozenset(), frozenset([self]))
+        else:
+            HilbertSpace.__init__(self, frozenset([self]), frozenset())
 
     def __reduce__(self):
         """
@@ -311,41 +310,6 @@ class HilbertAtom(HilbertSpace):
             return self.basis_vec({self: idx})
         else:
             return self.H.basis_vec({self.H: idx})
-
-    # These are implemented as properties rather than setting them in the
-    # HilbertSpace constructor in order to avoid self-reference.
-
-    @property
-    def bra_ket_set(self):
-        return frozenset([self])
-
-    @property
-    def bra_set(self):
-        if self.is_dual:
-            return frozenset([self])
-        else:
-            return frozenset()
-
-    @property
-    def ket_set(self):
-        if self.is_dual:
-            return frozenset()
-        else:
-            return frozenset([self])
-
-    @property
-    def sorted_bras(self):
-        if self.is_dual:
-            return [self]
-        else:
-            return []
-
-    @property
-    def sorted_kets(self):
-        if self.is_dual:
-            return []
-        else:
-            return [self]
 
     # Special states
 

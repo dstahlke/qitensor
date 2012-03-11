@@ -56,6 +56,13 @@ class TensorSubspace(object):
     """
 
     def __init__(self, basis, perp_basis, tol, hilb_space, validate=False):
+        """
+        You can directly initialize this class if you have a basis for the
+        subspace and a basis for the perpendicular subspace, but typically it
+        is easier (although slower) to instead initialize using the
+        ``from_span`` factory method.
+        """
+
         self._tol = tol
         self._hilb_space = hilb_space
         self._basis = basis
@@ -92,6 +99,26 @@ class TensorSubspace(object):
 
     @classmethod
     def from_span(cls, X, tol=1e-10, hilb_space=None, dtype=None):
+        """
+        Construct a TensorSubspace that represents the span of the given operators.
+
+        :param X: the operators to take the span of.
+        :type X: list of numpy array or numpy array whose first axes indexes the operators
+        :param tol: tolerance for determining whether operators are perpendicular
+        :param dtype: the datatype (default is to use the datatype of the input operators)
+
+        >>> from qitensor import TensorSubspace
+        >>> import numpy as np
+        >>> x = np.random.randn(3, 5)
+        >>> y = np.random.randn(3, 5)
+        >>> TensorSubspace.from_span([x, y])
+        <TensorSubspace of dim 2 over space (3, 5)>
+        >>> TensorSubspace.from_span([x, y, 2*x+0.3*y])
+        <TensorSubspace of dim 2 over space (3, 5)>
+        >>> TensorSubspace.from_span(x)
+        <TensorSubspace of dim 3 over space (5,)>
+        """
+
         if not isinstance(X, np.ndarray):
             X = list(X)
             try:
@@ -145,6 +172,14 @@ class TensorSubspace(object):
 
     @classmethod
     def empty(cls, col_shp, tol=1e-10, hilb_space=None, dtype=complex):
+        """
+        Constructs the empty subspace of the given dimension.
+
+        >>> from qitensor import TensorSubspace
+        >>> TensorSubspace.empty((3,5))
+        <TensorSubspace of dim 0 over space (3, 5)>
+        """
+
         # FIXME - col_shp not needed if hilb_space given
         n = np.product(col_shp)
         basis = np.zeros((0,)+col_shp, dtype=dtype)
@@ -153,6 +188,14 @@ class TensorSubspace(object):
 
     @classmethod
     def full(cls, col_shp, tol=1e-10, hilb_space=None, dtype=complex):
+        """
+        Constructs the full subspace of the given dimension.
+
+        >>> from qitensor import TensorSubspace
+        >>> TensorSubspace.full((3,5))
+        <TensorSubspace of dim 15 over space (3, 5)>
+        """
+
         # FIXME - col_shp not needed if hilb_space given
         return cls.empty(col_shp, tol=tol, hilb_space=hilb_space, dtype=dtype).perp()
 
@@ -166,7 +209,25 @@ class TensorSubspace(object):
         assert self._col_shp == other._col_shp
 
     def perp(self):
-        """Returns orthogonal complement of this space."""
+        """
+        Returns orthogonal complement of this space.
+
+        >>> from qitensor import TensorSubspace
+        >>> import numpy as np
+        >>> x = np.random.randn(3, 5)
+        >>> y = np.random.randn(3, 5)
+        >>> spc = TensorSubspace.from_span([x, y]); spc
+        <TensorSubspace of dim 2 over space (3, 5)>
+        >>> spc.perp()
+        <TensorSubspace of dim 13 over space (3, 5)>
+        >>> spc.equiv(spc.perp().perp())
+        True
+        >>> TensorSubspace.full((3,5)).perp().equiv(TensorSubspace.empty((3,5)))
+        True
+        >>> TensorSubspace.empty((3,5)).perp().equiv(TensorSubspace.full((3,5)))
+        True
+        """
+
         if self._perp_cache is None:
             self._perp_cache = self.__class__(self._perp_basis, self._basis, **self._config_kw)
             self._perp_cache._perp_cache = self

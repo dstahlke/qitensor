@@ -155,11 +155,11 @@ class HilbertArray(object):
         >>> x._assert_same_axes(z)
         Traceback (most recent call last):
             ...
-        HilbertIndexError: 'Mismatched HilbertSpaces: |a> vs. |b>'
+        MismatchedIndexSetError: 'Mismatched HilbertSpaces: |a> vs. |b>'
         """
 
         if self.axes != other.axes:
-            raise HilbertIndexError('Mismatched HilbertSpaces: '+
+            raise MismatchedIndexSetError('Mismatched HilbertSpaces: '+
                 repr(self.space)+' vs. '+repr(other.space))
 
     def set_data(self, new_data):
@@ -361,7 +361,7 @@ class HilbertArray(object):
         tpose_atoms = []
         for x in tpose_axes.bra_set | tpose_axes.ket_set:
             if not (x in self.axes or x.H in self.axes):
-                raise HilbertIndexError('Hilbert space not part of this '+
+                raise HilbertError('Hilbert space not part of this '+
                     'array: '+repr(x))
             if x.is_dual:
                 tpose_atoms.append(x.H)
@@ -697,7 +697,7 @@ class HilbertArray(object):
         >>> x+y
         Traceback (most recent call last):
             ...
-        HilbertIndexError: 'Mismatched HilbertSpaces: |a> vs. |b>'
+        MismatchedIndexSetError: 'Mismatched HilbertSpaces: |a> vs. |b>'
         """
 
         if not isinstance(other, HilbertArray):
@@ -745,7 +745,7 @@ class HilbertArray(object):
         >>> x-y
         Traceback (most recent call last):
             ...
-        HilbertIndexError: 'Mismatched HilbertSpaces: |a> vs. |b>'
+        MismatchedIndexSetError: 'Mismatched HilbertSpaces: |a> vs. |b>'
         """
 
         if not isinstance(other, HilbertArray):
@@ -1509,7 +1509,7 @@ class HilbertArray(object):
             axes_set = set()
             for s in HilbertSpace._expand_list_to_atoms(list(axes)):
                 if not s in self.space.bra_ket_set:
-                    raise HilbertIndexError('not in ket set: '+repr(s))
+                    raise HilbertError('not in ket set: '+repr(s))
                 axes_set.add(s.H if s.is_dual else s)
             axes = dict((s, s.H) for s in axes_set)
 
@@ -1519,9 +1519,9 @@ class HilbertArray(object):
 
         for (k, v) in axes.iteritems():
             if not k in self.space.bra_ket_set:
-                raise HilbertIndexError("not in this array's space: "+repr(k))
+                raise HilbertError("not in this array's space: "+repr(k))
             if not v in self.space.bra_ket_set:
-                raise HilbertIndexError("not in this array's space: "+repr(v))
+                raise HilbertError("not in this array's space: "+repr(v))
 
         # The full trace is handled specially here, for efficiency.
         if frozenset(axes.keys()+axes.values()) == self.space.bra_ket_set:

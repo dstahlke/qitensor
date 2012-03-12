@@ -62,6 +62,22 @@ class DuplicatedSpaceError(HilbertError):
         HilbertError.__init__(self, msg)
 
 class HilbertIndexError(HilbertError, LookupError):
+    """
+    Raised when an invalid array subscript is given.
+
+    >>> from qitensor import qubit
+    >>> ha = qubit('a')
+    >>> x = ha.array()
+    >>> x[2]
+    Traceback (most recent call last):
+        ...
+    HilbertIndexError: 'Index set for |a> does not contain 2'
+    >>> x[{ ha.H: 0 }]
+    Traceback (most recent call last):
+        ...
+    HilbertIndexError: 'Hilbert space not part of this array: <a|'
+    """
+
     def __init__(self, msg):
         HilbertError.__init__(self, msg)
         LookupError.__init__(self, )

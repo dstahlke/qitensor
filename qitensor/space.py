@@ -10,7 +10,7 @@ import weakref
 
 from qitensor import have_sage, _shape_product
 from qitensor.exceptions import DuplicatedSpaceError, HilbertError, \
-    HilbertIndexError, HilbertShapeError, NotKetSpaceError
+    HilbertError, HilbertShapeError, NotKetSpaceError
 import qitensor.atom
 from qitensor.arrayformatter import FORMATTER
 from qitensor.subspace import TensorSubspace
@@ -764,7 +764,7 @@ class HilbertSpace(object):
         ret = self.array()
         index_map = ret._index_key_to_map(idx)
         if len(index_map) != len(self.shape):
-            raise HilbertIndexError('not enough indices given')
+            raise HilbertError('not enough indices given')
         ret[idx] = 1
         return ret
 

@@ -251,6 +251,16 @@ class HilbertSpace(object):
         """
         If the dimension of the bra and ket spaces are equal, returns this
         common dimension.  Otherwise throws a HilbertShapeError.
+
+        >>> from qitensor import qudit
+        >>> qudit('a', 3).assert_square()
+        Traceback (most recent call last):
+            ...
+        HilbertShapeError: '3 vs. 1'
+        >>> (qudit('a', 3) * qudit('b', 4).H).assert_square()
+        Traceback (most recent call last):
+            ...
+        HilbertShapeError: '3 vs. 4'
         """
 
         ket_size = _shape_product([len(x.indices) for x in self.ket_set])
@@ -910,6 +920,18 @@ class HilbertSpace(object):
     def assert_ket_space(self):
         """
         Throws an exception unless the bra space is empty.
+
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> ha.assert_ket_space()
+        >>> ha.H.assert_ket_space()
+        Traceback (most recent call last):
+            ...
+        NotKetSpaceError: '<a|'
+        >>> ha.O.assert_ket_space()
+        Traceback (most recent call last):
+            ...
+        NotKetSpaceError: '|a><a|'
         """
 
         if self.bra_set:
@@ -920,6 +942,14 @@ class HilbertSpace(object):
     def reshaped_sage_matrix(self, m, input_axes=None):
         """
         Just like :func:`reshaped_np_matrix` but takes a Sage Matrix as input.
+
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> m = Matrix([[1,2],[3,4]])
+        >>> ha.O.reshaped_sage_matrix(m)
+        HilbertArray(|a><a|,
+        array([[ 1.+0.j,  2.+0.j],
+               [ 3.+0.j,  4.+0.j]]))
         """
 
         if not have_sage:

@@ -17,14 +17,33 @@ class GroupOpCyclic_impl(object):
         self.D = D
 
     def __reduce__(self):
+        """
+        Tells pickle how to store this object.
+        """
         return GroupOpCyclic_factory, (self.D,)
 
     def op(self, x, y):
+        """
+        The group operation (modular addition).
+
+        >>> from qitensor import GroupOpCyclic_factory
+        >>> g = GroupOpCyclic_factory(5)
+        >>> g.op(2, 7)
+        4
+        """
         return (x+y) % self.D
 
 # This implements memoization
 _op_cyclic_cache = {}
 def GroupOpCyclic_factory(D):
+    """
+    Returns an instance of GroupOpCyclic_impl, the cyclic group of order D.
+
+    >>> from qitensor import GroupOpCyclic_factory
+    >>> g = GroupOpCyclic_factory(5)
+    >>> g.op(2, 7)
+    4
+    """
     if not _op_cyclic_cache.has_key(D):
         _op_cyclic_cache[D] = GroupOpCyclic_impl(D)
     return _op_cyclic_cache[D]
@@ -37,14 +56,33 @@ class GroupOpTimes_impl(object):
         pass
 
     def __reduce__(self):
+        """
+        Tells pickle how to store this object.
+        """
         return GroupOpTimes_factory, tuple()
 
     def op(self, x, y):
+        """
+        The group operation (multiplication).
+
+        >>> from qitensor import GroupOpTimes_factory
+        >>> g = GroupOpTimes_factory()
+        >>> g.op(3, 4)
+        12
+        """
         return x*y
 
 # This implements memoization
 _op_times_cache = GroupOpTimes_impl()
 def GroupOpTimes_factory():
+    """
+    Returns an instance of GroupOpTimes_impl, which operates on elements by multiplication.
+
+    >>> from qitensor import GroupOpTimes_factory
+    >>> g = GroupOpTimes_factory()
+    >>> g.op(3, 4)
+    12
+    """
     return _op_times_cache
 
 ##############################

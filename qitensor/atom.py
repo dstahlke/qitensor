@@ -9,7 +9,7 @@ import weakref
 import numpy as np
 
 import qitensor
-from qitensor.exceptions import MismatchedIndexSetError,HilbertError
+from qitensor.exceptions import MismatchedSpaceError,HilbertError
 from qitensor.space import HilbertSpace
 
 __all__ = ['HilbertAtom', 'direct_sum']
@@ -55,7 +55,7 @@ def _assert_all_compatible(collection):
     >>> _assert_all_compatible([qudit('a', 3), qudit('a', 4)])
     Traceback (most recent call last):
         ...
-    MismatchedIndexSetError: 'Two instances of HilbertSpace with label "a" but with different indices: (0, 1, 2) vs. (0, 1, 2, 3)'
+    MismatchedSpaceError: 'Two instances of HilbertSpace with label "a" but with different indices: (0, 1, 2) vs. (0, 1, 2, 3)'
     """
 
     by_label = {}
@@ -160,36 +160,36 @@ class HilbertAtom(HilbertSpace):
         >>> qudit('a', 3)._assert_compatible(qudit('a', 4))
         Traceback (most recent call last):
             ...
-        MismatchedIndexSetError: 'Two instances of HilbertSpace with label "a" but with different indices: (0, 1, 2) vs. (0, 1, 2, 3)'
+        MismatchedSpaceError: 'Two instances of HilbertSpace with label "a" but with different indices: (0, 1, 2) vs. (0, 1, 2, 3)'
         >>> qudit('a', 3)._assert_compatible(indexed_space('a', (10,20,30)))
         Traceback (most recent call last):
             ...
-        MismatchedIndexSetError: 'Two instances of HilbertSpace with label "a" but with different indices: (0, 1, 2) vs. (10, 20, 30)'
+        MismatchedSpaceError: 'Two instances of HilbertSpace with label "a" but with different indices: (0, 1, 2) vs. (10, 20, 30)'
         >>> from qitensor.factory import GroupOpTimes_factory
         >>> qudit('a', 3)._assert_compatible(indexed_space('a', (0,1,2), group_op=GroupOpTimes_factory())) # doctest: +ELLIPSIS
         Traceback (most recent call last):
             ...
-        MismatchedIndexSetError: 'Two instances of HilbertSpace with label "a" but with different group_op: ...
+        MismatchedSpaceError: 'Two instances of HilbertSpace with label "a" but with different group_op: ...
 
         sage: from qitensor import qudit
         sage: qudit('a', 3)._assert_compatible(qudit('a', 3, dtype=SR)) # doctest: +ELLIPSIS
         Traceback (most recent call last):
             ...
-        MismatchedIndexSetError: 'Two instances of HilbertSpace with label "a" but with different base_field: ...
+        MismatchedSpaceError: 'Two instances of HilbertSpace with label "a" but with different base_field: ...
         """
 
         if self.indices != other.indices:
-            raise MismatchedIndexSetError('Two instances of HilbertSpace '+
+            raise MismatchedSpaceError('Two instances of HilbertSpace '+
                 'with label "'+str(self.label)+'" but with different '+
                 'indices: '+repr(self.indices)+' vs. '+repr(other.indices))
 
         if self.group_op != other.group_op:
-            raise MismatchedIndexSetError('Two instances of HilbertSpace '+
+            raise MismatchedSpaceError('Two instances of HilbertSpace '+
                 'with label "'+str(self.label)+'" but with different '+
                 'group_op: '+repr(self.group_op)+' vs. '+repr(other.group_op))
 
         if self.base_field != other.base_field:
-            raise MismatchedIndexSetError('Two instances of HilbertSpace '+
+            raise MismatchedSpaceError('Two instances of HilbertSpace '+
                 'with label "'+str(self.label)+'" but with different '+
                 'base_field: '+repr(self.base_field)+' vs. '+
                 repr(other.base_field))

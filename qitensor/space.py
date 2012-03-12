@@ -98,7 +98,7 @@ class HilbertSpace(object):
         self.base_field = list(self.bra_ket_set)[0].base_field
 
         # Make sure all atoms are compatible, otherwise raise
-        # a MismatchedIndexSetError
+        # a MismatchedSpaceError
         qitensor.atom._assert_all_compatible(self.bra_ket_set)
 
         for x in self.bra_ket_set:

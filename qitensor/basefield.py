@@ -14,7 +14,7 @@ import numpy as np
 import numpy.random
 import numpy.linalg
 
-from qitensor.exceptions import HilbertError, MismatchedIndexSetError
+from qitensor.exceptions import HilbertError, MismatchedSpaceError
 import qitensor.atom
 import qitensor.space
 from qitensor.array import HilbertArray
@@ -62,7 +62,7 @@ class HilbertBaseField(object):
         """
 
         if self.unique_id != other.unique_id:
-            raise MismatchedIndexSetError('Different base_fields: '+
+            raise MismatchedSpaceError('Different base_fields: '+
                 repr(self.unique_id)+' vs. '+repr(other.unique_id))
 
     def matrix_np_to_sage(self, np_mat, R=None):

@@ -8,8 +8,8 @@ import numpy as np
 
 from qitensor import have_sage, _shape_product
 from qitensor.exceptions import DuplicatedSpaceError, HilbertError, \
-    HilbertIndexError, HilbertShapeError, HilbertSliceError, \
-    NotKetSpaceError, MismatchedIndexSetError
+    HilbertIndexError, HilbertShapeError, \
+    NotKetSpaceError, MismatchedSpaceError
 from qitensor.space import HilbertSpace
 from qitensor.atom import HilbertAtom
 from qitensor.arrayformatter import FORMATTER
@@ -155,11 +155,11 @@ class HilbertArray(object):
         >>> x._assert_same_axes(z)
         Traceback (most recent call last):
             ...
-        MismatchedIndexSetError: 'Mismatched HilbertSpaces: |a> vs. |b>'
+        MismatchedSpaceError: 'Mismatched HilbertSpaces: |a> vs. |b>'
         """
 
         if self.axes != other.axes:
-            raise MismatchedIndexSetError('Mismatched HilbertSpaces: '+
+            raise MismatchedSpaceError('Mismatched HilbertSpaces: '+
                 repr(self.space)+' vs. '+repr(other.space))
 
     def set_data(self, new_data):
@@ -476,7 +476,7 @@ class HilbertArray(object):
             assert isinstance(k, HilbertAtom)
             assert isinstance(v, HilbertAtom)
             if not k in self.space.bra_ket_set:
-                raise MismatchedIndexSetError("not in input space: "+repr(k))
+                raise MismatchedSpaceError("not in input space: "+repr(k))
 
         xlate_list = [ mapping[x] if x in mapping else x for x in self.axes ]
         HilbertSpace._assert_nodup_space(xlate_list, "relabling would cause a duplicated space")
@@ -697,7 +697,7 @@ class HilbertArray(object):
         >>> x+y
         Traceback (most recent call last):
             ...
-        MismatchedIndexSetError: 'Mismatched HilbertSpaces: |a> vs. |b>'
+        MismatchedSpaceError: 'Mismatched HilbertSpaces: |a> vs. |b>'
         """
 
         if not isinstance(other, HilbertArray):
@@ -745,7 +745,7 @@ class HilbertArray(object):
         >>> x-y
         Traceback (most recent call last):
             ...
-        MismatchedIndexSetError: 'Mismatched HilbertSpaces: |a> vs. |b>'
+        MismatchedSpaceError: 'Mismatched HilbertSpaces: |a> vs. |b>'
         """
 
         if not isinstance(other, HilbertArray):
@@ -943,7 +943,7 @@ class HilbertArray(object):
                         # this axis
                         pass
                     else:
-                        raise HilbertSliceError("Slices are not allowed")
+                        raise HilbertIndexError("Slices are not allowed")
                 else:
                     index_map[self.axes[i]] = k
         else:
@@ -956,7 +956,7 @@ class HilbertArray(object):
                     # this axis
                     pass
                 else:
-                    raise HilbertSliceError("Slices are not allowed")
+                    raise HilbertIndexError("Slices are not allowed")
             else:
                 index_map[self.axes[0]] = key
 
@@ -1057,23 +1057,23 @@ class HilbertArray(object):
         >>> x._get_row_col_spaces(row_space=(ha, hb.H))
         Traceback (most recent call last):
             ...
-        MismatchedIndexSetError: "not in array's index set: <b|"
+        MismatchedSpaceError: "not in array's index set: <b|"
         >>> x._get_row_col_spaces(col_space=ha)
         ([|b>, <a|], [|a>])
         >>> x._get_row_col_spaces(col_space=(ha, hb.H))
         Traceback (most recent call last):
             ...
-        MismatchedIndexSetError: "not in array's index set: <b|"
+        MismatchedSpaceError: "not in array's index set: <b|"
         >>> x._get_row_col_spaces(col_space=(ha, hb*ha.H))
         ([], [|a>, |b>, <a|])
         >>> x._get_row_col_spaces(row_space=ha, col_space=hb)
         Traceback (most recent call last):
             ...
-        MismatchedIndexSetError: 'all indices must be in col_set or row_set, these were missing: <a|'
+        MismatchedSpaceError: 'all indices must be in col_set or row_set, these were missing: <a|'
         >>> x._get_row_col_spaces(row_space=ha.O, col_space=hb*ha)
         Traceback (most recent call last):
             ...
-        MismatchedIndexSetError: 'space is in both col and row sets: |a>'
+        MismatchedSpaceError: 'space is in both col and row sets: |a>'
         """
 
         def parse_space(s):
@@ -1102,16 +1102,16 @@ class HilbertArray(object):
             return repr(self.space.base_field.create_space1(spc_set))
 
         if not col_set.isdisjoint(row_set):
-            raise MismatchedIndexSetError( \
+            raise MismatchedSpaceError( \
                 'space is in both col and row sets: '+space_string(col_set & row_set))
         if not row_set <= self.space.bra_ket_set:
-            raise MismatchedIndexSetError( \
+            raise MismatchedSpaceError( \
                 "not in array's index set: "+space_string(row_set - self.space.bra_ket_set))
         if not col_set <= self.space.bra_ket_set:
-            raise MismatchedIndexSetError( \
+            raise MismatchedSpaceError( \
                 "not in array's index set: "+space_string(col_set - self.space.bra_ket_set))
         if not col_set | row_set == self.space.bra_ket_set:
-            raise MismatchedIndexSetError( \
+            raise MismatchedSpaceError( \
                 'all indices must be in col_set or row_set, these were missing: '+ \
                 space_string(self.space.bra_ket_set-(col_set | row_set)))
 

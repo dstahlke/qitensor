@@ -7,10 +7,8 @@ __all__ = [
     'HilbertError',
     'HilbertIndexError',
     'HilbertShapeError',
-    'IncompatibleBaseFieldError',
-    'MismatchedIndexSetError',
+    'MismatchedSpaceError',
     'NotKetSpaceError',
-    'HilbertSliceError',
 ]
 
 class HilbertError(Exception):
@@ -26,7 +24,7 @@ class HilbertError(Exception):
     def __str__(self):
         return repr(self.msg)
 
-class MismatchedIndexSetError(HilbertError):
+class MismatchedSpaceError(HilbertError):
     """
     Raised when two HilbertAtoms have the same label but different properties,
     or when the HilbertSpace requested for an operation doesn't match that of
@@ -82,20 +80,20 @@ class HilbertIndexError(HilbertError, LookupError):
         HilbertError.__init__(self, msg)
         LookupError.__init__(self, )
 
-class IncompatibleBaseFieldError(HilbertError):
-    def __init__(self, msg):
-        HilbertError.__init__(self, msg)
-
 class HilbertShapeError(HilbertError, ValueError):
+    """
+    Raised when an array is not the right shape for the requested operation.
+    """
+
     def __init__(self, shape1, shape2):
         msg = repr(shape1)+' vs. '+repr(shape2)
         HilbertError.__init__(self, msg)
         ValueError.__init__(self, )
 
 class NotKetSpaceError(HilbertError):
-    def __init__(self, msg):
-        HilbertError.__init__(self, msg)
+    """
+    Raised when a bra space is given to an operation that only works on ket spaces.
+    """
 
-class HilbertSliceError(HilbertError):
     def __init__(self, msg):
         HilbertError.__init__(self, msg)

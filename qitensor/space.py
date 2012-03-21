@@ -943,10 +943,10 @@ class HilbertSpace(object):
         """
         Just like :func:`reshaped_np_matrix` but takes a Sage Matrix as input.
 
-        >>> from qitensor import qubit
-        >>> ha = qubit('a')
-        >>> m = Matrix([[1,2],[3,4]])
-        >>> ha.O.reshaped_sage_matrix(m)
+        sage: from qitensor import qubit
+        sage: ha = qubit('a')
+        sage: m = Matrix([[1,2],[3,4]])
+        sage: ha.O.reshaped_sage_matrix(m)
         HilbertArray(|a><a|,
         array([[ 1.+0.j,  2.+0.j],
                [ 3.+0.j,  4.+0.j]]))

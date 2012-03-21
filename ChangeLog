@@ -8,6 +8,7 @@ Version 0.8.1 (ongoing):
 	much better HilbertArray.relabel method
 	HilbertArray.trace between arbitrary spaces
 	HilbertArray.sqrt
+	HilbertArray.purity
 	TensorSubspace module
 	better performance
 	direct_sum for HilbertAtom

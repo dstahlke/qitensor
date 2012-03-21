@@ -2051,6 +2051,52 @@ class HilbertArray(object):
 
         return sum([-self.space.base_field.xlog2x(x) for x in schmidt])
 
+    def purity(self, normalize=False, checks=True):
+        """
+        Returns the purity of a density operator, ``(self*self).trace()``.
+
+        :param normalize: if True, the input is automatically normalized to
+            trace one.  If false, an exception is raised if the trace is not
+            one.
+        :type normalize: bool; default False
+        :param checks: if False, don't check that the input is a valid density
+            matrix or Hermitian.  This is sometimes needed for symbolic
+            computations.
+        :type checks: bool; default True
+
+        >>> import numpy as np
+        >>> from qitensor import qubit, qudit
+        >>> ha = qubit('a')
+        >>> # purity of a pure state is one
+        >>> ha.ket(0).O.purity()
+        1.0
+        >>> # a fully mixed state of dimension 2
+        >>> (ha.ket(0).O/2 + ha.ket(1).O/2).purity()
+        0.5
+        >>> # automatic normalization
+        >>> ha.eye().purity(normalize=True)
+        0.5
+        """
+
+        if not self.space.is_symmetric():
+            raise HilbertError("bra and ket spaces must be the same")
+
+        if checks and not (self == self.H or np.allclose(self.nparray, self.H.nparray)):
+            raise HilbertError("density matrix must be Hermitian")
+
+        norm = self.trace()
+        if normalize:
+            densmat = self / norm
+        else:
+            if checks and abs(norm-1) > 1e-9:
+                raise HilbertError('density matrix was not normalized: norm='+str(norm))
+            densmat = self
+
+        purity = (densmat*densmat).trace()
+
+        assert abs(purity.imag) < 1e-12
+        return purity.real
+
     def QR(self, inner_space=None):
         """
         Returns operators Q and R such that Q is an isometry, R is upper triangular, and self=Q*R.

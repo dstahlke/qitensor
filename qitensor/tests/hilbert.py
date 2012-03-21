@@ -3,7 +3,7 @@
 import unittest
 import qitensor
 from qitensor import qubit, qudit, indexed_space
-from qitensor import MismatchedIndexSetError, DuplicatedSpaceError
+from qitensor import DuplicatedSpaceError, HilbertError
 from qitensor import HilbertIndexError, HilbertShapeError
 from qitensor.factory import GroupOpCyclic_factory
 
@@ -27,16 +27,16 @@ class HilbertBasicTests(unittest.TestCase):
         # OK, same index set
         self.Ha * Ha2.H
         # Not OK, different index set
-        self.assertRaises(MismatchedIndexSetError,
+        self.assertRaises(HilbertError,
             lambda: self.Ha * Ha3.H)
         # Not OK, different group operation (add vs. multiply)
-        self.assertRaises(MismatchedIndexSetError,
+        self.assertRaises(HilbertError,
             lambda: self.Ha * Ha4.H)
 
         self.assertEqual(self.Ha, Ha2)
         self.assertNotEqual(self.Ha, Ha3)
         # This is no longer how it works:
-        #self.assertRaises(MismatchedIndexSetError,
+        #self.assertRaises(HilbertError,
         #    lambda: self.Ha == Ha3)
 
     def testRedundant(self):
@@ -143,7 +143,7 @@ class HilbertOperTests(unittest.TestCase):
         self.assertEqual(M.T, M.transpose(Ha))
         self.assertEqual(M.T, M.transpose(Ha.H))
         self.assertEqual(M.T, M.transpose(Ha * Ha.H))
-        self.assertRaises(HilbertIndexError, lambda: M.transpose(Hb))
+        self.assertRaises(HilbertError, lambda: M.transpose(Hb))
 
         M = (Ha * Hb * Hx.H).array()
         M[{Ha: 0, Hb: 1, Hx.H: 'z'}] = 5

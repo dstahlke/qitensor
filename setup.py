@@ -2,11 +2,15 @@
 
 from distutils.core import setup
 from distutils.core import Command
+from distutils.extension import Extension
+from Cython.Distutils import build_ext
 import unittest
 
-import qitensor
-import qitensor.tests.hilbert
-import qitensor.tests.experimental
+import re
+version = [m.group(1) for m in [re.search('__version__ = "(.*)"', line) for line in open('qitensor/__init__.py').readlines()] if m is not None][0]
+# Cannot import qitensor until cython extensions are built
+# import qitensor
+# version = qitensor.__version__
 
 # Adapted from sympy
 class test_qitensor(Command):
@@ -27,15 +31,31 @@ class test_qitensor(Command):
         pass
 
     def run(self):
+        import qitensor.tests.hilbert
+        import qitensor.tests.experimental
+
         suite = unittest.TestSuite([
             qitensor.tests.hilbert.suite(),
             qitensor.tests.experimental.suite(),
         ])
         unittest.TextTestRunner().run(suite)
 
+ext_modules = [ \
+    Extension("qitensor.array",          ["qitensor/array.pyx"]), \
+    Extension("qitensor.arrayformatter", ["qitensor/arrayformatter.pyx"]), \
+    Extension("qitensor.atom",           ["qitensor/atom.pyx"]), \
+    Extension("qitensor.basefield",      ["qitensor/basefield.pyx"]), \
+    Extension("qitensor.circuit",        ["qitensor/circuit.pyx"]), \
+    Extension("qitensor.exceptions",     ["qitensor/exceptions.pyx"]), \
+    Extension("qitensor.factory",        ["qitensor/factory.pyx"]), \
+    Extension("qitensor.sagebasefield",  ["qitensor/sagebasefield.pyx"]), \
+    Extension("qitensor.space",          ["qitensor/space.pyx"]), \
+    Extension("qitensor.subspace",       ["qitensor/subspace.pyx"]), \
+]
+
 setup(
     name = 'qitensor',
-    version = qitensor.__version__,
+    version = '0.8.1',
     author = 'Dan Stahlke',
     author_email = 'dstahlke@gmail.com',
     url = 'http://www.stahlke.org/dan/qitensor',
@@ -79,5 +99,6 @@ space tensor product structure.
         'qitensor.experimental',
         'qitensor.tests',
     ],
-    cmdclass = {'test': test_qitensor },
+    cmdclass = {'test': test_qitensor, 'build_ext': build_ext},
+    ext_modules = ext_modules,
 )

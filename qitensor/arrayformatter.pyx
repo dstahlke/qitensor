@@ -7,6 +7,7 @@ functions.
 import numpy as np
 
 from qitensor import have_sage
+from qitensor.exceptions import HilbertError
 
 __all__ = ['set_qitensor_printoptions', 'get_qitensor_printoptions', 'HilbertArrayFormatter']
 

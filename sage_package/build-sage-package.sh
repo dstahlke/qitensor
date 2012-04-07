@@ -5,7 +5,8 @@ fatal() {
 	exit 1
 }
 
-ver=$(PYTHONPATH="..:$PYTHONPATH" python -c 'import qitensor; print qitensor.__version__') || fatal
+#ver=$(PYTHONPATH="..:$PYTHONPATH" python -c 'import qitensor; print qitensor.__version__') || fatal
+ver=$(grep __version__ ../qitensor/__init__.py|cut -d'"' -f2) || fatal
 build="qitensor-$ver"
 mkdir -p $build || fatal
 cp SPKG.txt spkg-install $build || fatal

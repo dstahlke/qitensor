@@ -13,10 +13,10 @@
 
 import sys, os, re
 
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.insert(0, os.path.abspath('..'))
+# Sphinx (apparently) won't read *.pyx files, so it is necessary to import the
+# compiled and installed version of the module to be documented.
+import qitensor
+#sys.path.insert(0, os.path.abspath('..'))
 
 import numpy
 # this is needed so that the doctests will pass

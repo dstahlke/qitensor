@@ -53,6 +53,9 @@ ext_modules = [ \
     Extension("qitensor.subspace",       ["qitensor/subspace.pyx"]), \
 ]
 
+for e in ext_modules:
+    e.pyrex_directives = {"embedsignature": True}
+
 setup(
     name = 'qitensor',
     version = '0.8.1',

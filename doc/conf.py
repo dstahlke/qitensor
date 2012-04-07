@@ -52,7 +52,10 @@ copyright = u'2012, Dan Stahlke'
 # built documents.
 #
 # The short X.Y version.
-version = [m.group(1) for m in [re.search('__version__ = "(.*)"', line) for line in open('../qitensor/__init__.py').readlines()] if m is not None][0]
+#version = [m.group(1) for m in [re.search('__version__ = "(.*)"', line) for line in open('../qitensor/__init__.py').readlines()] if m is not None][0]
+# Since I used 'import qitensor' above, take version directly from whichever
+# module was imported.
+version = qitensor.__version__
 # The full version, including alpha/beta/rc tags.
 release = version
 

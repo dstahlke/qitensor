@@ -11,6 +11,7 @@ passing the ``dtype`` parameter.
 """
 
 import numpy as np
+cimport numpy as np
 import numpy.random
 import numpy.linalg
 
@@ -63,7 +64,7 @@ cdef class HilbertBaseField:
             raise MismatchedSpaceError('Different base_fields: '+
                 repr(self.unique_id)+' vs. '+repr(other.unique_id))
 
-    cpdef matrix_np_to_sage(self, np_mat, R=None):
+    cpdef matrix_np_to_sage(self, np.ndarray np_mat, R=None):
         np_mat = np.array(np_mat)
 
         import sage.all
@@ -77,7 +78,7 @@ cdef class HilbertBaseField:
         else:
             return sage_mat.change_ring(R)
 
-    cpdef matrix_sage_to_np(self, sage_mat):
+    cpdef np.ndarray matrix_sage_to_np(self, sage_mat):
         if self.sage_ring is not None:
             if sage_mat.base_ring() != self.sage_ring:
                 sage_mat = sage_mat.change_ring(self.sage_ring)
@@ -102,76 +103,76 @@ cdef class HilbertBaseField:
     cpdef xlog2x(self, x):
         return 0 if x<=0 else x*np.log2(x)
 
-    cpdef random_array(self, shape):
+    cpdef np.ndarray random_array(self, shape):
         """Returns random array with standard normal distribution"""
         return (
             np.random.standard_normal(size=shape) +
             np.random.standard_normal(size=shape)*1j
         ) / np.sqrt(2)
 
-    cpdef eye(self, size):
+    cpdef np.ndarray eye(self, long size):
         return np.eye(size)
 
-    cpdef mat_adjoint(self, mat):
+    cpdef np.ndarray mat_adjoint(self, np.ndarray mat):
         return mat.H
 
-    cpdef mat_inverse(self, mat):
+    cpdef np.ndarray mat_inverse(self, np.ndarray mat):
         # linalg.inv is used instead of mat.I because the latter automatically
         # does pinv for non-square matrices, which is not really an inverse.
         # If you need pinv, just call the pinv method.
         return np.linalg.inv(mat)
 
-    cpdef mat_det(self, mat):
+    cpdef mat_det(self, np.ndarray mat):
         return np.linalg.det(mat)
 
-    cpdef mat_norm(self, arr):
+    cpdef mat_norm(self, np.ndarray arr):
         return np.linalg.norm(arr)
 
-    cpdef mat_pinv(self, mat, rcond):
+    cpdef np.ndarray mat_pinv(self, np.ndarray mat, rcond):
         return np.linalg.pinv(mat, rcond)
 
-    cpdef mat_conj(self, mat):
+    cpdef np.ndarray mat_conj(self, np.ndarray mat):
         return mat.conj()
 
-    cpdef mat_n(self, mat, prec=None, digits=None): # pylint: disable=W0613
+    cpdef np.ndarray mat_n(self, np.ndarray mat, prec=None, digits=None): # pylint: disable=W0613
         # arrays in this base field are already numeric
         return mat
 
-    cpdef mat_simplify(self, mat, full=False): # pylint: disable=W0613
+    cpdef np.ndarray mat_simplify(self, np.ndarray mat, full=False): # pylint: disable=W0613
         return mat
 
-    cpdef mat_expm(self, mat, q):
+    cpdef np.ndarray mat_expm(self, np.ndarray mat, q):
         import scipy.linalg
         return scipy.linalg.expm(mat, q)
 
-    cpdef mat_pow(self, mat, n):
+    cpdef np.ndarray mat_pow(self, np.ndarray mat, n):
         return mat**n
 
-    cpdef mat_svd(self, mat, full_matrices):
+    cpdef mat_svd(self, np.ndarray mat, full_matrices):
         # cast to complex in case we have symbolic vals from Sage
         (u, s, v) = np.linalg.svd(np.matrix(mat, dtype=complex), \
             full_matrices=full_matrices)
         return (u, s, v)
 
-    cpdef mat_svd_vals(self, mat):
+    cpdef mat_svd_vals(self, np.ndarray mat):
         # cast to complex in case we have symbolic vals from Sage
         (_u, s, _v) = np.linalg.svd(np.matrix(mat, dtype=complex), \
             full_matrices=False)
         return s
 
-    cpdef mat_eig(self, mat, hermit):
+    cpdef mat_eig(self, np.ndarray mat, cpython.bool hermit):
         eig_fn = np.linalg.eigh if hermit else np.linalg.eig
         # cast to complex in case we have symbolic vals from Sage
         (w, v) = eig_fn(np.matrix(mat, dtype=complex))
         return (w, v)
 
-    cpdef mat_eigvals(self, mat, hermit):
+    cpdef mat_eigvals(self, np.ndarray mat, cpython.bool hermit):
         eig_fn = np.linalg.eigvalsh if hermit else np.linalg.eigvals
         # cast to complex in case we have symbolic vals from Sage
         w = eig_fn(np.matrix(mat, dtype=complex))
         return w
 
-    cpdef mat_qr(self, mat):
+    cpdef mat_qr(self, np.ndarray mat):
         # cast to complex in case we have symbolic vals from Sage
         (q, r) = np.linalg.qr(np.matrix(mat, dtype=complex))
         return (q, r)

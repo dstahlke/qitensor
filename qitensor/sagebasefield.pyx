@@ -1,6 +1,8 @@
 #!/usr/bin/python
 
 import numpy as np
+cimport numpy as np
+cimport cpython
 
 import sage.all
 from qitensor.basefield import HilbertBaseField
@@ -32,7 +34,7 @@ cdef class SageHilbertBaseField(HilbertBaseField):
     def __reduce__(self):
         return _unreduce_v1, (self.sage_ring, )
 
-    cpdef sage_mat_xform(self, m, f):
+    cpdef np.ndarray sage_mat_xform(self, np.ndarray m, f):
         return self.matrix_sage_to_np(f(self.matrix_np_to_sage(m)))
 
     cpdef complex_unit(self):
@@ -53,15 +55,15 @@ cdef class SageHilbertBaseField(HilbertBaseField):
     cpdef xlog2x(self, x):
         return self.sage_ring(0 if x<=0 else x*sage.all.log(x)/sage.all.log2)
 
-    cpdef eye(self, size):
+    cpdef np.ndarray eye(self, long size):
         return np.array(sage.all.identity_matrix(self.sage_ring, size), dtype=self.dtype)
 
-    cpdef mat_n(self, m, prec=None, digits=None):
+    cpdef np.ndarray mat_n(self, np.ndarray m, prec=None, digits=None):
         return self.matrix_sage_to_np(self.matrix_np_to_sage(m).n(prec=prec, digits=digits))
         #return self.sage_mat_xform(m, \
         #    lambda x: x.n(prec=prec, digits=digits))
 
-    cpdef mat_simplify(self, m, full=False):
+    cpdef np.ndarray mat_simplify(self, np.ndarray m, full=False):
         if full:
             return self.matrix_sage_to_np(self.matrix_np_to_sage(m).simplify_full())
             #return m.apply_map(lambda x: x.simplify_full())
@@ -69,29 +71,29 @@ cdef class SageHilbertBaseField(HilbertBaseField):
             return self.matrix_sage_to_np(self.matrix_np_to_sage(m).simplify())
             #return m.apply_map(lambda x: x.simplify())
 
-    cpdef mat_adjoint(self, m):
+    cpdef np.ndarray mat_adjoint(self, np.ndarray m):
         return self.matrix_sage_to_np(self.matrix_np_to_sage(m).conjugate().transpose())
         #return self.sage_mat_xform(m, lambda x: x.conjugate().transpose())
 
-    cpdef mat_inverse(self, m):
+    cpdef np.ndarray mat_inverse(self, np.ndarray m):
         return self.matrix_sage_to_np(self.matrix_np_to_sage(m).inverse())
         #return self.sage_mat_xform(m, lambda x: x.inverse())
 
-    cpdef mat_det(self, m):
+    cpdef mat_det(self, np.ndarray m):
         return self.matrix_np_to_sage(m).det()
 
-    cpdef mat_norm(self, arr):
+    cpdef mat_norm(self, np.ndarray arr):
         return self.sqrt(np.sum(arr * np.conj(arr)))
 
-    cpdef mat_conj(self, m):
+    cpdef np.ndarray mat_conj(self, np.ndarray m):
         return self.matrix_sage_to_np(self.matrix_np_to_sage(m).conjugate())
         #return self.sage_mat_xform(m, lambda x: x.conjugate())
 
-    cpdef mat_pow(self, m, n):
+    cpdef np.ndarray mat_pow(self, np.ndarray m, n):
         return self.matrix_sage_to_np(self.matrix_np_to_sage(m) ** n)
         #return self.sage_mat_xform(m, lambda x: x**n)
 
-    cpdef mat_eig(self, m, hermit):
+    cpdef mat_eig(self, np.ndarray m, cpython.bool hermit):
         (w, v) = self.matrix_np_to_sage(m).eigenmatrix_right()
 
         # convert result to numpy
@@ -104,7 +106,7 @@ cdef class SageHilbertBaseField(HilbertBaseField):
 
         return (w, v)
 
-    cpdef mat_eigvals(self, m, hermit):
+    cpdef mat_eigvals(self, np.ndarray m, cpython.bool hermit):
         w = self.matrix_np_to_sage(m).eigenvalues()
         # convert result to numpy
         return np.array(w)

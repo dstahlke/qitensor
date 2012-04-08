@@ -6,7 +6,7 @@ import numpy as np
 
 from qitensor import *
 
-def random_channels(D=2, cnt=1000):
+def random_channels(D=2, cnt=3000):
     ha = qudit('a', D)
     hb = qudit('b', D)
     hc = qudit('c', D*D)
@@ -21,3 +21,15 @@ def random_channels(D=2, cnt=1000):
         accum += sigma
 
     return accum / cnt
+
+def orbit(D=2, cnt=50000):
+    ha = qudit('a', D)
+    hb = qudit('b', D)
+
+    x = (ha*hb).random_unitary()
+    y = (ha*hb).random_unitary()
+
+    for idx in xrange(cnt):
+        y *= x
+
+    return y

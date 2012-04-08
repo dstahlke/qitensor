@@ -20,7 +20,7 @@ def _unreduce_v1(label, latex_label, indices, group_op, base_field, is_dual, add
     This is the function that handles restoring a pickle.
     """
 
-    atom = base_field._atom_factory(label, latex_label, indices, group_op)
+    atom = _atom_factory(base_field, label, latex_label, indices, group_op)
     atom.addends = addends
     if atom.addends is not None:
         atom._create_addend_isoms()
@@ -30,7 +30,7 @@ def _unreduce_v1(label, latex_label, indices, group_op, base_field, is_dual, add
 cdef dict _atom_cache = dict()
 
 cpdef _cached_atom_factory(label, latex_label, indices, group_op, base_field):
-    """This should be called only by ``qitensor.factory._atom_factory``."""
+    """This should be called only by ``qitensor.atom._atom_factory``."""
 
     assert label is not None
     assert indices is not None
@@ -50,6 +50,19 @@ cpdef _cached_atom_factory(label, latex_label, indices, group_op, base_field):
             group_op, base_field, None)
         _atom_cache[key] = atom
     return _atom_cache[key]
+
+# FIXME - could just absorb _cached_atom_factory
+cpdef _atom_factory(base_field, label, latex_label, indices, group_op):
+    r"""
+    Factory method for creating ``HilbertAtom`` objects.
+
+    Subclasses can override this method in order to return custom
+    subclasses of ``HilbertAtom``.
+
+    Users should call methods in ``qitensor.factory`` instead.
+    """
+    return qitensor.atom._cached_atom_factory( \
+        label, latex_label, indices, group_op, base_field)
 
 cpdef _assert_all_compatible(collection):
     """
@@ -162,7 +175,7 @@ cdef class HilbertAtom(HilbertSpace):
         assert isinstance(other, HilbertAtom)
         return cmp(self.key, other.key)
 
-    cpdef _assert_compatible(self, other):
+    cpdef _assert_compatible(self, HilbertAtom other):
         """
         It is not allowed for HilbertAtom's with the same name but other
         properties different to be used together (leniency is given for
@@ -274,8 +287,9 @@ cdef class HilbertAtom(HilbertSpace):
             if self.is_dual:
                 self._prime = self.H.prime.H
             else:
-                self._prime = self.base_field._atom_factory(
-                    self.label+"'", "{"+self.latex_label+"}'", \
+                self._prime = _atom_factory(
+                    self.base_field,
+                    self.label+"'", "{"+self.latex_label+"}'",
                     self.indices, self.group_op)
         return self._prime
 

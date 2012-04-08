@@ -31,7 +31,3 @@ cdef class HilbertBaseField:
     cpdef mat_eig(self, mat, hermit)
     cpdef mat_eigvals(self, mat, hermit)
     cpdef mat_qr(self, mat)
-    cpdef create_space1(self, kets_and_bras)
-    cpdef create_space2(self, ket_set, bra_set)
-    cpdef _atom_factory(self, label, latex_label, indices, group_op)
-    cpdef _space_factory(self, ket_set, bra_set)

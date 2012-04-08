@@ -14,9 +14,13 @@ from qitensor.exceptions import DuplicatedSpaceError, HilbertError, \
     HilbertIndexError, HilbertShapeError, \
     NotKetSpaceError, MismatchedSpaceError
 from qitensor.space import HilbertSpace
+from qitensor.space cimport HilbertSpace
 from qitensor.atom import HilbertAtom
+from qitensor.atom cimport HilbertAtom
 from qitensor.arrayformatter import FORMATTER
 from qitensor.subspace import TensorSubspace
+from qitensor.space import create_space1, create_space2
+from qitensor.space cimport create_space1, create_space2
 
 __all__ = ['HilbertArray']
 
@@ -30,7 +34,7 @@ def _parse_space(s):
 
 
 cdef class HilbertArray:
-    def __init__(self, HilbertSpace space, data, cpython.bool noinit_data, cpython.bool reshape, tuple input_axes):
+    def __init__(self, HilbertSpace space, data, cpython.bool noinit_data, cpython.bool reshape, input_axes):
         """
         Don't call this constructor yourself, use HilbertSpace.array
 
@@ -328,9 +332,9 @@ cdef class HilbertArray:
 
             if not (ket1.isdisjoint(ket2) and bra1.isdisjoint(bra2)):
                 raise DuplicatedSpaceError(
-                    hs.base_field.create_space2(ket1 & ket2, bra1 & bra2))
+                    create_space2(ket1 & ket2, bra1 & bra2))
 
-            ret_space = hs.base_field.create_space2(ket1 | ket2, bra1 | bra2)
+            ret_space = create_space2(ket1 | ket2, bra1 | bra2)
             #print 'ret', ret_space
 
             ret = ret_space.array(None, True)
@@ -395,7 +399,7 @@ cdef class HilbertArray:
             else:
                 in_space_dualled.append(x)
 
-        out_space = self.space.base_field.create_space1(in_space_dualled)
+        out_space = create_space1(in_space_dualled)
 
         ret = out_space.array(noinit_data=True)
         permute = tuple([in_space_dualled.index(x) for x in ret.axes])
@@ -499,7 +503,7 @@ cdef class HilbertArray:
 
         xlate_list = [ mapping[x] if x in mapping else x for x in self.axes ]
         HilbertSpace._assert_nodup_space(xlate_list, "relabling would cause a duplicated space")
-        new_space = self.space.base_field.create_space1(xlate_list)
+        new_space = create_space1(xlate_list)
 
         return new_space.array(data=self.nparray, input_axes=xlate_list)
 
@@ -1025,7 +1029,7 @@ cdef class HilbertArray:
             return sliced
         else:
             assert len(sliced.shape) == len(out_axes)
-            ret = self.space.base_field.create_space1(out_axes). \
+            ret = create_space1(out_axes). \
                 array(noinit_data=True)
             permute = tuple([out_axes.index(x) for x in ret.axes])
             ret.nparray = sliced.transpose(permute)
@@ -1054,7 +1058,7 @@ cdef class HilbertArray:
         self._get_set_item(key, True, val)
 
     cpdef _space_string(self, spc_set):
-        return repr(self.space.base_field.create_space1(spc_set))
+        return repr(create_space1(spc_set))
 
     cpdef _get_row_col_spaces(self, row_space=None, col_space=None):
         """
@@ -1552,7 +1556,7 @@ cdef class HilbertArray:
                 # arr should be a scalar
                 working = arr
             else:
-                out_space = self.space.base_field.create_space1(out_space)
+                out_space = create_space1(out_space)
                 working = out_space.array(arr)
 
         return working

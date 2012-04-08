@@ -3,6 +3,7 @@ cimport cpython
 from qitensor.space cimport HilbertSpace
 
 cpdef _cached_atom_factory(label, latex_label, indices, group_op, base_field)
+cpdef _atom_factory(base_field, label, latex_label, indices, group_op)
 cpdef _assert_all_compatible(collection)
 
 cdef class HilbertAtom(HilbertSpace):
@@ -16,7 +17,7 @@ cdef class HilbertAtom(HilbertSpace):
     cdef readonly HilbertAtom _prime
 
     cpdef _mycmp(self, other)
-    cpdef _assert_compatible(self, other)
+    cpdef _assert_compatible(self, HilbertAtom other)
     cpdef ket(self, idx)
     cpdef bra(self, idx)
     cpdef fourier_basis_state(self, k)

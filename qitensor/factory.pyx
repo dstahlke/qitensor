@@ -6,6 +6,8 @@ package.
 
 from qitensor import have_sage
 from qitensor.basefield import HilbertBaseField
+import qitensor.atom
+cimport qitensor.atom
 
 __all__ = ['base_field_lookup', 'indexed_space', 'qubit', 'qudit']
 
@@ -158,7 +160,7 @@ cpdef indexed_space(label, indices, dtype=complex, latex_label=None, group_op=No
     if group_op is None:
         group_op = GroupOpTimes_factory()
 
-    return field._atom_factory(label, latex_label, indices, group_op)
+    return qitensor.atom._atom_factory(field, label, latex_label, indices, group_op)
 
 cpdef qudit(label, dim, dtype=complex, latex_label=None):
     r"""

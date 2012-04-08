@@ -15,8 +15,6 @@ import numpy.random
 import numpy.linalg
 
 from qitensor.exceptions import HilbertError, MismatchedSpaceError
-import qitensor.atom
-import qitensor.space
 from qitensor.array import HilbertArray
 from qitensor.arrayformatter import FORMATTER
 
@@ -177,78 +175,3 @@ cdef class HilbertBaseField:
         # cast to complex in case we have symbolic vals from Sage
         (q, r) = np.linalg.qr(np.matrix(mat, dtype=complex))
         return (q, r)
-
-    cpdef create_space1(self, kets_and_bras):
-        r"""
-        Creates a ``HilbertSpace`` from a collection of ``HilbertAtom`` objects.
-
-        This provides an alternative to using the multiplication operator
-        to combine ``HilbertAtom`` objects.
-
-        :param kets_and_bras: a collection of ``HilbertAtom`` objects
-
-        >>> from qitensor import qubit
-        >>> ha = qubit('a')
-        >>> hb = qubit('b')
-        >>> field = ha.base_field
-        >>> ha * hb == field.create_space1([ha, hb])
-        True
-        >>> ha.H * hb == field.create_space1([ha.H, hb])
-        True
-        """
-        return self.create_space2(
-            frozenset([x for x in kets_and_bras if not x.is_dual]),
-            frozenset([x for x in kets_and_bras if x.is_dual]))
-
-    cpdef create_space2(self, ket_set, bra_set):
-        r"""
-        Creates a ``HilbertSpace`` from frozensets of ``HilbertAtom`` kets and bras.
-
-        This provides an alternative to using the multiplication operator
-        to combine ``HilbertAtom`` objects.
-
-        :param ket_set: a collection of ``HilbertAtom`` objects for which ``is_dual==False``
-        :param bra_set: a collection of ``HilbertAtom`` objects for which ``is_dual==True``
-
-        >>> from qitensor import qubit
-        >>> ha = qubit('a')
-        >>> hb = qubit('b')
-        >>> field = ha.base_field
-        >>> ha * hb == field.create_space2(frozenset([ha, hb]), frozenset())
-        True
-        >>> ha.H * hb == field.create_space2(frozenset([hb]), frozenset([ha.H]))
-        True
-        """
-
-        # Just return the atoms if possible:
-        if not ket_set and not bra_set:
-            raise HilbertError('tried to create empty HilbertSpace')
-        elif len(ket_set) == 1 and not bra_set:
-            return ket_set.__iter__().next()
-        elif not ket_set and len(bra_set) == 1:
-            return bra_set.__iter__().next()
-        else:
-            return self._space_factory(ket_set, bra_set)
-
-    cpdef _atom_factory(self, label, latex_label, indices, group_op):
-        r"""
-        Factory method for creating ``HilbertAtom`` objects.
-
-        Subclasses can override this method in order to return custom
-        subclasses of ``HilbertAtom``.
-
-        Users should call methods in ``qitensor.factory`` instead.
-        """
-        return qitensor.atom._cached_atom_factory( \
-            label, latex_label, indices, group_op, self)
-
-    cpdef _space_factory(self, ket_set, bra_set):
-        r"""
-        Factory method for creating ``HilbertSpace`` objects.
-
-        Subclasses can override this method in order to return custom
-        subclasses of ``HilbertSpace``.
-
-        Users shouldn't call this function.
-        """
-        return qitensor.space._cached_space_factory(ket_set, bra_set)

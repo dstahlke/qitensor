@@ -25,7 +25,7 @@ def _unreduce_v1(ket_set, bra_set):
     """
 
     base_field = list(ket_set | bra_set)[0].base_field
-    return base_field._space_factory(ket_set, bra_set)
+    return _space_factory(ket_set, bra_set)
 
 #_space_cache = weakref.WeakValueDictionary()
 cdef dict _space_cache = dict()
@@ -42,6 +42,67 @@ cpdef _cached_space_factory(ket_set, bra_set):
         spc = HilbertSpace(ket_set, bra_set)
         _space_cache[key] = spc
     return _space_cache[key]
+
+cpdef create_space1(kets_and_bras):
+    r"""
+    Creates a ``HilbertSpace`` from a collection of ``HilbertAtom`` objects.
+
+    This provides an alternative to using the multiplication operator
+    to combine ``HilbertAtom`` objects.
+
+    :param kets_and_bras: a collection of ``HilbertAtom`` objects
+
+    >>> from qitensor import qubit
+    >>> ha = qubit('a')
+    >>> hb = qubit('b')
+    >>> ha * hb == create_space1([ha, hb])
+    True
+    >>> ha.H * hb == create_space1([ha.H, hb])
+    True
+    """
+    return create_space2(
+        frozenset([x for x in kets_and_bras if not x.is_dual]),
+        frozenset([x for x in kets_and_bras if x.is_dual]))
+
+cpdef create_space2(frozenset ket_set, frozenset bra_set):
+    r"""
+    Creates a ``HilbertSpace`` from frozensets of ``HilbertAtom`` kets and bras.
+
+    This provides an alternative to using the multiplication operator
+    to combine ``HilbertAtom`` objects.
+
+    :param ket_set: a collection of ``HilbertAtom`` objects for which ``is_dual==False``
+    :param bra_set: a collection of ``HilbertAtom`` objects for which ``is_dual==True``
+
+    >>> from qitensor import qubit
+    >>> ha = qubit('a')
+    >>> hb = qubit('b')
+    >>> ha * hb == create_space2(frozenset([ha, hb]), frozenset())
+    True
+    >>> ha.H * hb == create_space2(frozenset([hb]), frozenset([ha.H]))
+    True
+    """
+
+    # Just return the atoms if possible:
+    if not ket_set and not bra_set:
+        raise HilbertError('tried to create empty HilbertSpace')
+    elif len(ket_set) == 1 and not bra_set:
+        return ket_set.__iter__().next()
+    elif not ket_set and len(bra_set) == 1:
+        return bra_set.__iter__().next()
+    else:
+        return _space_factory(ket_set, bra_set)
+
+cpdef _space_factory(ket_set, bra_set):
+    r"""
+    Factory method for creating ``HilbertSpace`` objects.
+
+    Subclasses can override this method in order to return custom
+    subclasses of ``HilbertSpace``.
+
+    Users shouldn't call this function.
+    """
+    return qitensor.space._cached_space_factory(ket_set, bra_set)
 
 cdef class HilbertSpace:
     def __init__(self, ket_set, bra_set, _H=None):
@@ -169,7 +230,7 @@ cdef class HilbertSpace:
         if dupes:
             common_kets = frozenset(x for x in dupes if not x.is_dual)
             common_bras = frozenset(x for x in dupes if x.is_dual)
-            spc = list(dupes)[0].base_field.create_space2(common_kets, common_bras)
+            spc = create_space2(common_kets, common_bras)
             raise DuplicatedSpaceError(spc, msg)
 
     cpdef bra_space(self):
@@ -186,7 +247,7 @@ cdef class HilbertSpace:
         >>> sp.bra_space()
         <a,c|
         """
-        return self.base_field.create_space2(frozenset(), self.bra_set)
+        return create_space2(frozenset(), self.bra_set)
 
     cpdef ket_space(self):
         """
@@ -202,7 +263,7 @@ cdef class HilbertSpace:
         >>> sp.ket_space()
         |b,c>
         """
-        return self.base_field.create_space2(self.ket_set, frozenset())
+        return create_space2(self.ket_set, frozenset())
 
     cpdef is_symmetric(self):
         """
@@ -291,7 +352,7 @@ cdef class HilbertSpace:
         |a,b><c|
         """
         if self._H is None:
-            self._H = self.base_field.create_space1(
+            self._H = create_space1(
                 [x.H for x in self.bra_ket_set])
         return self._H
 
@@ -410,8 +471,8 @@ cdef class HilbertSpace:
         common_bras = self.bra_set & other.bra_set
         if common_kets or common_bras:
             raise DuplicatedSpaceError(
-                self.base_field.create_space2(common_kets, common_bras))
-        return self.base_field.create_space1(
+                create_space2(common_kets, common_bras))
+        return create_space1(
             self.bra_ket_set | other.bra_ket_set)
 
     def __rmul__(self, other):
@@ -516,7 +577,7 @@ cdef class HilbertSpace:
 
         return self.array(m, reshape=True, input_axes=input_axes)
 
-    cpdef array(self, data=None, cpython.bool noinit_data=False, cpython.bool reshape=False, tuple input_axes=None):
+    cpdef array(self, data=None, cpython.bool noinit_data=False, cpython.bool reshape=False, input_axes=None):
         """
         Returns a ``HilbertArray`` created from the given data, or filled with
         zeros if no data is given.

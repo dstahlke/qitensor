@@ -12,7 +12,7 @@ cdef class HilbertArray:
     cpdef get_dim(self, atom)
     cpdef _assert_same_axes(self, other)
     cpdef set_data(self, new_data)
-    cpdef tensordot(self, other, contraction_spaces=*)
+    cpdef tensordot(self, HilbertArray other, contraction_spaces=*)
     cpdef transpose(self, tpose_axes=*)
     cpdef relabel(self, from_spaces, to_spaces=*)
     cpdef relabel_prime(self)

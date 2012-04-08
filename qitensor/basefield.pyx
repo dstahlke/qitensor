@@ -56,7 +56,7 @@ cdef class HilbertBaseField:
 
         return _unreduce_v1, (self.dtype, )
 
-    cpdef assert_same(self, other):
+    cpdef assert_same(self, HilbertBaseField other):
         """
         Asserts that this object is the same as other.
         """
@@ -252,14 +252,3 @@ cdef class HilbertBaseField:
         Users shouldn't call this function.
         """
         return qitensor.space._cached_space_factory(ket_set, bra_set)
-
-    cpdef _array_factory(self, space, data, noinit_data, reshape, input_axes):
-        r"""
-        Factory method for creating ``HilbertArray`` objects.
-
-        Subclasses can override this method in order to return custom
-        subclasses of ``HilbertArray``.
-
-        Users shouldn't call this function.
-        """
-        return HilbertArray(space, data, noinit_data, reshape, input_axes)

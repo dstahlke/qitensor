@@ -7,6 +7,7 @@ numpy.array.  HilbertArray's are to be created using the
 """
 
 import numpy as np
+cimport cpython
 
 from qitensor import have_sage, _shape_product
 from qitensor.exceptions import DuplicatedSpaceError, HilbertError, \
@@ -29,7 +30,7 @@ def _parse_space(s):
 
 
 cdef class HilbertArray:
-    def __init__(self, space, data, noinit_data, reshape, input_axes):
+    def __init__(self, HilbertSpace space, data, cpython.bool noinit_data, cpython.bool reshape, tuple input_axes):
         """
         Don't call this constructor yourself, use HilbertSpace.array
 
@@ -203,7 +204,7 @@ cdef class HilbertArray:
             # This is needed to make slices work properly
             self.nparray[:] = new_data
 
-    cpdef tensordot(self, other, contraction_spaces=None):
+    cpdef tensordot(self, HilbertArray other, contraction_spaces=None):
         """
         Inner or outer product of two arrays.
 
@@ -249,8 +250,8 @@ cdef class HilbertArray:
         True
         """
 
-        hs = self.space
-        ohs = other.space
+        cdef HilbertSpace hs = self.space
+        cdef HilbertSpace ohs = other.space
         #print str(hs)+'*'+str(ohs)
 
         hs.base_field.assert_same(ohs.base_field)
@@ -259,6 +260,7 @@ cdef class HilbertArray:
         if (contraction_spaces is None) and (hs._is_simple_dyad) and (hs == ohs) and (hs == hs.H):
             return self.space.array(np.dot(self.nparray, other.nparray))
 
+        cdef frozenset mul_space
         if contraction_spaces is None:
             mul_space = frozenset([x.H for x in hs.bra_set]) & ohs.ket_set
         elif isinstance(contraction_spaces, frozenset):
@@ -282,14 +284,14 @@ cdef class HilbertArray:
             assert isinstance(x, HilbertAtom)
             assert not x.is_dual
 
-        mul_H = frozenset([x.H for x in mul_space])
+        cdef frozenset mul_H = frozenset([x.H for x in mul_space])
         #print mul_space
 
-        mul_space_sorted = sorted(mul_space)
-        axes_self  = [self.get_dim(x.H) for x in mul_space_sorted]
-        axes_other = [other.get_dim(x)  for x in mul_space_sorted]
+        cdef list mul_space_sorted = sorted(mul_space)
+        cdef list axes_self  = [self.get_dim(x.H) for x in mul_space_sorted]
+        cdef list axes_other = [other.get_dim(x)  for x in mul_space_sorted]
         #print axes_self, axes_other
-        td = np.tensordot(self.nparray, other.nparray,
+        cdef np.ndarray td = np.tensordot(self.nparray, other.nparray,
             axes=(axes_self, axes_other))
         assert td.dtype == hs.base_field.dtype
 
@@ -299,14 +301,21 @@ cdef class HilbertArray:
         #print "ohs.b", ohs.sorted_bras
         #print "cH", mul_H
         #print "c", mul_space
-        td_axes = \
+        cdef list td_axes = \
             hs.sorted_kets + \
             [x for x in hs.sorted_bras if not x in mul_H] + \
             [x for x in ohs.sorted_kets if not x in mul_space] + \
             ohs.sorted_bras
         #print td_axes
         #print td.shape
-        assert len(td_axes) == len(td.shape)
+        assert len(td_axes) == td.ndim
+
+        cdef:
+            frozenset ket1
+            frozenset ket2
+            frozenset bra1
+            frozenset bra2
+            HilbertSpace ret_space
 
         if len(td_axes) == 0:
             # convert 0-d array to scalar
@@ -324,11 +333,10 @@ cdef class HilbertArray:
             ret_space = hs.base_field.create_space2(ket1 | ket2, bra1 | bra2)
             #print 'ret', ret_space
 
-            ret = ret_space.array(noinit_data=True)
+            ret = ret_space.array(None, True)
             #print "ret", ret.axes
-            permute = tuple([td_axes.index(x) for x in ret.axes])
-            #print permute
-            ret.nparray = td.transpose(permute)
+            ret.nparray = td.transpose( \
+                tuple([td_axes.index(x) for x in ret.axes]))
 
             return ret
 

@@ -1,4 +1,5 @@
 cimport cpython
+cimport numpy as np
 
 cpdef _cached_space_factory(ket_set, bra_set)
 
@@ -27,7 +28,7 @@ cdef class HilbertSpace(object):
     cpdef assert_square(self)
     cpdef diag(self, v)
     cpdef reshaped_np_matrix(self, m, input_axes=*)
-    cpdef array(self, data=*, noinit_data=*, reshape=*, input_axes=*)
+    cpdef array(self, data=*, cpython.bool noinit_data=*, cpython.bool reshape=*, tuple input_axes=*)
     cpdef random_array(self)
     cpdef random_unitary(self)
     cpdef random_isometry(self)

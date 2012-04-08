@@ -14,6 +14,8 @@ from qitensor.exceptions import DuplicatedSpaceError, HilbertError, \
 import qitensor.atom
 from qitensor.arrayformatter import FORMATTER
 from qitensor.subspace import TensorSubspace
+from qitensor.array import HilbertArray
+from qitensor.array cimport HilbertArray
 
 __all__ = ['HilbertSpace']
 
@@ -514,7 +516,7 @@ cdef class HilbertSpace:
 
         return self.array(m, reshape=True, input_axes=input_axes)
 
-    cpdef array(self, data=None, noinit_data=False, reshape=False, input_axes=None):
+    cpdef array(self, data=None, cpython.bool noinit_data=False, cpython.bool reshape=False, tuple input_axes=None):
         """
         Returns a ``HilbertArray`` created from the given data, or filled with
         zeros if no data is given.
@@ -551,7 +553,7 @@ cdef class HilbertSpace:
         :param input_axes: Tells how the axes map to the space.  Default is
             lexicographically based upon the names of the HilbertAtoms (it
             is not recommended to rely on this ordering).
-        :type input_axes: list of HilbertAtoms
+        :type input_axes: tuple of HilbertAtoms
 
         >>> from qitensor import qubit, qudit
         >>> ha = qubit('a')
@@ -594,8 +596,7 @@ cdef class HilbertSpace:
         (3+0j)
         """
 
-        return self.base_field._array_factory( \
-            self, data, noinit_data, reshape, input_axes)
+        return HilbertArray(self, data, noinit_data, reshape, input_axes)
 
     cpdef random_array(self):
         """

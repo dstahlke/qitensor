@@ -5,7 +5,7 @@ cdef class HilbertBaseField:
     cdef readonly unique_id
     cdef readonly sage_ring
 
-    cpdef assert_same(self, other)
+    cpdef assert_same(self, HilbertBaseField other)
     cpdef matrix_np_to_sage(self, np_mat, R=*)
     cpdef matrix_sage_to_np(self, sage_mat)
     cpdef latex_formatter(self, data, dollar_if_tex)
@@ -35,4 +35,3 @@ cdef class HilbertBaseField:
     cpdef create_space2(self, ket_set, bra_set)
     cpdef _atom_factory(self, label, latex_label, indices, group_op)
     cpdef _space_factory(self, ket_set, bra_set)
-    cpdef _array_factory(self, space, data, noinit_data, reshape, input_axes)

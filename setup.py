@@ -63,6 +63,7 @@ for e in ext_modules:
     e.depends = [
         "qitensor/atom.pxd",
         "qitensor/space.pxd",
+        "qitensor/array.pxd",
     ]
 
 setup(

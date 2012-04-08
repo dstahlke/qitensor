@@ -28,11 +28,7 @@ def _parse_space(s):
         return sum((_parse_space(x) for x in s), [])
 
 
-cdef class HilbertArray(object):
-    cdef readonly space
-    cdef readonly axes
-    cdef public nparray
-
+cdef class HilbertArray:
     def __init__(self, space, data, noinit_data, reshape, input_axes):
         """
         Don't call this constructor yourself, use HilbertSpace.array
@@ -77,12 +73,12 @@ cdef class HilbertArray(object):
 
             # make sure given array is the right size
             if reshape:
-                if _shape_product(self.nparray.shape) != _shape_product(data_shape):
+                if _shape_product(np.shape(self.nparray)) != _shape_product(data_shape):
                     raise HilbertShapeError(_shape_product(data.shape),
                         _shape_product(data_shape))
                 self.nparray = self.nparray.reshape(data_shape)
-            if self.nparray.shape != data_shape:
-                raise HilbertShapeError(self.nparray.shape, data_shape)
+            if np.shape(self.nparray) != data_shape:
+                raise HilbertShapeError(np.shape(self.nparray), data_shape)
 
             if input_axes is not None:
                 assert frozenset(input_axes) == frozenset(self.axes)
@@ -1005,7 +1001,8 @@ cdef class HilbertArray(object):
             else:
                 slice_list.append(slice(None))
                 out_axes.append(x)
-        assert len(slice_list) == len(self.nparray.shape)
+        # FIXME - equivalent to len(self.axes) ???
+        assert len(slice_list) == len(np.shape(self.nparray))
 
         if do_set and len(out_axes) == 0:
             # must do assignment like this, since in the 1-d case numpy will

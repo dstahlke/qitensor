@@ -25,9 +25,6 @@ space tensor product structure.
 
 __version__ = "0.8.1"
 
-import numpy as np
-import operator
-
 ########################################
 
 try:
@@ -35,22 +32,6 @@ try:
     have_sage = True
 except ImportError:
     have_sage = False
-
-########################################
-
-def _shape_product(l):
-    """
-    Multiplies a tuple of integers together.
-
-    Used to convert shape to dimension.
-
-    >>> from qitensor import _shape_product
-    >>> _shape_product((1,2,3,4))
-    24
-    """
-
-    # faster than np.prod(l, dtype=int)
-    return reduce(operator.mul, l, 1)
 
 ########################################
 

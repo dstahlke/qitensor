@@ -29,29 +29,6 @@ def _unreduce_v1(label, latex_label, indices, group_op, base_field, is_dual, add
 #_atom_cache = weakref.WeakValueDictionary()
 cdef dict _atom_cache = dict()
 
-cpdef _cached_atom_factory(label, latex_label, indices, group_op, base_field):
-    """This should be called only by ``qitensor.atom._atom_factory``."""
-
-    assert label is not None
-    assert indices is not None
-    assert group_op is not None
-
-    if latex_label is None:
-        latex_label = label
-
-    label = str(label)
-    latex_label = str(latex_label)
-    indices = tuple(indices)
-
-    key = (label, latex_label, indices, group_op, base_field)
-
-    if not _atom_cache.has_key(key):
-        atom = HilbertAtom(label, latex_label, indices, \
-            group_op, base_field, None)
-        _atom_cache[key] = atom
-    return _atom_cache[key]
-
-# FIXME - could just absorb _cached_atom_factory
 cpdef _atom_factory(base_field, label, latex_label, indices, group_op):
     r"""
     Factory method for creating ``HilbertAtom`` objects.
@@ -61,8 +38,26 @@ cpdef _atom_factory(base_field, label, latex_label, indices, group_op):
 
     Users should call methods in ``qitensor.factory`` instead.
     """
-    return qitensor.atom._cached_atom_factory( \
-        label, latex_label, indices, group_op, base_field)
+
+    assert label is not None
+    assert indices is not None
+    assert group_op is not None
+
+    if latex_label is None:
+        latex_label = label
+
+    # convert to proper types
+    cdef str _label = str(label)
+    cdef str _latex_label = str(latex_label)
+    cdef tuple _indices = tuple(indices)
+
+    cdef tuple key = (_label, _latex_label, _indices, group_op, base_field)
+
+    if not _atom_cache.has_key(key):
+        atom = HilbertAtom(_label, _latex_label, _indices, \
+            group_op, base_field, None)
+        _atom_cache[key] = atom
+    return _atom_cache[key]
 
 cpdef _assert_all_compatible(collection):
     """
@@ -92,7 +87,7 @@ cpdef _assert_all_compatible(collection):
             group[0]._assert_compatible(atom)
 
 cdef class HilbertAtom(HilbertSpace):
-    def __init__(self, label, latex_label, indices, group_op, base_field, dual):
+    def __init__(self, str label, str latex_label, tuple indices, group_op, base_field, dual):
         """
         Users should not call this constructor directly, rather use the
         methods in qitensor.factory.
@@ -115,11 +110,6 @@ cdef class HilbertAtom(HilbertSpace):
         assert latex_label is not None
         assert indices is not None
         assert group_op is not None
-
-        # cast to appropriate types so static typing can be used
-        label = str(label)
-        latex_label = str(latex_label)
-        indices = tuple(indices)
 
         # (Sphinx docstrings)
         #: The text label for this atom (gets displayed as ``|label>`` or ``<label|``).

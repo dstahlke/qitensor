@@ -1,9 +1,9 @@
 cimport cpython
 cimport numpy as np
 
-cpdef _cached_space_factory(ket_set, bra_set)
 cpdef create_space1(kets_and_bras)
 cpdef create_space2(frozenset ket_set, frozenset bra_set)
+cpdef long _shape_product(l)
 
 cdef class HilbertSpace(object):
     cdef HilbertSpace _H

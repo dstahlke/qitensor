@@ -9,12 +9,12 @@ numpy.array.  HilbertArray's are to be created using the
 import numpy as np
 cimport cpython
 
-from qitensor import have_sage, _shape_product
+from qitensor import have_sage
 from qitensor.exceptions import DuplicatedSpaceError, HilbertError, \
     HilbertIndexError, HilbertShapeError, \
     NotKetSpaceError, MismatchedSpaceError
-from qitensor.space import HilbertSpace
-from qitensor.space cimport HilbertSpace
+from qitensor.space import HilbertSpace, _shape_product
+from qitensor.space cimport HilbertSpace, _shape_product
 from qitensor.atom import HilbertAtom
 from qitensor.atom cimport HilbertAtom
 from qitensor.arrayformatter import FORMATTER
@@ -84,7 +84,7 @@ cdef class HilbertArray:
 
             # make sure given array is the right size
             if reshape:
-                if _shape_product(np.shape(self.nparray)) != _shape_product(data_shape):
+                if self.nparray.size != _shape_product(data_shape):
                     raise HilbertShapeError(_shape_product(data.shape),
                         _shape_product(data_shape))
                 self.nparray = self.nparray.reshape(data_shape)
@@ -1025,8 +1025,7 @@ cdef class HilbertArray:
             else:
                 slice_list.append(slice(None))
                 out_axes.append(x)
-        # FIXME - equivalent to len(self.axes) ???
-        assert len(slice_list) == len(np.shape(self.nparray))
+        assert len(slice_list) == self.nparray.ndim
 
         if do_set and len(out_axes) == 0:
             # must do assignment like this, since in the 1-d case numpy will

@@ -2,7 +2,6 @@ cimport cpython
 
 from qitensor.space cimport HilbertSpace
 
-cpdef _cached_atom_factory(label, latex_label, indices, group_op, base_field)
 cpdef _atom_factory(base_field, label, latex_label, indices, group_op)
 cpdef _assert_all_compatible(collection)
 

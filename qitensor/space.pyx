@@ -6,9 +6,11 @@ multiplication operator to HilbertAtoms or other HilbertSpaces.
 
 import numpy as np
 import itertools
+import operator
+
 #import weakref
 
-from qitensor import have_sage, _shape_product
+from qitensor import have_sage
 from qitensor.exceptions import DuplicatedSpaceError, HilbertError, \
     HilbertError, HilbertShapeError, NotKetSpaceError
 import qitensor.atom
@@ -30,17 +32,22 @@ def _unreduce_v1(ket_set, bra_set):
 #_space_cache = weakref.WeakValueDictionary()
 cdef dict _space_cache = dict()
 
-cpdef _cached_space_factory(ket_set, bra_set):
-    """This should be called only by ``qitensor.factory._space_factory``."""
+cpdef _space_factory(frozenset ket_set, frozenset bra_set):
+    r"""
+    Factory method for creating ``HilbertSpace`` objects.
 
-    assert isinstance(ket_set, frozenset)
-    assert isinstance(bra_set, frozenset)
+    Subclasses can override this method in order to return custom
+    subclasses of ``HilbertSpace``.
 
-    key = (ket_set, bra_set)
+    Users shouldn't call this function.
+    """
+
+    cdef tuple key = (ket_set, bra_set)
 
     if not _space_cache.has_key(key):
         spc = HilbertSpace(ket_set, bra_set)
         _space_cache[key] = spc
+
     return _space_cache[key]
 
 cpdef create_space1(kets_and_bras):
@@ -93,22 +100,26 @@ cpdef create_space2(frozenset ket_set, frozenset bra_set):
     else:
         return _space_factory(ket_set, bra_set)
 
-cpdef _space_factory(ket_set, bra_set):
-    r"""
-    Factory method for creating ``HilbertSpace`` objects.
-
-    Subclasses can override this method in order to return custom
-    subclasses of ``HilbertSpace``.
-
-    Users shouldn't call this function.
+cpdef long _shape_product(l):
     """
-    return qitensor.space._cached_space_factory(ket_set, bra_set)
+    Multiplies a tuple of integers together.
+
+    Used to convert shape to dimension.
+
+    >>> from qitensor import _shape_product
+    >>> _shape_product((1,2,3,4))
+    24
+    """
+
+    # faster than np.prod(l, dtype=int)
+    return reduce(operator.mul, l, 1)
+
+########################################
 
 cdef class HilbertSpace:
     def __init__(self, ket_set, bra_set, _H=None):
         """
-        Constructor should only be called from :meth:`_cached_space_factory` or
-        subclasses.
+        Constructor should only be called from :meth:`_space_factory`.
 
         >>> from qitensor import qubit, qudit
         >>> ha = qubit('a'); ha
@@ -219,9 +230,10 @@ cdef class HilbertSpace:
         DuplicatedSpaceError: 'oops: |c>'
         """
 
-        # FIXME - use this more often
-        seen = set()
-        dupes = set()
+        # FIXME - use this function more often
+
+        cdef set seen = set()
+        cdef set dupes = set()
         for s in cls._expand_list_to_atoms(spaces):
             assert isinstance(s, qitensor.atom.HilbertAtom)
             if s in seen:

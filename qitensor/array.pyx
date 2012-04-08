@@ -1,3 +1,5 @@
+#cython: nonecheck=True
+
 """
 A HilbertArray is a vector in a HilbertSpace.  Internally, it is backed by a
 numpy.array.  HilbertArray's are to be created using the
@@ -17,7 +19,41 @@ from qitensor.subspace import TensorSubspace
 
 __all__ = ['HilbertArray']
 
-class HilbertArray(object):
+# These functions are here because Cython doesn't yet support closures.
+
+def _parse_space(s):
+    if s is None:
+        return None
+    elif isinstance(s, HilbertSpace):
+        return s.sorted_kets + s.sorted_bras
+    else:
+        return sum((_parse_space(x) for x in s), [])
+
+def _do_pinv(self, rcond):
+    return self.np_matrix_transform( \
+        lambda x: self.space.base_field.mat_pinv(x, rcond), \
+        transpose_dims=True)
+
+def _do_expm(self, q):
+    return self.np_matrix_transform( \
+        lambda x: self.space.base_field.mat_expm(x, q))
+
+def _do_pow(self, other):
+    return self.np_matrix_transform( \
+        lambda x: self.space.base_field.mat_pow(x, other))
+
+def _do_T(x):
+    return x.T
+
+def _do_n(self, prec, digits):
+    return self.np_matrix_transform( \
+        lambda x: self.space.base_field.mat_n(x, prec, digits))
+
+cdef class HilbertArray(object):
+    cdef readonly space
+    cdef readonly axes
+    cdef public nparray
+
     def __init__(self, space, data, noinit_data, reshape, input_axes):
         """
         Don't call this constructor yourself, use HilbertSpace.array
@@ -79,7 +115,7 @@ class HilbertArray(object):
             if cast_fn is not None:
                 self.nparray = np.vectorize(cast_fn)(self.nparray)
 
-    def copy(self):
+    cpdef copy(self):
         """
         Creates a copy (not a view) of this array.
 
@@ -102,7 +138,7 @@ class HilbertArray(object):
         ret.nparray = self.nparray.copy()
         return ret
 
-    def _reassign(self, other):
+    cpdef _reassign(self, other):
         """
         Used internally to change the contents of a HilbertArray without creating a new object.
 
@@ -120,7 +156,7 @@ class HilbertArray(object):
         self.nparray = other.nparray
         self.axes = other.axes
 
-    def get_dim(self, atom):
+    cpdef get_dim(self, atom):
         """
         Returns the axis corresponding to the given HilbertAtom.
 
@@ -140,7 +176,7 @@ class HilbertArray(object):
 
         return self.space._array_axes_lookup[atom]
 
-    def _assert_same_axes(self, other):
+    cpdef _assert_same_axes(self, other):
         """
         Throws an exception if self.axes != other.axes.  Used when determining whether
         two arrays are compatible for certain operations (such as addition).
@@ -162,7 +198,7 @@ class HilbertArray(object):
             raise MismatchedSpaceError('Mismatched HilbertSpaces: '+
                 repr(self.space)+' vs. '+repr(other.space))
 
-    def set_data(self, new_data):
+    cpdef set_data(self, new_data):
         """
         Sets this array equal to the given argument.
 
@@ -192,7 +228,7 @@ class HilbertArray(object):
             # This is needed to make slices work properly
             self.nparray[:] = new_data
 
-    def tensordot(self, other, contraction_spaces=None):
+    cpdef tensordot(self, other, contraction_spaces=None):
         """
         Inner or outer product of two arrays.
 
@@ -321,7 +357,7 @@ class HilbertArray(object):
 
             return ret
 
-    def transpose(self, tpose_axes=None):
+    cpdef transpose(self, tpose_axes=None):
         """
         Perform a transpose or partial transpose operation.
 
@@ -384,7 +420,7 @@ class HilbertArray(object):
 
         return ret
 
-    def relabel(self, from_spaces, to_spaces=None):
+    cpdef relabel(self, from_spaces, to_spaces=None):
         """
         Returns a HilbertArray with the same data as this one, but with axes relabelled.
 
@@ -484,7 +520,7 @@ class HilbertArray(object):
 
         return new_space.array(data=self.nparray, input_axes=xlate_list)
 
-    def relabel_prime(self):
+    cpdef relabel_prime(self):
         """
         Returns a relabeled array with primed spaces.
 
@@ -502,7 +538,7 @@ class HilbertArray(object):
 
         return self.relabel(self.axes, [x.prime for x in self.axes])
 
-    def apply_map(self, fn):
+    cpdef apply_map(self, fn):
         """
         Apply the given function to each element of the array.
 
@@ -518,7 +554,7 @@ class HilbertArray(object):
         arr = np.vectorize(fn, otypes=[dtype])(self.nparray)
         return self.space.array(arr)
 
-    def closeto(self, other, rtol=1e-05, atol=1e-08):
+    cpdef closeto(self, other, rtol=1e-05, atol=1e-08):
         """
         Checks whether two arrays are nearly equal, similar to numpy.allclose.
 
@@ -541,7 +577,7 @@ class HilbertArray(object):
         self._assert_same_axes(other)
         return np.allclose(self.nparray, other.nparray, rtol=rtol, atol=atol)
 
-    def __eq__(self, other):
+    def __richcmp__(self, other, op):
         """
         Checks whether two arrays are equal.
 
@@ -558,24 +594,6 @@ class HilbertArray(object):
         True
         >>> x == x.relabel({ ha: hb })
         False
-        """
-
-        if not isinstance(other, HilbertArray):
-            return False
-        elif self.space != other.space:
-            return False
-        else:
-            return np.all(self.nparray == other.nparray)
-
-    def __ne__(self, other):
-        """
-        Checks whether two arrays are not equal.
-
-        >>> from qitensor import qudit
-        >>> ha = qudit('a', 10)
-        >>> hb = qudit('b', 10)
-        >>> x = ha.array()
-        >>> y = ha.random_array()
         >>> x != x or y != y
         False
         >>> x != y
@@ -586,9 +604,21 @@ class HilbertArray(object):
         True
         """
 
-        return not (self == other)
+        if not isinstance(other, HilbertArray):
+            eq = False
+        elif self.space != other.space:
+            eq = False
+        else:
+            eq = np.all(self.nparray == other.nparray)
 
-    def lmul(self, other):
+        if op == 2:
+            return eq
+        elif op == 3:
+            return not eq
+        else:
+            raise NotImplementedError()
+
+    cpdef lmul(self, other):
         """
         Returns other*self.
 
@@ -877,18 +907,18 @@ class HilbertArray(object):
         self.nparray.__itruediv__(other)
         return self
 
-    def __pow__(self, other):
+    def __pow__(self, other, mod):
+        assert mod is None
         if self.space != self.space.H:
             raise HilbertError('bra space must be the same as ket space '+
                 '(space was '+repr(self.space)+')')
-        return self.np_matrix_transform( \
-            lambda x: self.space.base_field.mat_pow(x, other))
+        return _do_pow(self, other)
 
     def __ipow__(self, other):
         self.nparray[:] = self.__pow__(other).nparray
         return self
 
-    def _index_key_to_map(self, key):
+    cpdef _index_key_to_map(self, key):
         """
         Converts indices to a standard form, for use by _get_set_item.
 
@@ -969,7 +999,7 @@ class HilbertArray(object):
 
         return index_map
 
-    def _get_set_item(self, key, do_set=False, set_val=None):
+    cpdef _get_set_item(self, key, do_set=False, set_val=None):
         """
         The guts for the __getitem__ and __setitem__ methods.
 
@@ -1032,9 +1062,12 @@ class HilbertArray(object):
         Doctests are in doc/examples/slices.rst.
         """
 
-        return self._get_set_item(key, True, val)
+        self._get_set_item(key, True, val)
 
-    def _get_row_col_spaces(self, row_space=None, col_space=None):
+    cpdef _space_string(self, spc_set):
+        return repr(self.space.base_field.create_space1(spc_set))
+
+    cpdef _get_row_col_spaces(self, row_space=None, col_space=None):
         """
         Parses the row_space and col_space parameters used by various functions.
 
@@ -1076,16 +1109,8 @@ class HilbertArray(object):
         MismatchedSpaceError: 'space is in both col and row sets: |a>'
         """
 
-        def parse_space(s):
-            if s is None:
-                return None
-            elif isinstance(s, HilbertSpace):
-                return s.sorted_kets + s.sorted_bras
-            else:
-                return sum((parse_space(x) for x in s), [])
-
-        col_space = parse_space(col_space)
-        row_space = parse_space(row_space)
+        col_space = _parse_space(col_space)
+        row_space = _parse_space(row_space)
 
         if row_space is None and col_space is None:
             col_space = self.space.sorted_kets
@@ -1098,26 +1123,23 @@ class HilbertArray(object):
         col_set = frozenset(col_space)
         row_set = frozenset(row_space)
 
-        def space_string(spc_set):
-            return repr(self.space.base_field.create_space1(spc_set))
-
         if not col_set.isdisjoint(row_set):
             raise MismatchedSpaceError( \
-                'space is in both col and row sets: '+space_string(col_set & row_set))
+                'space is in both col and row sets: '+self._space_string(col_set & row_set))
         if not row_set <= self.space.bra_ket_set:
             raise MismatchedSpaceError( \
-                "not in array's index set: "+space_string(row_set - self.space.bra_ket_set))
+                "not in array's index set: "+self._space_string(row_set - self.space.bra_ket_set))
         if not col_set <= self.space.bra_ket_set:
             raise MismatchedSpaceError( \
-                "not in array's index set: "+space_string(col_set - self.space.bra_ket_set))
+                "not in array's index set: "+self._space_string(col_set - self.space.bra_ket_set))
         if not col_set | row_set == self.space.bra_ket_set:
             raise MismatchedSpaceError( \
                 'all indices must be in col_set or row_set, these were missing: '+ \
-                space_string(self.space.bra_ket_set-(col_set | row_set)))
+                self._space_string(self.space.bra_ket_set-(col_set | row_set)))
 
         return (row_space, col_space)
 
-    def as_np_matrix(self, dtype=None, row_space=None, col_space=None):
+    cpdef as_np_matrix(self, dtype=None, row_space=None, col_space=None):
         """
         Returns the underlying data as a numpy.matrix.  Returns a copy, not a view.
 
@@ -1165,7 +1187,7 @@ class HilbertArray(object):
         v = self.nparray.transpose(axes).reshape(col_size, row_size)
         return np.matrix(v, dtype=dtype)
 
-    def np_matrix_transform(self, f, transpose_dims=False):
+    cpdef np_matrix_transform(self, f, transpose_dims=False):
         """
         Performs a numpy matrix operation.
 
@@ -1273,7 +1295,7 @@ class HilbertArray(object):
         """
 
         # transpose should be the same for all base_field's
-        return self.np_matrix_transform(lambda x: x.T, transpose_dims=True)
+        return self.np_matrix_transform(_do_T, transpose_dims=True)
 
     @property
     def O(self):
@@ -1298,7 +1320,7 @@ class HilbertArray(object):
         else:
             return self * self.H
 
-    def det(self):
+    cpdef det(self):
         """
         Returns the matrix determinant of this array.
 
@@ -1317,7 +1339,7 @@ class HilbertArray(object):
 
         return self.space.base_field.mat_det(self.as_np_matrix())
 
-    def fill(self, val):
+    cpdef fill(self, val):
         """
         Fills every entry of this array with a constant value.
 
@@ -1335,7 +1357,7 @@ class HilbertArray(object):
         # fill should be the same for all base_field's
         self.nparray.fill(val)
 
-    def norm(self):
+    cpdef norm(self):
         """
         Returns the norm of this array.
 
@@ -1351,7 +1373,7 @@ class HilbertArray(object):
 
         return self.space.base_field.mat_norm(self.nparray)
 
-    def normalize(self):
+    cpdef normalize(self):
         """
         Normalizes array in-place.
 
@@ -1368,7 +1390,7 @@ class HilbertArray(object):
 
         self /= self.norm()
 
-    def normalized(self):
+    cpdef normalized(self):
         """
         Returns a normalized copy of this array.
 
@@ -1402,11 +1424,9 @@ class HilbertArray(object):
         True
         """
 
-        return self.np_matrix_transform( \
-            lambda x: self.space.base_field.mat_pinv(x, rcond), \
-            transpose_dims=True)
+        _do_pinv(self, rcond)
 
-    def conj(self):
+    cpdef conj(self):
         """
         Returns the complex conjugate of this array.
 
@@ -1567,10 +1587,9 @@ class HilbertArray(object):
                [ 0.+0.j, -1.+0.j]]))
         """
 
-        return self.np_matrix_transform( \
-            lambda x: self.space.base_field.mat_expm(x, q))
+        _do_expm(self, q)
 
-    def svd(self, full_matrices=True, inner_space=None):
+    cpdef svd(self, full_matrices=True, inner_space=None):
         """
         Return the singular value decomposition of this array.
 
@@ -1707,7 +1726,7 @@ class HilbertArray(object):
 
         return (U, S, V)
 
-    def svd_list(self, row_space=None, col_space=None, thresh=0):
+    cpdef svd_list(self, row_space=None, col_space=None, thresh=0):
         """
         Computes a singular value decomposition or Schmidt decomposition of
         this array.
@@ -1808,7 +1827,7 @@ class HilbertArray(object):
 
         return (U_list, s, V_list)
 
-    def singular_vals(self, row_space=None, col_space=None):
+    cpdef singular_vals(self, row_space=None, col_space=None):
         """
         Returns the singular values of this array.
 
@@ -1832,7 +1851,7 @@ class HilbertArray(object):
 
         return self.space.base_field.mat_svd_vals(m)
 
-    def eig(self, w_space=None, hermit=False):
+    cpdef eig(self, w_space=None, hermit=False):
         """
         Return the eigenvalues and right eigenvectors of this array.
 
@@ -1911,7 +1930,7 @@ class HilbertArray(object):
         V = (self.space.ket_space() * w_space.H).reshaped_np_matrix(v)
         return (W, V)
 
-    def eigvals(self, hermit=False):
+    cpdef eigvals(self, hermit=False):
         """
         Return the eigenvalues of this array, sorted in order of decreasing
         real component.
@@ -1949,7 +1968,7 @@ class HilbertArray(object):
 
         return w
 
-    def sqrt(self):
+    cpdef sqrt(self):
         """
         Return the square root of this matrix.
 
@@ -1984,7 +2003,7 @@ class HilbertArray(object):
         W = self.space.diag(np.sqrt(W))
         return V * W * V.H
 
-    def entropy(self, normalize=False, checks=True):
+    cpdef entropy(self, normalize=False, checks=True):
         """
         Returns the von Neumann entropy of a density operator, in bits.
 
@@ -2051,7 +2070,7 @@ class HilbertArray(object):
 
         return sum([-self.space.base_field.xlog2x(x) for x in schmidt])
 
-    def purity(self, normalize=False, checks=True):
+    cpdef purity(self, normalize=False, checks=True):
         """
         Returns the purity of a density operator, ``(self*self).trace()``.
 
@@ -2097,7 +2116,7 @@ class HilbertArray(object):
         assert abs(purity.imag) < 1e-12
         return purity.real
 
-    def QR(self, inner_space=None):
+    cpdef QR(self, inner_space=None):
         """
         Returns operators Q and R such that Q is an isometry, R is upper triangular, and self=Q*R.
 
@@ -2142,7 +2161,7 @@ class HilbertArray(object):
 
         return (Q, R)
 
-    def span(self, axes='all'):
+    cpdef span(self, axes='all'):
         """
         Returns a TensorSubspace for the column/row/mixed space of this array.
 
@@ -2207,17 +2226,16 @@ class HilbertArray(object):
         array([1.38629436111989, 2.07944154167984], dtype=object))
         """
 
-        return self.np_matrix_transform( \
-            lambda x: self.space.base_field.mat_n(x, prec, digits))
+        return _do_n(self, prec, digits)
 
-    def simplify(self):
+    cpdef simplify(self):
         """
         Simplifies symbolic expressions (only useful in Sage).
         """
 
         return self.space.base_field.mat_simplify(self)
 
-    def simplify_full(self):
+    cpdef simplify_full(self):
         """
         Simplifies symbolic expressions (only useful in Sage).
 
@@ -2253,7 +2271,7 @@ class HilbertArray(object):
 
         return self.sage_matrix(R)
 
-    def sage_matrix(self, R=None):
+    cpdef sage_matrix(self, R=None):
         """
         Returns a Sage Matrix for this array.
 
@@ -2280,7 +2298,7 @@ class HilbertArray(object):
 
         return FORMATTER.array_latex_block_table(self, use_hline=False)
 
-    def sage_block_matrix(self, R=None):
+    cpdef sage_block_matrix(self, R=None):
         """
         Returns a Sage Matrix for this array, with blocks corresponding to
         subsystem structure.
@@ -2322,7 +2340,7 @@ class HilbertArray(object):
 
         return sage.all.block_matrix(blocks, nrows=nrows, ncols=ncols, subdivide=True)
 
-    def sage_matrix_transform(self, f, transpose_dims=False):
+    cpdef sage_matrix_transform(self, f, transpose_dims=False):
         """
         Just like :func:`np_matrix_transform` but does operations on a Sage Matrix.
 

@@ -11,7 +11,9 @@ __all__ = ['base_field_lookup', 'indexed_space', 'qubit', 'qudit']
 
 ##############################
 
-class GroupOpCyclic_impl(object):
+cdef class GroupOpCyclic_impl(object):
+    cdef long D
+
     def __init__(self, D):
         """Don't use this constructor, rather call ``GroupOpCyclic_factory``."""
         self.D = D
@@ -34,8 +36,8 @@ class GroupOpCyclic_impl(object):
         return (x+y) % self.D
 
 # This implements memoization
-_op_cyclic_cache = {}
-def GroupOpCyclic_factory(D):
+cdef dict _op_cyclic_cache = {}
+cpdef GroupOpCyclic_factory(D):
     """
     Returns an instance of GroupOpCyclic_impl, the cyclic group of order D.
 
@@ -50,7 +52,7 @@ def GroupOpCyclic_factory(D):
 
 ##############################
 
-class GroupOpTimes_impl(object):
+cdef class GroupOpTimes_impl(object):
     def __init__(self):
         """Don't use this constructor, rather call ``GroupOpTimes_factory``."""
         pass
@@ -73,8 +75,8 @@ class GroupOpTimes_impl(object):
         return x*y
 
 # This implements memoization
-_op_times_cache = GroupOpTimes_impl()
-def GroupOpTimes_factory():
+cdef GroupOpTimes_impl _op_times_cache = GroupOpTimes_impl()
+cpdef GroupOpTimes_factory():
     """
     Returns an instance of GroupOpTimes_impl, which operates on elements by multiplication.
 
@@ -87,7 +89,7 @@ def GroupOpTimes_factory():
 
 ##############################
 
-_base_field_factories = []
+cdef list _base_field_factories = []
 
 import qitensor.basefield
 _base_field_factories.append(qitensor.basefield._factory)
@@ -96,7 +98,7 @@ if have_sage:
     import qitensor.sagebasefield
     _base_field_factories.append(qitensor.sagebasefield._factory)
     
-def base_field_lookup(dtype):
+cpdef base_field_lookup(dtype):
     r"""
     Returns the HilbertBaseField for the given data type.
 
@@ -106,7 +108,7 @@ def base_field_lookup(dtype):
 
     >>> from qitensor import base_field_lookup
     >>> base_field_lookup(complex).__class__
-    <class 'qitensor.basefield.HilbertBaseField'>
+    <type 'qitensor.basefield.HilbertBaseField'>
     """
 
     if isinstance(dtype, HilbertBaseField):
@@ -121,7 +123,7 @@ def base_field_lookup(dtype):
 
 ##############################
 
-def indexed_space(label, indices, dtype=complex, latex_label=None, group_op=None):
+cpdef indexed_space(label, indices, dtype=complex, latex_label=None, group_op=None):
     r"""
     Returns a finite-dimensional Hilbert space with an arbitrary index set.
 
@@ -158,7 +160,7 @@ def indexed_space(label, indices, dtype=complex, latex_label=None, group_op=None
 
     return field._atom_factory(label, latex_label, indices, group_op)
 
-def qudit(label, dim, dtype=complex, latex_label=None):
+cpdef qudit(label, dim, dtype=complex, latex_label=None):
     r"""
     Returns a finite-dimensional Hilbert space with index set [0, 1, ..., n-1].
 
@@ -188,7 +190,7 @@ def qudit(label, dim, dtype=complex, latex_label=None):
         label=label, indices=range(dim), dtype=dtype,
         latex_label=latex_label, group_op=group_op)
 
-def qubit(label, dtype=complex, latex_label=None):
+cpdef qubit(label, dtype=complex, latex_label=None):
     r"""
     Returns a two-dimensional Hilbert space with index set [0, 1].
 

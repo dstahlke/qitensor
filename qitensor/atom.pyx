@@ -27,14 +27,20 @@ def _unreduce_v1(label, latex_label, indices, group_op, base_field, is_dual, add
     return atom.H if is_dual else atom
 
 #_atom_cache = weakref.WeakValueDictionary()
-_atom_cache = dict()
+cdef dict _atom_cache = dict()
 
-def _cached_atom_factory(label, latex_label, indices, group_op, base_field):
+cpdef _cached_atom_factory(label, latex_label, indices, group_op, base_field):
     """This should be called only by ``qitensor.factory._atom_factory``."""
+
+    assert label is not None
+    assert indices is not None
+    assert group_op is not None
 
     if latex_label is None:
         latex_label = label
 
+    label = str(label)
+    latex_label = str(latex_label)
     indices = tuple(indices)
 
     key = (label, latex_label, indices, group_op, base_field)
@@ -45,7 +51,7 @@ def _cached_atom_factory(label, latex_label, indices, group_op, base_field):
         _atom_cache[key] = atom
     return _atom_cache[key]
 
-def _assert_all_compatible(collection):
+cpdef _assert_all_compatible(collection):
     """
     Make sure that all HilbertAtoms in a collection that have the same label
     are compatible.
@@ -97,12 +103,17 @@ cdef class HilbertAtom(HilbertSpace):
         assert indices is not None
         assert group_op is not None
 
+        # cast to appropriate types so static typing can be used
+        label = str(label)
+        latex_label = str(latex_label)
+        indices = tuple(indices)
+
         # (Sphinx docstrings)
         #: The text label for this atom (gets displayed as ``|label>`` or ``<label|``).
         self.label = label
         #: The label used for the latex representation (by default equal to ``self.label``).
         self.latex_label = latex_label
-        #: A list of the tokens used as indices for this space.  By default this consists of
+        #: A tuple of the tokens used as indices for this space.  By default this consists of
         #: the integers ``0..dim-1``.
         self.indices = indices
         #: The group operation associated with the indices.  This is relevant to the
@@ -143,7 +154,7 @@ cdef class HilbertAtom(HilbertSpace):
         return _unreduce_v1, (self.label, self.latex_label, \
             self.indices, self.group_op, self.base_field, self.is_dual, self.addends)
 
-    def _mycmp(self, other):
+    cpdef _mycmp(self, other):
         """
         Helper function used by __lt__, __gt__, __eq__, etc.
         """
@@ -151,7 +162,7 @@ cdef class HilbertAtom(HilbertSpace):
         assert isinstance(other, HilbertAtom)
         return cmp(self.key, other.key)
 
-    def _assert_compatible(self, other):
+    cpdef _assert_compatible(self, other):
         """
         It is not allowed for HilbertAtom's with the same name but other
         properties different to be used together (leniency is given for
@@ -268,7 +279,7 @@ cdef class HilbertAtom(HilbertSpace):
                     self.indices, self.group_op)
         return self._prime
 
-    def ket(self, idx):
+    cpdef ket(self, idx):
         """
         Returns a ket basis vector.
 
@@ -295,7 +306,7 @@ cdef class HilbertAtom(HilbertSpace):
         else:
             return self.basis_vec({self: idx})
 
-    def bra(self, idx):
+    cpdef bra(self, idx):
         """
         Returns a bra basis vector.
 
@@ -324,7 +335,7 @@ cdef class HilbertAtom(HilbertSpace):
 
     # Special states
 
-    def fourier_basis_state(self, k):
+    cpdef fourier_basis_state(self, k):
         """
         Returns a state from the Fourier basis.
 
@@ -355,7 +366,7 @@ cdef class HilbertAtom(HilbertSpace):
             ret[key] = self.base_field.fractional_phase(i*k, N)
         return ret / self.base_field.sqrt(N)
 
-    def x_plus(self):
+    cpdef x_plus(self):
         """
         Returns a state with 1/sqrt(D) in each slot.
 
@@ -372,7 +383,7 @@ cdef class HilbertAtom(HilbertSpace):
         else:
             return self.array([1, 1]) / self.base_field.sqrt(2)
 
-    def x_minus(self):
+    cpdef x_minus(self):
         """
         Returns the state [1, -1]/sqrt(2), only available for qubits.
 
@@ -388,7 +399,7 @@ cdef class HilbertAtom(HilbertSpace):
             raise HilbertError('x_minus only available for qubits')
         return self.array([1, -1]) / self.base_field.sqrt(2)
 
-    def y_plus(self):
+    cpdef y_plus(self):
         """
         Returns the state [1, I]/sqrt(2), only available for qubits.
 
@@ -405,7 +416,7 @@ cdef class HilbertAtom(HilbertSpace):
         i = self.base_field.complex_unit()
         return self.array([1, i]) / self.base_field.sqrt(2)
 
-    def y_minus(self):
+    cpdef y_minus(self):
         """
         Returns the state [1, I]/sqrt(2), only available for qubits.
 
@@ -422,7 +433,7 @@ cdef class HilbertAtom(HilbertSpace):
         i = self.base_field.complex_unit()
         return self.array([1, -i]) / self.base_field.sqrt(2)
 
-    def z_plus(self):
+    cpdef z_plus(self):
         """
         Returns the state [1, 0], only available for qubits.
 
@@ -438,7 +449,7 @@ cdef class HilbertAtom(HilbertSpace):
             raise HilbertError('z_plus only available for qubits')
         return self.array([1, 0])
 
-    def z_minus(self):
+    cpdef z_minus(self):
         """
         Returns the state [0, 1], only available for qubits.
 
@@ -454,7 +465,7 @@ cdef class HilbertAtom(HilbertSpace):
             raise HilbertError('z_minus only available for qubits')
         return self.array([0, 1])
 
-    def bloch(self, theta, phi):
+    cpdef bloch(self, theta, phi):
         """
         Returns a qubit state given its Bloch sphere representation (in radians).
 
@@ -477,7 +488,7 @@ cdef class HilbertAtom(HilbertSpace):
 
     # Special operators
 
-    def pauliX(self, h=None, left=True):
+    cpdef pauliX(self, h=None, left=True):
         """
         Returns the Pauli X operator.
 
@@ -522,7 +533,7 @@ cdef class HilbertAtom(HilbertSpace):
                 ret[{ self: g, self.H: bra }] = 1
             return ret
 
-    def pauliY(self):
+    cpdef pauliY(self):
         """
         Returns the Pauli Y operator.
 
@@ -544,7 +555,7 @@ cdef class HilbertAtom(HilbertSpace):
             j = self.base_field.complex_unit()
             return self.O.array([[0, -j], [j, 0]])
 
-    def pauliZ(self, order=1):
+    cpdef pauliZ(self, order=1):
         r"""
         Returns the generalized Pauli Z operator.
 
@@ -652,7 +663,7 @@ cdef class HilbertAtom(HilbertSpace):
         """
         return self.pauliZ()
 
-    def hadamard(self):
+    cpdef hadamard(self):
         """
         Returns the Hadamard operator.
 
@@ -674,7 +685,7 @@ cdef class HilbertAtom(HilbertSpace):
         else:
             return self.O.array([[1, 1], [1, -1]]) / self.base_field.sqrt(2)
 
-    def gateS(self):
+    cpdef gateS(self):
         """
         Returns the S-gate operator.
 
@@ -694,7 +705,7 @@ cdef class HilbertAtom(HilbertSpace):
             j = self.base_field.complex_unit()
             return self.O.array([[1, 0], [0, j]])
 
-    def gateT(self):
+    cpdef gateT(self):
         """
         Returns the T-gate operator.
 
@@ -765,7 +776,7 @@ cdef class HilbertAtom(HilbertSpace):
 
         return ket_sum
 
-    def _create_addend_isoms(self):
+    cpdef _create_addend_isoms(self):
         self.P = []
         idx = 0
         for k in self.addends:

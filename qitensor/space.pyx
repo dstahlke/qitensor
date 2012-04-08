@@ -26,9 +26,9 @@ def _unreduce_v1(ket_set, bra_set):
     return base_field._space_factory(ket_set, bra_set)
 
 #_space_cache = weakref.WeakValueDictionary()
-_space_cache = dict()
+cdef dict _space_cache = dict()
 
-def _cached_space_factory(ket_set, bra_set):
+cpdef _cached_space_factory(ket_set, bra_set):
     """This should be called only by ``qitensor.factory._space_factory``."""
 
     assert isinstance(ket_set, frozenset)
@@ -170,7 +170,7 @@ cdef class HilbertSpace:
             spc = list(dupes)[0].base_field.create_space2(common_kets, common_bras)
             raise DuplicatedSpaceError(spc, msg)
 
-    def bra_space(self):
+    cpdef bra_space(self):
         """
         Returns a ``HilbertSpace`` consisting of only the bra space of this
         space.
@@ -186,7 +186,7 @@ cdef class HilbertSpace:
         """
         return self.base_field.create_space2(frozenset(), self.bra_set)
 
-    def ket_space(self):
+    cpdef ket_space(self):
         """
         Returns a ``HilbertSpace`` consisting of only the ket space of this
         space.
@@ -202,7 +202,7 @@ cdef class HilbertSpace:
         """
         return self.base_field.create_space2(self.ket_set, frozenset())
 
-    def is_symmetric(self):
+    cpdef is_symmetric(self):
         """
         Check whether the bra and ket spaces are the same.
         >>> from qitensor import qubit
@@ -219,7 +219,7 @@ cdef class HilbertSpace:
         """
         return self == self.H
 
-    def is_square(self):
+    cpdef is_square(self):
         """
         If the dimension of the bra and ket spaces are equal, returns this
         common dimension.  Otherwise returns zero.
@@ -245,7 +245,7 @@ cdef class HilbertSpace:
         else:
             return 0
 
-    def assert_square(self):
+    cpdef assert_square(self):
         """
         If the dimension of the bra and ket spaces are equal, returns this
         common dimension.  Otherwise throws a HilbertShapeError.
@@ -415,7 +415,7 @@ cdef class HilbertSpace:
     def __rmul__(self, other):
         return self.__mul__(other)
 
-    def diag(self, v):
+    cpdef diag(self, v):
         """
         Create a diagonal operator from the given 1-d list.
 
@@ -449,7 +449,7 @@ cdef class HilbertSpace:
         diag = np.diagflat(v)
         return self.reshaped_np_matrix(diag)
 
-    def reshaped_np_matrix(self, m, input_axes=None):
+    cpdef reshaped_np_matrix(self, m, input_axes=None):
         """
         Returns a ``HilbertArray`` created from a given numpy matrix.
 
@@ -514,7 +514,7 @@ cdef class HilbertSpace:
 
         return self.array(m, reshape=True, input_axes=input_axes)
 
-    def array(self, data=None, noinit_data=False, reshape=False, input_axes=None):
+    cpdef array(self, data=None, noinit_data=False, reshape=False, input_axes=None):
         """
         Returns a ``HilbertArray`` created from the given data, or filled with
         zeros if no data is given.
@@ -597,7 +597,7 @@ cdef class HilbertSpace:
         return self.base_field._array_factory( \
             self, data, noinit_data, reshape, input_axes)
 
-    def random_array(self):
+    cpdef random_array(self):
         """
         Returns a ``HilbertArray`` with random values.
 
@@ -612,7 +612,7 @@ cdef class HilbertSpace:
         """
         return self.array(self.base_field.random_array(self.shape))
 
-    def random_unitary(self):
+    cpdef random_unitary(self):
         """
         Returns a random unitary.
 
@@ -657,7 +657,7 @@ cdef class HilbertSpace:
         ret = np.multiply(q, ph)
         return self.reshaped_np_matrix(ret)
 
-    def random_isometry(self):
+    cpdef random_isometry(self):
         """
         Returns a random isometry.
 
@@ -688,7 +688,7 @@ cdef class HilbertSpace:
         iso = U.as_np_matrix()[:, :db]
         return self.reshaped_np_matrix(iso)
 
-    def eye(self):
+    cpdef eye(self):
         """
         Returns a ``HilbertArray`` corresponding to the identity matrix.
 
@@ -724,7 +724,7 @@ cdef class HilbertSpace:
 
         return self.array(self.base_field.eye(bra_size), reshape=True)
 
-    def basis_vec(self, idx):
+    cpdef basis_vec(self, idx):
         """
         Returns a ``HilbertArray`` corresponding to a basis vector.
 
@@ -765,7 +765,7 @@ cdef class HilbertSpace:
         ret[idx] = 1
         return ret
 
-    def basis(self):
+    cpdef basis(self):
         """
         Returns an orthonormal basis (the computational basis) for this space.
 
@@ -784,7 +784,7 @@ cdef class HilbertSpace:
 
         return [ self.basis_vec(idx) for idx in self.index_iter() ]
 
-    def hermitian_basis(self, normalize=False):
+    cpdef hermitian_basis(self, normalize=False):
         """
         Returns an orthogonal basis (optionally normalized) of Hermitian
         operators.  It is required that the dimension of the bra space be equal
@@ -837,7 +837,7 @@ cdef class HilbertSpace:
 
         return basis
 
-    def full_space(self):
+    cpdef full_space(self):
         """
         Returns a TensorSubspace corresponding to the entire space.
 
@@ -851,7 +851,7 @@ cdef class HilbertSpace:
 
         return TensorSubspace.full(self.shape, hilb_space=self)
 
-    def empty_space(self):
+    cpdef empty_space(self):
         """
         Returns a TensorSubspace corresponding to the empty space.
 
@@ -865,7 +865,7 @@ cdef class HilbertSpace:
 
         return TensorSubspace.empty(self.shape, hilb_space=self)
 
-    def dim(self):
+    cpdef dim(self):
         """
         Returns the dimension of this space.
 
@@ -882,7 +882,7 @@ cdef class HilbertSpace:
 
         return self._dim
 
-    def index_iter(self):
+    cpdef index_iter(self):
         """
         Returns an iterator over the indices of a space.
 
@@ -904,7 +904,7 @@ cdef class HilbertSpace:
         axes = self.sorted_kets + self.sorted_bras
         return itertools.product(*[s.indices for s in axes])
 
-    def assert_ket_space(self):
+    cpdef assert_ket_space(self):
         """
         Throws an exception unless the bra space is empty.
 
@@ -926,7 +926,7 @@ cdef class HilbertSpace:
 
     ########## stuff that only works in Sage ##########
 
-    def reshaped_sage_matrix(self, m, input_axes=None):
+    cpdef reshaped_sage_matrix(self, m, input_axes=None):
         """
         Just like :func:`reshaped_np_matrix` but takes a Sage Matrix as input.
 

@@ -58,12 +58,14 @@ for e in ext_modules:
     e.pyrex_directives = {
         "embedsignature": True,
         "nonecheck": True,
-        "profile": True, # FIXME
+        #"profile": True, # FIXME
     }
     e.depends = [
-        "qitensor/atom.pxd",
-        "qitensor/space.pxd",
         "qitensor/array.pxd",
+        "qitensor/atom.pxd",
+        "qitensor/basefield.pxd",
+        "qitensor/factory.pxd",
+        "qitensor/space.pxd",
     ]
 
 setup(

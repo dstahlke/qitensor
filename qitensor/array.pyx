@@ -109,7 +109,7 @@ cdef class HilbertArray:
         array([ 1.+0.j,  2.+0.j]))
         """
 
-        ret = self.space.array(noinit_data=True)
+        ret = self.space.array(None, True)
         ret.nparray = self.nparray.copy()
         return ret
 

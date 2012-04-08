@@ -3,12 +3,13 @@
 import numpy as np
 
 import sage.all
-from qitensor import HilbertBaseField
+from qitensor.basefield import HilbertBaseField
+from qitensor.basefield cimport HilbertBaseField
 from qitensor.arrayformatter import FORMATTER
 
-_base_field_cache = {}
+cdef dict _base_field_cache = {}
 
-def _factory(dtype):
+cpdef _factory(dtype):
     """Don't call this, use base_field_lookup instead."""
 
     if not isinstance(dtype, sage.all.CommutativeRing):
@@ -21,7 +22,7 @@ def _factory(dtype):
 def _unreduce_v1(sage_ring):
     return _factory(sage_ring)
 
-class SageHilbertBaseField(HilbertBaseField):
+cdef class SageHilbertBaseField(HilbertBaseField):
     def __init__(self, sage_ring):
         """Don't call this, use base_field_lookup instead."""
         unique_id = 'sage '+repr(sage_ring)
@@ -31,59 +32,66 @@ class SageHilbertBaseField(HilbertBaseField):
     def __reduce__(self):
         return _unreduce_v1, (self.sage_ring, )
 
-    def sage_mat_xform(self, m, f):
+    cpdef sage_mat_xform(self, m, f):
         return self.matrix_sage_to_np(f(self.matrix_np_to_sage(m)))
 
-    def complex_unit(self):
+    cpdef complex_unit(self):
         return self.sage_ring(sage.all.I)
 
-    def latex_formatter(self, data, dollar_if_tex):
+    cpdef latex_formatter(self, data, dollar_if_tex):
         return FORMATTER.sage_scalar_latex_formatter(data, dollar_if_tex)
 
-    def input_cast_function(self):
+    cpdef input_cast_function(self):
         return self.sage_ring
 
-    def fractional_phase(self, a, b):
+    cpdef fractional_phase(self, a, b):
         return self.sage_ring(sage.all.exp(2 * sage.all.pi * sage.all.I * a / b))
 
-    def sqrt(self, x):
+    cpdef sqrt(self, x):
         return self.sage_ring(sage.all.sqrt(x))
 
-    def xlog2x(self, x):
+    cpdef xlog2x(self, x):
         return self.sage_ring(0 if x<=0 else x*sage.all.log(x)/sage.all.log2)
 
-    def eye(self, size):
+    cpdef eye(self, size):
         return np.array(sage.all.identity_matrix(self.sage_ring, size), dtype=self.dtype)
 
-    def mat_n(self, m, prec=None, digits=None):
-        return self.sage_mat_xform(m, \
-            lambda x: x.n(prec=prec, digits=digits))
+    cpdef mat_n(self, m, prec=None, digits=None):
+        return self.matrix_sage_to_np(self.matrix_np_to_sage(m).n(prec=prec, digits=digits))
+        #return self.sage_mat_xform(m, \
+        #    lambda x: x.n(prec=prec, digits=digits))
 
-    def mat_simplify(self, m, full=False):
+    cpdef mat_simplify(self, m, full=False):
         if full:
-            return m.apply_map(lambda x: x.simplify_full())
+            return self.matrix_sage_to_np(self.matrix_np_to_sage(m).simplify_full())
+            #return m.apply_map(lambda x: x.simplify_full())
         else:
-            return m.apply_map(lambda x: x.simplify())
+            return self.matrix_sage_to_np(self.matrix_np_to_sage(m).simplify())
+            #return m.apply_map(lambda x: x.simplify())
 
-    def mat_adjoint(self, m):
-        return self.sage_mat_xform(m, lambda x: x.conjugate().transpose())
+    cpdef mat_adjoint(self, m):
+        return self.matrix_sage_to_np(self.matrix_np_to_sage(m).conjugate().transpose())
+        #return self.sage_mat_xform(m, lambda x: x.conjugate().transpose())
 
-    def mat_inverse(self, m):
-        return self.sage_mat_xform(m, lambda x: x.inverse())
+    cpdef mat_inverse(self, m):
+        return self.matrix_sage_to_np(self.matrix_np_to_sage(m).inverse())
+        #return self.sage_mat_xform(m, lambda x: x.inverse())
 
-    def mat_det(self, m):
+    cpdef mat_det(self, m):
         return self.matrix_np_to_sage(m).det()
 
-    def mat_norm(self, arr):
+    cpdef mat_norm(self, arr):
         return self.sqrt(np.sum(arr * np.conj(arr)))
 
-    def mat_conj(self, m):
-        return self.sage_mat_xform(m, lambda x: x.conjugate())
+    cpdef mat_conj(self, m):
+        return self.matrix_sage_to_np(self.matrix_np_to_sage(m).conjugate())
+        #return self.sage_mat_xform(m, lambda x: x.conjugate())
 
-    def mat_pow(self, m, n):
-        return self.sage_mat_xform(m, lambda x: x**n)
+    cpdef mat_pow(self, m, n):
+        return self.matrix_sage_to_np(self.matrix_np_to_sage(m) ** n)
+        #return self.sage_mat_xform(m, lambda x: x**n)
 
-    def mat_eig(self, m, hermit):
+    cpdef mat_eig(self, m, hermit):
         (w, v) = self.matrix_np_to_sage(m).eigenmatrix_right()
 
         # convert result to numpy
@@ -96,7 +104,7 @@ class SageHilbertBaseField(HilbertBaseField):
 
         return (w, v)
 
-    def mat_eigvals(self, m, hermit):
+    cpdef mat_eigvals(self, m, hermit):
         w = self.matrix_np_to_sage(m).eigenvalues()
         # convert result to numpy
         return np.array(w)

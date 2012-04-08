@@ -41,8 +41,6 @@ cdef class HilbertArray:
     cpdef purity(self, normalize=*, checks=*)
     cpdef QR(self, inner_space=*)
     cpdef span(self, axes=*)
-    cpdef simplify(self)
-    cpdef simplify_full(self)
     cpdef sage_matrix(self, R=*)
     cpdef sage_block_matrix(self, R=*)
     cpdef sage_matrix_transform(self, f, transpose_dims=*)

@@ -2236,14 +2236,15 @@ cdef class HilbertArray:
         return self.np_matrix_transform( \
             lambda x: self.space.base_field.mat_n(x, prec, digits))
 
-    cpdef simplify(self):
+    def simplify(self):
         """
         Simplifies symbolic expressions (only useful in Sage).
         """
 
-        return self.space.base_field.mat_simplify(self)
+        return self.np_matrix_transform( \
+            lambda x: self.space.base_field.mat_simplify(x))
 
-    cpdef simplify_full(self):
+    def simplify_full(self):
         """
         Simplifies symbolic expressions (only useful in Sage).
 
@@ -2260,7 +2261,8 @@ cdef class HilbertArray:
         array([2, 3], dtype=object))
         """
 
-        return self.space.base_field.mat_simplify(self, full=True)
+        return self.np_matrix_transform( \
+            lambda x: self.space.base_field.mat_simplify(x, full=True))
 
     def _matrix_(self, R=None):
         """

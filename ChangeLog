@@ -15,6 +15,7 @@ Version 0.8.1 (ongoing):
 	simplified space/atom constructors
 	more consistent use of exceptions
 	use Cython
+	pickle for HilbertArray has changed; reverse compatibility broken
 
 Version 0.8 (2011-12-01):
 	as_np_matrix take {row,col}_space args

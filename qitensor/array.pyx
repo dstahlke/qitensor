@@ -32,6 +32,12 @@ def _parse_space(s):
     else:
         return sum((_parse_space(x) for x in s), [])
 
+def _unreduce_v1(space, nparray):
+    """
+    This is the function that handles restoring a pickle.
+    """
+
+    return space.array(nparray)
 
 cdef class HilbertArray:
     def __init__(self, HilbertSpace space, data, cpython.bool noinit_data, cpython.bool reshape, input_axes):
@@ -94,6 +100,12 @@ cdef class HilbertArray:
             cast_fn = space.base_field.input_cast_function()
             if cast_fn is not None:
                 self.nparray = np.vectorize(cast_fn)(self.nparray)
+
+    def __reduce__(self):
+        """
+        Tells pickle how to store this object.
+        """
+        return _unreduce_v1, (self.space, self.nparray)
 
     cpdef copy(self):
         """

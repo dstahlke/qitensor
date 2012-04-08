@@ -5,12 +5,13 @@ product spaces by using the multiplication operator.  HilbertAtoms should be
 created using the factory functions in :mod:`qitensor.factory`.
 """
 
-import weakref
+#import weakref
 import numpy as np
 
 import qitensor
 from qitensor.exceptions import MismatchedSpaceError,HilbertError
 from qitensor.space import HilbertSpace
+from qitensor.space cimport HilbertSpace
 
 __all__ = ['HilbertAtom', 'direct_sum']
 
@@ -25,7 +26,8 @@ def _unreduce_v1(label, latex_label, indices, group_op, base_field, is_dual, add
         atom._create_addend_isoms()
     return atom.H if is_dual else atom
 
-_atom_cache = weakref.WeakValueDictionary()
+#_atom_cache = weakref.WeakValueDictionary()
+_atom_cache = dict()
 
 def _cached_atom_factory(label, latex_label, indices, group_op, base_field):
     """This should be called only by ``qitensor.factory._atom_factory``."""
@@ -70,7 +72,7 @@ def _assert_all_compatible(collection):
         for atom in group:
             group[0]._assert_compatible(atom)
 
-class HilbertAtom(HilbertSpace):
+cdef class HilbertAtom(HilbertSpace):
     def __init__(self, label, latex_label, indices, group_op, base_field, dual):
         """
         Users should not call this constructor directly, rather use the
@@ -119,9 +121,9 @@ class HilbertAtom(HilbertSpace):
         self.base_field = base_field
 
         if dual:
-            self._H = dual
+            _H = dual
         else:
-            self._H = HilbertAtom(label, latex_label,
+            _H = HilbertAtom(label, latex_label,
                 indices, group_op, base_field, self)
 
         # NOTE: since 'self' is passed in the bra_set/ket_set parameters to the
@@ -130,9 +132,9 @@ class HilbertAtom(HilbertSpace):
         # above).
 
         if self.is_dual:
-            HilbertSpace.__init__(self, frozenset(), frozenset([self]))
+            HilbertSpace.__init__(<HilbertSpace>self, frozenset(), frozenset([self]), _H)
         else:
-            HilbertSpace.__init__(self, frozenset([self]), frozenset())
+            HilbertSpace.__init__(<HilbertSpace>self, frozenset([self]), frozenset(), _H)
 
     def __reduce__(self):
         """
@@ -194,98 +196,52 @@ class HilbertAtom(HilbertSpace):
                 'base_field: '+repr(self.base_field)+' vs. '+
                 repr(other.base_field))
 
-    def __eq__(self, other):
+    def __richcmp__(self, other, op):
         """
-        Compares two HilbertSpace objects for equality.
+        Rich comparison of two HilbertSpace objects.
 
         >>> from qitensor import qubit, qudit
         >>> ha = qubit('a')
         >>> hb = qudit('b', 3)
         >>> (ha == ha, ha == hb)
         (True, False)
-        """
-
-        if not isinstance(other, HilbertAtom):
-            return HilbertSpace.__eq__(self, other)
-        else:
-            return self._hashval == other._hashval and 0 == self._mycmp(other)
-
-    def __ne__(self, other):
-        """
-        Compares two HilbertSpace objects for inequality.
-
-        >>> from qitensor import qubit, qudit
-        >>> ha = qubit('a')
-        >>> hb = qudit('b', 3)
         >>> (ha != ha, ha != hb)
         (False, True)
-        """
-
-        return not (self == other)
-
-    def __lt__(self, other):
-        """
-        Compares two HilbertSpace objects lexicographically.
-
-        >>> from qitensor import qubit, qudit
-        >>> ha = qubit('a')
-        >>> hb = qudit('b', 3)
         >>> (ha < ha, ha < hb, hb < ha)
         (False, True, False)
-        """
-
-        if not isinstance(other, HilbertAtom):
-            return HilbertSpace.__lt__(self, other)
-        else:
-            return self._mycmp(other) < 0
-
-    def __gt__(self, other):
-        """
-        Compares two HilbertSpace objects lexicographically.
-
-        >>> from qitensor import qubit, qudit
-        >>> ha = qubit('a')
-        >>> hb = qudit('b', 3)
         >>> (ha > ha, ha > hb, hb > ha)
         (False, False, True)
-        """
-
-        if not isinstance(other, HilbertAtom):
-            return HilbertSpace.__gt__(self, other)
-        else:
-            return self._mycmp(other) > 0
-
-    def __ge__(self, other):
-        """
-        Compares two HilbertSpace objects lexicographically.
-
-        >>> from qitensor import qubit, qudit
-        >>> ha = qubit('a')
-        >>> hb = qudit('b', 3)
         >>> (ha >= ha, ha >= hb, hb >= ha)
         (True, False, True)
-        """
-
-        if not isinstance(other, HilbertAtom):
-            return HilbertSpace.__ge__(self, other)
-        else:
-            return self._mycmp(other) >= 0
-
-    def __le__(self, other):
-        """
-        Compares two HilbertSpace objects lexicographically.
-
-        >>> from qitensor import qubit, qudit
-        >>> ha = qubit('a')
-        >>> hb = qudit('b', 3)
         >>> (ha <= ha, ha <= hb, hb <= ha)
         (True, True, False)
         """
 
         if not isinstance(other, HilbertAtom):
-            return HilbertSpace.__le__(self, other)
-        else:
+            if op == 0: # <
+                return HilbertSpace.__gt__(self, other)
+            elif op == 1: # <=
+                return HilbertSpace.__ge__(self, other)
+            elif op == 2: # ==
+                return HilbertSpace.__eq__(self, other)
+            elif op == 3: # !=
+                return HilbertSpace.__ne__(self, other)
+            elif op == 4: # >
+                return HilbertSpace.__lt__(self, other)
+            elif op == 5: # >=
+                return HilbertSpace.__le__(self, other)
+
+        if op == 0: # <
+            return self._mycmp(other) < 0
+        elif op == 1: # <=
             return self._mycmp(other) <= 0
+        elif op == 2 or op == 3: # == or !=
+            eq = self._hashval == other._hashval and 0 == self._mycmp(other)
+            return eq if op==2 else not eq
+        elif op == 4: # >
+            return self._mycmp(other) > 0
+        elif op == 5: # >=
+            return self._mycmp(other) >= 0
 
     def __hash__(self):
         return self._hashval

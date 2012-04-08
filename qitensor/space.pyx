@@ -6,7 +6,7 @@ multiplication operator to HilbertAtoms or other HilbertSpaces.
 
 import numpy as np
 import itertools
-import weakref
+#import weakref
 
 from qitensor import have_sage, _shape_product
 from qitensor.exceptions import DuplicatedSpaceError, HilbertError, \
@@ -25,7 +25,8 @@ def _unreduce_v1(ket_set, bra_set):
     base_field = list(ket_set | bra_set)[0].base_field
     return base_field._space_factory(ket_set, bra_set)
 
-_space_cache = weakref.WeakValueDictionary()
+#_space_cache = weakref.WeakValueDictionary()
+_space_cache = dict()
 
 def _cached_space_factory(ket_set, bra_set):
     """This should be called only by ``qitensor.factory._space_factory``."""
@@ -40,8 +41,8 @@ def _cached_space_factory(ket_set, bra_set):
         _space_cache[key] = spc
     return _space_cache[key]
 
-class HilbertSpace(object):
-    def __init__(self, ket_set, bra_set):
+cdef class HilbertSpace:
+    def __init__(self, ket_set, bra_set, _H=None):
         """
         Constructor should only be called from :meth:`_cached_space_factory` or
         subclasses.
@@ -62,10 +63,7 @@ class HilbertSpace(object):
         sage: TestSuite(ha*hb).run()
         """
 
-        # In the case of the HilbertAtom subclass, ``_H`` will already have
-        # been set.
-        if not '_H' in self.__dict__:
-            self._H = None
+        self._H = _H
 
         # (Sphinx docstrings)
         #: In the case of direct sum spaces, this is a list of the components.
@@ -312,55 +310,44 @@ class HilbertSpace(object):
         """
         return self * self.H
 
-    def __eq__(self, other):
-        if not isinstance(other, HilbertSpace):
-            return False
-        else:
-            return (self.sorted_kets == other.sorted_kets) and \
-                (self.sorted_bras == other.sorted_bras)
-
-    def __ne__(self, other):
-        return not (self == other)
-
-    def __lt__(self, other):
+    def __richcmp__(self, other, op):
         """
         Compares two HilbertSpace objects lexicographically.
         """
 
-        assert isinstance(other, HilbertSpace)
+        if not isinstance(other, qitensor.space.HilbertSpace):
+            if op == 2: # ==
+                return False
+            elif op == 3: # !=
+                return True
+            else:
+                assert isinstance(other, HilbertSpace)
 
-        if self.sorted_kets < other.sorted_kets:
-            return True
-        elif self.sorted_kets > other.sorted_kets:
-            return False
-        if self.sorted_bras < other.sorted_bras:
-            return True
-        else:
-            return False
+        eq = (self.sorted_kets == other.sorted_kets) and \
+            (self.sorted_bras == other.sorted_bras)
 
-    def __gt__(self, other):
-        """
-        Compares two HilbertSpace objects lexicographically.
-        """
-
-        assert isinstance(other, HilbertSpace)
-        return other < self
-
-    def __ge__(self, other):
-        """
-        Compares two HilbertSpace objects lexicographically.
-        """
-
-        assert isinstance(other, HilbertSpace)
-        return not self < other
-
-    def __le__(self, other):
-        """
-        Compares two HilbertSpace objects lexicographically.
-        """
-
-        assert isinstance(other, HilbertSpace)
-        return not other < self
+        if op == 0 or op == 1: # < or <=
+            if self.sorted_kets < other.sorted_kets:
+                lt = True
+            elif self.sorted_kets > other.sorted_kets:
+                lt = False
+            if self.sorted_bras < other.sorted_bras:
+                lt = True
+            else:
+                lt = False
+            return lt if op==0 else (lt or eq)
+        elif op == 2 or op == 3: # == or !=
+            return eq if op==2 else not eq
+        elif op == 4 or op == 5: # > or >=
+            if self.sorted_kets > other.sorted_kets:
+                gt = True
+            elif self.sorted_kets < other.sorted_kets:
+                gt = False
+            if self.sorted_bras > other.sorted_bras:
+                gt = True
+            else:
+                gt = False
+            return gt if op==4 else (gt or eq)
 
     def __hash__(self):
         if len(self.ket_set) + len(self.bra_set) == 1:

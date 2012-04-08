@@ -55,7 +55,15 @@ ext_modules = [ \
 ]
 
 for e in ext_modules:
-    e.pyrex_directives = {"embedsignature": True, "nonecheck": True}
+    e.pyrex_directives = {
+        "embedsignature": True,
+        "nonecheck": True,
+        "profile": True, # FIXME
+    }
+    e.depends = [
+        "qitensor/atom.pxd",
+        "qitensor/space.pxd",
+    ]
 
 setup(
     name = 'qitensor',

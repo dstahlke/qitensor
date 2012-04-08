@@ -19,8 +19,6 @@ from qitensor.subspace import TensorSubspace
 
 __all__ = ['HilbertArray']
 
-# These functions are here because Cython doesn't yet support closures.
-
 def _parse_space(s):
     if s is None:
         return None
@@ -29,25 +27,6 @@ def _parse_space(s):
     else:
         return sum((_parse_space(x) for x in s), [])
 
-def _do_pinv(self, rcond):
-    return self.np_matrix_transform( \
-        lambda x: self.space.base_field.mat_pinv(x, rcond), \
-        transpose_dims=True)
-
-def _do_expm(self, q):
-    return self.np_matrix_transform( \
-        lambda x: self.space.base_field.mat_expm(x, q))
-
-def _do_pow(self, other):
-    return self.np_matrix_transform( \
-        lambda x: self.space.base_field.mat_pow(x, other))
-
-def _do_T(x):
-    return x.T
-
-def _do_n(self, prec, digits):
-    return self.np_matrix_transform( \
-        lambda x: self.space.base_field.mat_n(x, prec, digits))
 
 cdef class HilbertArray(object):
     cdef readonly space
@@ -664,6 +643,10 @@ cdef class HilbertArray(object):
         True
         """
 
+        # FIXME - Cython seems to send self=float sometimes
+        if not isinstance(self, HilbertArray):
+            return other * self
+
         if isinstance(other, HilbertArray):
             return self.tensordot(other)
         else:
@@ -912,7 +895,8 @@ cdef class HilbertArray(object):
         if self.space != self.space.H:
             raise HilbertError('bra space must be the same as ket space '+
                 '(space was '+repr(self.space)+')')
-        return _do_pow(self, other)
+        return self.np_matrix_transform( \
+            lambda x: self.space.base_field.mat_pow(x, other))
 
     def __ipow__(self, other):
         self.nparray[:] = self.__pow__(other).nparray
@@ -1295,7 +1279,7 @@ cdef class HilbertArray(object):
         """
 
         # transpose should be the same for all base_field's
-        return self.np_matrix_transform(_do_T, transpose_dims=True)
+        return self.np_matrix_transform(lambda x: x.T, transpose_dims=True)
 
     @property
     def O(self):
@@ -1424,7 +1408,9 @@ cdef class HilbertArray(object):
         True
         """
 
-        _do_pinv(self, rcond)
+        return self.np_matrix_transform( \
+            lambda x: self.space.base_field.mat_pinv(x, rcond), \
+            transpose_dims=True)
 
     cpdef conj(self):
         """
@@ -1587,7 +1573,8 @@ cdef class HilbertArray(object):
                [ 0.+0.j, -1.+0.j]]))
         """
 
-        _do_expm(self, q)
+        return self.np_matrix_transform( \
+            lambda x: self.space.base_field.mat_expm(x, q))
 
     cpdef svd(self, full_matrices=True, inner_space=None):
         """
@@ -2226,7 +2213,8 @@ cdef class HilbertArray(object):
         array([1.38629436111989, 2.07944154167984], dtype=object))
         """
 
-        return _do_n(self, prec, digits)
+        return self.np_matrix_transform( \
+            lambda x: self.space.base_field.mat_n(x, prec, digits))
 
     cpdef simplify(self):
         """

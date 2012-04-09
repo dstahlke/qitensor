@@ -79,9 +79,11 @@ if use_cython:
     ]
 
     for e in ext_modules:
-        e.pyrex_directives = {
+        # renamed from pyrex_directives in Cython 0.16.
+        e.cython_directives = {
             "embedsignature": True,
             "nonecheck": True,
+            #"profile": True,
         }
         e.depends = [
             "qitensor/array.pxd",

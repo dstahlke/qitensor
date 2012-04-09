@@ -3,15 +3,29 @@
 from distutils.core import setup
 from distutils.core import Command
 from distutils.extension import Extension
-from Cython.Distutils import build_ext
 import unittest
-
 import re
+
+# http://stackoverflow.com/a/4515279/1048959
+try:
+    import Cython
+    from Cython.Distutils import build_ext
+    # Lower versions give code that causes segfault.
+    # Currently you need to install Cython from the development repos.
+    use_cython = (Cython.__version__ >= '0.16')
+except ImportError:
+    use_cython = False
+
 version = [m.group(1) for m in [re.search('__version__ = "(.*)"', line) for line in open('qitensor/__init__.py').readlines()] if m is not None][0]
 # Cannot import qitensor until cython extensions are built
 # import qitensor
 # version = qitensor.__version__
 
+cmdclass = { }
+
+######################################################################
+
+# FIXME - these tests are probably obsoleted by the doctests
 # Adapted from sympy
 class test_qitensor(Command):
     """Runs all tests under the qitensor/ folder
@@ -40,31 +54,53 @@ class test_qitensor(Command):
         ])
         unittest.TextTestRunner().run(suite)
 
-ext_modules = [ \
-    Extension("qitensor.array",          ["qitensor/array.pyx"]), \
-    Extension("qitensor.atom",           ["qitensor/atom.pyx"]), \
-    Extension("qitensor.basefield",      ["qitensor/basefield.pyx"]), \
-    Extension("qitensor.benchmark_cy",   ["qitensor/benchmark_cy.pyx"]), \
-    Extension("qitensor.factory",        ["qitensor/factory.pyx"]), \
-    Extension("qitensor.sagebasefield",  ["qitensor/sagebasefield.pyx"]), \
-    Extension("qitensor.space",          ["qitensor/space.pyx"]), \
+cmdclass.update({'test': test_qitensor})
+
+######################################################################
+
+ext_names = [
+    "array",
+    "atom",
+    "basefield",
+    "benchmark_cy",
+    "factory",
+    "sagebasefield",
+    "space"
 ]
 
-for e in ext_modules:
-    e.pyrex_directives = {
-        "embedsignature": True,
-        "nonecheck": True,
-        #"profile": True, # FIXME
-    }
-    e.depends = [
-        "qitensor/array.pxd",
-        "qitensor/atom.pxd",
-        "qitensor/basefield.pxd",
-        "qitensor/factory.pxd",
-        "qitensor/space.pxd",
+ext_modules = []
+
+if use_cython:
+    cmdclass.update({'build_ext': build_ext})
+
+    ext_modules += [
+        Extension("qitensor."+s, ["qitensor/"+s+".pyx"]) \
+        for s in ext_names
     ]
-    # This doesn't seem to make it faster:
-    #e.extra_compile_args = ['-O2']
+
+    for e in ext_modules:
+        e.pyrex_directives = {
+            "embedsignature": True,
+            "nonecheck": True,
+        }
+        e.depends = [
+            "qitensor/array.pxd",
+            "qitensor/atom.pxd",
+            "qitensor/basefield.pxd",
+            "qitensor/factory.pxd",
+            "qitensor/space.pxd",
+        ]
+else: # no cython
+    ext_modules += [
+        Extension("qitensor."+s, ["qitensor/"+s+".c"]) \
+        for s in ext_names
+    ]
+
+# This doesn't seem to make it faster:
+#for e in ext_modules:
+#    e.extra_compile_args = ['-O2']
+
+######################################################################
 
 setup(
     name = 'qitensor',
@@ -112,6 +148,6 @@ space tensor product structure.
         'qitensor.experimental',
         'qitensor.tests',
     ],
-    cmdclass = {'test': test_qitensor, 'build_ext': build_ext},
+    cmdclass = cmdclass,
     ext_modules = ext_modules,
 )

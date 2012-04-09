@@ -3,6 +3,7 @@ include LICENSE
 include README
 # include cython *.c files
 recursive-include qitensor *
+recursive-include doc *
 include sage_package/SPKG.txt
 include sage_package/build-sage-package.sh
 include sage_package/spkg-install

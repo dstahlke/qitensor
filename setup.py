@@ -42,16 +42,12 @@ class test_qitensor(Command):
 
 ext_modules = [ \
     Extension("qitensor.array",          ["qitensor/array.pyx"]), \
-    Extension("qitensor.arrayformatter", ["qitensor/arrayformatter.pyx"]), \
     Extension("qitensor.atom",           ["qitensor/atom.pyx"]), \
     Extension("qitensor.basefield",      ["qitensor/basefield.pyx"]), \
     Extension("qitensor.benchmark_cy",   ["qitensor/benchmark_cy.pyx"]), \
-    Extension("qitensor.circuit",        ["qitensor/circuit.pyx"]), \
-    Extension("qitensor.exceptions",     ["qitensor/exceptions.pyx"]), \
     Extension("qitensor.factory",        ["qitensor/factory.pyx"]), \
     Extension("qitensor.sagebasefield",  ["qitensor/sagebasefield.pyx"]), \
     Extension("qitensor.space",          ["qitensor/space.pyx"]), \
-    Extension("qitensor.subspace",       ["qitensor/subspace.pyx"]), \
 ]
 
 for e in ext_modules:

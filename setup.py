@@ -58,7 +58,7 @@ for e in ext_modules:
     e.pyrex_directives = {
         "embedsignature": True,
         "nonecheck": True,
-        "profile": True, # FIXME
+        #"profile": True, # FIXME
     }
     e.depends = [
         "qitensor/array.pxd",
@@ -67,6 +67,8 @@ for e in ext_modules:
         "qitensor/factory.pxd",
         "qitensor/space.pxd",
     ]
+    # This doesn't seem to make it faster:
+    #e.extra_compile_args = ['-O2']
 
 setup(
     name = 'qitensor',

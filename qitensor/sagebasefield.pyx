@@ -11,6 +11,11 @@ from qitensor.arrayformatter import FORMATTER
 
 cdef dict _base_field_cache = {}
 
+# Cython doesn't yet support lambda in cpdef funcs, so this helper function is
+# declared here.
+cpdef do_simplify_full(x):
+    return x.simplify_full()
+
 cpdef _factory(dtype):
     """Don't call this, use base_field_lookup instead."""
 
@@ -65,7 +70,7 @@ cdef class SageHilbertBaseField(HilbertBaseField):
 
     cpdef np.ndarray mat_simplify(self, np.ndarray m, full=False):
         if full:
-            return self.matrix_sage_to_np(self.matrix_np_to_sage(m).simplify_full())
+            return np.vectorize(do_simplify_full, otypes=[self.dtype])(m)
             #return m.apply_map(lambda x: x.simplify_full())
         else:
             return self.matrix_sage_to_np(self.matrix_np_to_sage(m).simplify())

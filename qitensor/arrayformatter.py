@@ -45,10 +45,10 @@ class HilbertArrayFormatter(object):
         """
 
         if data.dtype == complex:
+            (suppress, suppress_thresh) = self._get_suppress()
             precision = np.get_printoptions()['precision']
-            # suppress=False here since supression is done elsewhere
             return np.core.arrayprint.ComplexFormat( \
-                data, precision=precision, suppress_small=False)
+                data, precision=precision, suppress_small=suppress)
         else:
             return str
 

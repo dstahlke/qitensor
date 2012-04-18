@@ -6,6 +6,7 @@ FINISH DOCS
     * ``sage -coverage qitensor/*.py``
 
 BUGS
+    * graph_codes.rst doctest gives Sage a segfault
     * redeclaring HilbertAtom can't change latex label
     * set formatting options on sage examples (including webpage)
     * detect when running under 'ipython qtconsole' and disable mathjax in html

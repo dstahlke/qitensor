@@ -108,7 +108,7 @@ else: # no cython
 
 setup(
     name = 'qitensor',
-    version = '0.8.1',
+    version = version,
     author = 'Dan Stahlke',
     author_email = 'dstahlke@gmail.com',
     url = 'http://www.stahlke.org/dan/qitensor',

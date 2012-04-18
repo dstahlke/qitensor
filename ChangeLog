@@ -1,88 +1,87 @@
-Version 0.8.1 (ongoing):
-	random_isometry
-	doctest fixes for sage
-	can pass HilbertBaseField for dtype
-	array formatting fixes/improvements
-	API CHANGE: random_array uses normal distribution
-	random_unitary is uniform w.r.t. Haar measure
-	much better HilbertArray.relabel method
-	HilbertArray.trace between arbitrary spaces
-	HilbertArray.sqrt
-	HilbertArray.purity
-	TensorSubspace module
-	better performance
-	direct_sum for HilbertAtom
-	simplified space/atom constructors
-	more consistent use of exceptions
-	use Cython
-	pickle for HilbertArray has changed; reverse compatibility broken
+=== qitensor-0.9 (Dan Stahlke, 2011-04-17) ===
+	* random_isometry
+	* doctest fixes for sage
+	* can pass HilbertBaseField for dtype
+	* array formatting fixes/improvements
+	* API CHANGE: random_array uses normal distribution
+	* random_unitary is uniform w.r.t. Haar measure
+	* much better HilbertArray.relabel method
+	* HilbertArray.trace between arbitrary spaces
+	* HilbertArray.sqrt
+	* HilbertArray.purity
+	* TensorSubspace module
+	* direct_sum for HilbertAtom
+	* simplified space/atom constructors
+	* more consistent use of exceptions
+	* use Cython
+	* pickle for HilbertArray has changed; reverse compatibility broken
 
-Version 0.8 (2011-12-01):
-	as_np_matrix take {row,col}_space args
-	array creation takes arg for axes order of input array
-	svd_list method
-	memoization and better pickling for base field, atom, space
-	index_set is a tuple
-	much refactoring of code
-	cleanup for pylint
-	ipython html rendering (experimental)
+=== qitensor-0.8 (Dan Stahlke, 2011-12-01) ===
+	* as_np_matrix take {row,col}_space args
+	* array creation takes arg for axes order of input array
+	* svd_list method
+	* memoization and better pickling for base field, atom, space
+	* index_set is a tuple
+	* much refactoring of code
+	* cleanup for pylint
+	* ipython html rendering (experimental)
 
-Version 0.7 (2011-08-09):
-	added QR and random_unitary methods
-	fixed bug in norm() under sage
-	added Cartan decomposition as experimental module
-	added HilbertSpace methods:
-		dim
-		index_iter
-		is_square
-		assert_square
-		basis
-		hermitian_basis
-		singular_vals
-	fixed Sage doctest
+=== qitensor-0.7 (Dan Stahlke, 2011-08-09) ===
+	* added QR and random_unitary methods
+	* fixed bug in norm() under sage
+	* added Cartan decomposition as experimental module
+	* added HilbertSpace methods:
+		* dim
+		* index_iter
+		* is_square
+		* assert_square
+		* basis
+		* hermitian_basis
+		* singular_vals
+	* fixed Sage doctest
 
-Version 0.6 (2011-05-21):
-	implement rich comparison rather than cmp (fixes HilbertSpace() == None)
-	check ininstance in HilbertArray.__eq__
-	HilbertArray.O method (density operator)
-	convert symbolic to complex for svd()
-	entropy() method (symbolic for Sage)
-	eigvals() method (symbolic for Sage)
-	eig() gives symbolic for sage
-	n() method for sage
-	simplify()/simplify_full() methods
+=== qitensor-0.6 (Dan Stahlke, 2011-05-21) ===
+	* implement rich comparison rather than cmp (fixes HilbertSpace() == None)
+	* check ininstance in HilbertArray.__eq__
+	* HilbertArray.O method (density operator)
+	* convert symbolic to complex for svd()
+	* entropy() method (symbolic for Sage)
+	* eigvals() method (symbolic for Sage)
+	* eig() gives symbolic for sage
+	* n() method for sage
+	* simplify()/simplify_full() methods
 
-Version 0.5.1 (2011-04-03):
-	cphase was erroneously called cnot
-	added correct cnot gate
+=== qitensor-0.5.1 (Dan Stahlke, 2011-04-03) ===
+	* cphase was erroneously called cnot
+	* added correct cnot gate
 
-Version 0.5 (2011-03-28):
-	fixed base_field equality check
-	fixed Hadamard gate for Sage's SR
-	full/partial trace function
-	eigenvectors function
-	diagonal matrix factory function
-	random_array gives complex values
-	0-d arrays always have int size (not 1.0)
-	matrix pow operator
-	apply_map function
+=== qitensor-0.5 (Dan Stahlke, 2011-03-28) ===
+	* fixed base_field equality check
+	* fixed Hadamard gate for Sage's SR
+	* full/partial trace function
+	* eigenvectors function
+	* diagonal matrix factory function
+	* random_array gives complex values
+	* 0-d arrays always have int size (not 1.0)
+	* matrix pow operator
+	* apply_map function
 
-Version 0.4 (2011-03-13):
-	don't test for Sage on every base_field_lookup call
-	custom matrix norm that works on Sage's SR
-	more package metadata
+=== qitensor-0.4 (Dan Stahlke, 2011-03-13) ===
+	* don't test for Sage on every base_field_lookup call
+	* custom matrix norm that works on Sage's SR
+	* more package metadata
 
-Version 0.3 (2011-03-11):
-	Python type arrays can use Sage rendering in Sage
-	Sage support without mixins
-	renamed some modules (no API changes)
-	unary negation
-	Pauli states and some circuit operators
-	input data is cast for Sage base fields
+=== qitensor-0.3 (Dan Stahlke, 2011-03-11) ===
+	* Python type arrays can use Sage rendering in Sage
+	* Sage support without mixins
+	* renamed some modules (no API changes)
+	* unary negation
+	* Pauli states and some circuit operators
+	* input data is cast for Sage base fields
 
-Version 0.2 (2011-03-10):
-	fix: tensordot returns scalar instead of 0-d Hilbert array
-	fix: catch usage of array slices (which are not allowed)
+=== qitensor-0.2 (Dan Stahlke, 2011-03-10) ===
+	* fix: tensordot returns scalar instead of 0-d Hilbert array
+	* fix: catch usage of array slices (which are not allowed)
 
-Version 0.1 (2011-03-08):
-	initial version
+=== qitensor-0.1 (Dan Stahlke, 2011-03-08) ===
+	* initial version

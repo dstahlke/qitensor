@@ -18,6 +18,7 @@ cdef class HilbertSpace(object):
     cdef readonly list _array_axes
     cdef readonly dict _array_axes_lookup
     cdef readonly base_field
+    cdef readonly HilbertSpace _prime
 
     # for direct sum
     cdef public addends

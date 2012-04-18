@@ -13,7 +13,6 @@ cdef class HilbertAtom(HilbertSpace):
     cdef readonly cpython.bool is_dual
     cdef readonly tuple key
     cdef readonly long _hashval
-    cdef readonly HilbertAtom _prime
 
     cpdef _mycmp(self, other)
     cpdef _assert_compatible(self, HilbertAtom other)

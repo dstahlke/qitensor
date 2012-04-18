@@ -128,7 +128,6 @@ cdef class HilbertAtom(HilbertSpace):
         #: The unique key used for comparing this atom to other atoms.
         self.key = (label, indices, group_op, base_field, self.is_dual)
         self._hashval = hash(self.key)
-        self._prime = None
 
         #: The HilbertBaseField that defines the numerical properties of arrays belonging
         #: to this space.

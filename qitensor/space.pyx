@@ -138,6 +138,7 @@ cdef class HilbertSpace:
         """
 
         self._H = _H
+        self._prime = None
 
         # (Sphinx docstrings)
         #: In the case of direct sum spaces, this is a list of the components.
@@ -384,6 +385,27 @@ cdef class HilbertSpace:
         |a,b><a,b|
         """
         return self * self.H
+
+    @property
+    def prime(self):
+        """
+        Returns a ``HilbertSpace`` just like this one but with an apostrophe
+        appended to each label.
+
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> hb = qubit('b')
+        >>> (ha*hb).prime
+        |a',b'>
+        >>> (ha*hb).prime.prime
+        |a'',b''>
+        >>> ha.O.prime
+        |a'><a'|
+        """
+
+        if self._prime is None:
+            self._prime = create_space1([ x.prime for x in self.bra_ket_set ])
+        return self._prime
 
     def __richcmp__(self, other, op):
         """

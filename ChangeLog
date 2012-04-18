@@ -1,3 +1,6 @@
+=== qitensor-0.10dev (Dan Stahlke, ongoing) ===
+	* no changes yet
+
 === qitensor-0.9 (Dan Stahlke, 2011-04-17) ===
 	* random_isometry
 	* doctest fixes for sage

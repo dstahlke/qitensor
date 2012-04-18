@@ -200,6 +200,22 @@ class TensorSubspace(object):
         return cls.empty(col_shp, tol=tol, hilb_space=hilb_space, dtype=dtype).perp()
 
     def assert_compatible(self, other):
+        """
+        Raise error if ``other`` is not compatible with this space.  Compatible means
+        that the dimensions are the same and that the HilbertSpaces match if both
+        subspaces have that property.
+
+        >>> from qitensor import TensorSubspace
+        >>> spc1 = TensorSubspace.full((3,5))
+        >>> spc2 = TensorSubspace.empty((3,5))
+        >>> spc3 = TensorSubspace.empty((3,6))
+        >>> spc1.assert_compatible(spc2)
+        >>> spc1.assert_compatible(spc3)
+        Traceback (most recent call last):
+            ...
+        AssertionError
+        """
+
         if not isinstance(other, self.__class__):
             raise TypeError('other object is not a TensorSubspace')
 
@@ -211,6 +227,7 @@ class TensorSubspace(object):
     def perp(self):
         """
         Returns orthogonal complement of this space.
+        Equivalent to ``~self``.
 
         >>> from qitensor import TensorSubspace
         >>> import numpy as np
@@ -234,6 +251,15 @@ class TensorSubspace(object):
         return self._perp_cache
 
     def __str__(self):
+        """
+        Returns string representation.
+
+        >>> from qitensor import TensorSubspace
+        >>> spc = TensorSubspace.full((3, 5))
+        >>> str(spc)
+        <TensorSubspace of dim 2 over space (3, 5)>
+        """
+
         if self._hilb_space is None:
             spc_str = str(self._col_shp)
         else:
@@ -241,27 +267,125 @@ class TensorSubspace(object):
         return "<TensorSubspace of dim "+str(self._dim)+" over space "+spc_str+">"
 
     def __repr__(self):
+        """
+        Returns string representation.
+
+        >>> from qitensor import TensorSubspace
+        >>> spc = TensorSubspace.full((3, 5))
+        >>> str(spc)
+        <TensorSubspace of dim 2 over space (3, 5)>
+        """
+
         return str(self)
 
     def __invert__(self):
-        """Returns orthogonal complement of this space."""
+        """
+        Returns orthogonal complement of this space.
+
+        >>> from qitensor import TensorSubspace
+        >>> import numpy as np
+        >>> x = np.random.randn(3, 5)
+        >>> y = np.random.randn(3, 5)
+        >>> spc = TensorSubspace.from_span([x, y]); spc
+        <TensorSubspace of dim 2 over space (3, 5)>
+        >>> ~spc
+        <TensorSubspace of dim 13 over space (3, 5)>
+        >>> spc.equiv(~(~perp))
+        True
+        >>> (~TensorSubspace.full((3,5))).equiv(TensorSubspace.empty((3,5)))
+        True
+        >>> (~TensorSubspace.empty((3,5))).equiv(TensorSubspace.full((3,5)))
+        True
+        """
+
         return self.perp()
 
     def __or__(self, other):
-        """Span of union of spaces."""
+        """
+        Span of union of spaces.
+
+        >>> import numpy as np
+        >>> from qitensor import TensorSubspace
+        >>> x = TensorSubspace.from_span(np.random.randn(4,5,10))
+        >>> y = TensorSubspace.from_span(np.random.randn(30,5,10))
+        >>> z = TensorSubspace.from_span(np.random.randn(30,5,10))
+        >>> x | y
+        <TensorSubspace of dim 34 over space (5, 10)>
+        >>> y | z
+        <TensorSubspace of dim 50 over space (5, 10)>
+        >>> y > x|y
+        False
+        >>> x|y > y
+        True
+        >>> (y & z).equiv(~(~y | ~z))
+        True
+        """
+
         self.assert_compatible(other)
         b_cat = np.concatenate((self._basis, other._basis), axis=0)
         return self.from_span(b_cat, **self._config_kw)
 
     def __and__(self, other):
-        """Intersection of spaces."""
+        """
+        Intersection of spaces.
+        
+        >>> import numpy as np
+        >>> from qitensor import TensorSubspace
+        >>> x = TensorSubspace.from_span(np.random.randn(4,5,10))
+        >>> y = TensorSubspace.from_span(np.random.randn(30,5,10))
+        >>> z = TensorSubspace.from_span(np.random.randn(30,5,10))
+        >>> y & z
+        <TensorSubspace of dim 10 over space (5, 10)>
+        >>> y > x&y
+        True
+        >>> (y & z).equiv(~(~y | ~z))
+        True
+        """
+
         return (self.perp() | other.perp()).perp()
 
     def __sub__(self, other):
-        """Subspace of first space perpendicular to second space."""
+        """
+        Subspace of first space perpendicular to second space.
+
+        >>> import numpy as np
+        >>> from qitensor import TensorSubspace
+        >>> x = TensorSubspace.from_span(np.random.randn(4,5,10))
+        >>> y = TensorSubspace.from_span(np.random.randn(30,5,10))
+        >>> z = TensorSubspace.from_span(np.random.randn(30,5,10))
+        >>> y - x
+        <TensorSubspace of dim 26 over space (5, 10)>
+        >>> (y-(y-x)).equiv(TensorSubspace.from_span([ y.project(v) for v in x ]))
+        True
+        """
+
         return self & other.perp()
 
     def to_basis(self, x):
+        """
+        Returns a representation of tensor ``x`` as a vector in the basis of
+        this subspace.  If ``x`` is not in this subspace, the orthogonal
+        projection is used (i.e. the element of the subspace closest to ``x``).
+
+        >>> import numpy as np
+        >>> from qitensor import TensorSubspace
+        >>> spc = TensorSubspace.from_span(np.random.randn(4,5,10))
+        >>> spc
+        <TensorSubspace of dim 4 over space (5, 10)>
+        >>> spc.dim()
+        4
+        >>> np.allclose(spc.to_basis(spc[0]), np.array([1,0,0,0]))
+        True
+        >>> np.allclose(spc.to_basis(spc[1]), np.array([0,1,0,0]))
+        True
+        >>> v = np.random.randn(5,10)
+        >>> spc.to_basis(v).shape
+        (4,)
+        >>> w = spc.from_basis(spc.to_basis(v))
+        >>> np.allclose(w, spc.project(v))
+        True
+        """
+
         if self._hilb_space is not None:
             import qitensor.array
             if isinstance(x, qitensor.array.HilbertArray):
@@ -273,6 +397,28 @@ class TensorSubspace(object):
         return np.tensordot(self._basis.conjugate(), x, axes=(range(1, nd+1), range(nd)))
 
     def from_basis(self, v):
+        """
+        Returns the element of this subspace corresponding to the given vector,
+        which is to be expressed in this subspace's basis.
+
+        >>> import numpy as np
+        >>> from qitensor import TensorSubspace
+        >>> spc = TensorSubspace.from_span(np.random.randn(4,5,10))
+        >>> spc
+        <TensorSubspace of dim 4 over space (5, 10)>
+        >>> spc.dim()
+        4
+        >>> np.allclose(spc[0], spc.from_basis([1,0,0,0]))
+        True
+        >>> np.allclose(spc[1], spc.from_basis([0,1,0,0]))
+        True
+        >>> v = np.random.randn(5,10)
+        >>> w = spc.from_basis(spc.to_basis(v))
+        >>> np.allclose(w, spc.project(v))
+        True
+        """
+
+        v = np.array(v)
         assert len(v.shape) == 1
         assert v.shape[0] == self._dim
         ret = np.tensordot(v, self._basis, axes=((0,),(0,)))
@@ -282,10 +428,44 @@ class TensorSubspace(object):
             return self._hilb_space.array(ret)
 
     def project(self, x):
+        """
+        Returns the element of this subspace that is the closest to the given
+        tensor.
+
+        >>> import numpy as np
+        >>> from qitensor import TensorSubspace
+        >>> spc = TensorSubspace.from_span(np.random.randn(4,5,10))
+        >>> v = np.random.randn(5,10)
+        >>> np.allclose(spc[0], spc.project(spc[0]))
+        True
+        >>> np.allclose(v, spc.project(v))
+        False
+        >>> w = spc.from_basis(spc.to_basis(v))
+        >>> np.allclose(w, spc.project(v))
+        True
+        """
+
         return self.from_basis(self.to_basis(x))
 
     def is_perp(self, other):
-        """Tests whether the given TensorSubspace or vector is perpendicular to this space."""
+        """
+        Tests whether the given TensorSubspace or vector is perpendicular to this space.
+
+        >>> import numpy as np
+        >>> from qitensor import TensorSubspace
+        >>> x = TensorSubspace.from_span(np.random.randn(4,5,10))
+        >>> y = TensorSubspace.from_span(np.random.randn(30,5,10))
+        >>> x.is_perp(y)
+        False
+        >>> x.is_perp(~x)
+        True
+        >>> x.is_perp(y-x)
+        True
+        >>> y.is_perp(x[0])
+        False
+        >>> (y-x).is_perp(x[0])
+        True
+        """
         if isinstance(other, self.__class__):
             self.assert_compatible(other)
             foo = np.tensordot(self._basis_flat.conjugate(), other._basis_flat, axes=((1,),(1,)))
@@ -294,13 +474,57 @@ class TensorSubspace(object):
             return linalg.norm(self.to_basis(other)) < self._tol
 
     def contains(self, other):
-        """Tests whether the given TensorSubspace or vector is contained in this space."""
+        """
+        Tests whether the given TensorSubspace or vector is contained in this space.
+        Equivalent to ``self > other``.
+
+        >>> import numpy as np
+        >>> from qitensor import TensorSubspace
+        >>> x = TensorSubspace.from_span(np.random.randn(4,5,10))
+        >>> y = TensorSubspace.from_span(np.random.randn(30,5,10))
+        >>> y.contains(x)
+        False
+        >>> (y|x).contains(x)
+        True
+        >>> x.contains(y[0])
+        False
+        >>> y.contains(y[0])
+        True
+        """
+
         return self.perp().is_perp(other)
 
     def equiv(self, other):
+        """
+        Tests whether this subspace is equal to ``other``, to within an error tolerance.
+        Equivalent to ``self < other and self > other``.
+
+        >>> import numpy as np
+        >>> from qitensor import TensorSubspace
+        >>> x = TensorSubspace.from_span(np.random.randn(4,5,10))
+        >>> y = TensorSubspace.from_span(np.random.randn(30,5,10))
+        >>> x.equiv(y)
+        False
+        >>> (x & y).equiv(~(~x | ~y))
+        True
+        """
+
         return self.contains(other) and other.contains(self)
 
     def is_hermitian(self):
+        """
+        A subspace S is Hermitian if :math:`S = \{ x^\dagger | x \in S \}`.
+
+        >>> import numpy as np
+        >>> from qitensor import TensorSubspace
+        >>> S = TensorSubspace.from_span(np.random.randn(4,10,10))
+        >>> S.is_hermitian()
+        False
+        >>> T = S | TensorSubspace.from_span([ x.transpose().conjugate() for x in S ])
+        >>> T.is_hermitian()
+        True
+        """
+
         assert len(self._col_shp) == 2
         assert self._col_shp[0] == self._col_shp[1]
         for x in self._basis:
@@ -312,6 +536,23 @@ class TensorSubspace(object):
         """
         Compute a basis for the Hermitian operators of this space.  Note that
         this basis is intended to map real vectors to complex operators.
+
+        >>> import numpy as np
+        >>> from qitensor import TensorSubspace
+        >>> S = TensorSubspace.from_span(np.random.randn(4,10,10))
+        >>> S.hermitian_basis() # S is not Hermitian
+        Traceback (most recent call last):
+            ...
+        AssertionError
+        >>> T = S | TensorSubspace.from_span([ x.transpose().conjugate() for x in S ])
+        >>> hbas = T.hermitian_basis()
+        >>> hbas.shape[0] == T.dim()
+        True
+        >>> x = np.tensordot(np.random.randn(hbas.shape[0]), hbas, axes=([0],[0]))
+        >>> np.allclose(x, x.transpose().conjugate())
+        True
+        >>> x in T
+        True
         """
 
         if self._hermit_cache is not None:
@@ -439,6 +680,20 @@ class TensorSubspace(object):
     def random_hermit(self):
         """
         Returns a random Hermitian vector in this subspace.
+
+        >>> import numpy as np
+        >>> from qitensor import TensorSubspace
+        >>> S = TensorSubspace.from_span(np.random.randn(4,10,10))
+        >>> S.random_hermit() # S is not Hermitian
+        Traceback (most recent call last):
+            ...
+        AssertionError
+        >>> T = S | TensorSubspace.from_span([ x.transpose().conjugate() for x in S ])
+        >>> v = T.random_hermit()
+        >>> np.allclose(v, v.transpose().conjugate())
+        True
+        >>> v in T
+        True
         """
 
         hb = self.hermitian_basis()
@@ -450,12 +705,46 @@ class TensorSubspace(object):
             return np.tensordot(v, hb, axes=([0],[0]))
 
     def dim(self):
+        """
+        Returns the dimension of this subspace.
+
+        >>> import numpy as np
+        >>> from qitensor import TensorSubspace
+        >>> x = TensorSubspace.from_span(np.random.randn(4,10,10))
+        >>> x.dim()
+        4
+        """
+
         return self._dim
 
     def __len__(self):
+        """
+        Returns the dimension of this subspace.
+        Equivalent to ``self.dim()``.  This method is here because this class
+        emulates an array, returning basis vectors with syntax like ``self[0]``.
+
+        >>> import numpy as np
+        >>> from qitensor import TensorSubspace
+        >>> x = TensorSubspace.from_span(np.random.randn(4,10,10))
+        >>> len(x)
+        4
+        """
+
         return self._dim
 
     def __getitem__(self, i):
+        """
+        Returns a basis vector of this subspace.
+
+        >>> import numpy as np
+        >>> from qitensor import TensorSubspace
+        >>> S = TensorSubspace.from_span(np.random.randn(4,10,10))
+        >>> S[0] in S
+        True
+        >>> S.equiv(TensorSpace.from_span([ x for x in S ]))
+        True
+        """
+
         if self._hilb_space is None:
             return self._basis[i]
         else:
@@ -464,19 +753,61 @@ class TensorSubspace(object):
     def __contains__(self, other):
         """
         Alias for self.contains(other).
+
+        >>> import numpy as np
+        >>> from qitensor import TensorSubspace
+        >>> x = TensorSubspace.from_span(np.random.randn(4,5,10))
+        >>> y = TensorSubspace.from_span(np.random.randn(30,5,10))
+        >>> x in y
+        False
+        >>> x in y|x
+        True
+        >>> y[0] in x
+        False
+        >>> y[0] in y
+        True
         """
+
         return self.contains(other)
 
     def __gt__(self, other):
         """
         Alias for self.contains(other).
+
+        >>> import numpy as np
+        >>> from qitensor import TensorSubspace
+        >>> x = TensorSubspace.from_span(np.random.randn(4,5,10))
+        >>> y = TensorSubspace.from_span(np.random.randn(30,5,10))
+        >>> y > x)
+        False
+        >>> y|x > x
+        True
+        >>> x > y[0]
+        False
+        >>> y > y[0]
+        True
         """
+
         return self.contains(other)
 
     def __lt__(self, other):
         """
         Alias for other.contains(self).
+
+        >>> import numpy as np
+        >>> from qitensor import TensorSubspace
+        >>> x = TensorSubspace.from_span(np.random.randn(4,5,10))
+        >>> y = TensorSubspace.from_span(np.random.randn(30,5,10))
+        >>> x < y
+        False
+        >>> x < y|x
+        True
+        >>> y[0] < x
+        False
+        >>> y[0] < y
+        True
         """
+
         return other.contains(self)
 
 if __name__ == "__main__":

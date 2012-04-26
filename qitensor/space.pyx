@@ -246,7 +246,7 @@ cdef class HilbertSpace:
             spc = create_space2(common_kets, common_bras)
             raise DuplicatedSpaceError(spc, msg)
 
-    cpdef bra_space(self):
+    cpdef HilbertSpace bra_space(self):
         """
         Returns a ``HilbertSpace`` consisting of only the bra space of this
         space.
@@ -262,7 +262,7 @@ cdef class HilbertSpace:
         """
         return create_space2(frozenset(), self.bra_set)
 
-    cpdef ket_space(self):
+    cpdef HilbertSpace ket_space(self):
         """
         Returns a ``HilbertSpace`` consisting of only the ket space of this
         space.
@@ -512,7 +512,7 @@ cdef class HilbertSpace:
     def __rmul__(self, other):
         return self.__mul__(other)
 
-    cpdef diag(self, v):
+    cpdef HilbertArray diag(self, v):
         """
         Create a diagonal operator from the given 1-d list.
 
@@ -784,7 +784,7 @@ cdef class HilbertSpace:
         iso = U.as_np_matrix()[:, :db]
         return self.reshaped_np_matrix(iso)
 
-    cpdef eye(self):
+    cpdef HilbertArray eye(self):
         """
         Returns a ``HilbertArray`` corresponding to the identity matrix.
 
@@ -933,6 +933,107 @@ cdef class HilbertSpace:
 
         return basis
 
+    cpdef HilbertArray fourier_basis_state(self, int k):
+        """
+        Returns a state from the Fourier basis.
+
+        The returned state is :math:`\sum_j (1/\sqrt{D}) e^{2 \pi i j k/D} |j>`
+        where `D` is the dimension of the space and `j` is an integer
+        (regardless of the actual values of the index set).
+
+        >>> from qitensor import qubit, qudit, indexed_space
+        >>> import numpy
+        >>> numpy.set_printoptions(suppress = True)
+
+        >>> ha = qudit('a', 4)
+        >>> ha.fourier_basis_state(0)
+        HilbertArray(|a>,
+        array([ 0.5+0.j,  0.5+0.j,  0.5+0.j,  0.5+0.j]))
+        >>> ha.fourier_basis_state(1)
+        HilbertArray(|a>,
+        array([ 0.5+0.j ,  0.0+0.5j, -0.5+0.j , -0.0-0.5j]))
+        >>> hb = qubit('b')
+        >>> (ha*hb).fourier_basis_state(0)
+        HilbertArray(|a,b>,
+        array([[ 0.353553+0.j,  0.353553+0.j],
+               [ 0.353553+0.j,  0.353553+0.j],
+               [ 0.353553+0.j,  0.353553+0.j],
+               [ 0.353553+0.j,  0.353553+0.j]]))
+        >>> (ha*hb).fourier_basis_state(3) == (ha*hb).H.fourier_basis_state(3).H
+        True
+        >>> (ha*hb.H).fourier_basis_state(0)
+        Traceback (most recent call last):
+            ...
+        HilbertError: 'fourier_basis_state not allowed for operators (only for bras or kets)'
+        >>> hc = indexed_space('c', ['w', 'x', 'y', 'z'])
+        >>> hc.fourier_basis_state(0)
+        HilbertArray(|c>,
+        array([ 0.5+0.j,  0.5+0.j,  0.5+0.j,  0.5+0.j]))
+        """
+
+        if len(self.ket_set) == 0:
+            return self.H.fourier_basis_state(k).H
+        elif len(self.bra_set):
+            raise HilbertError("fourier_basis_state not allowed for operators (only for bras or kets)")
+        # else it is a ket space
+
+        cdef int N = self.dim()
+        cdef int i
+        cdef np.ndarray arr = np.array([
+            self.base_field.fractional_phase(i*k, N)
+            for i in range(N)], dtype=self.base_field.dtype)
+        arr /= self.base_field.sqrt(N)
+        return self.array(data=arr, reshape=True)
+
+    cpdef HilbertArray fourier(self):
+        """
+        Returns the Fourier transform gate.
+
+        If the bra space or ket space is empty, then the nonempty of those two
+        is used to form an operator space (i.e. ``self.O``).  If both the
+        bra and ket spaces are nonempty, they must be of the same dimension
+        since the operator must be square.
+
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> hb = qubit('b')
+
+        >>> ha.fourier()
+        HilbertArray(|a><a|,
+        array([[ 1.+0.j,  1.+0.j],
+               [ 1.+0.j, -1.+0.j]]))
+
+        >>> (ha*hb.H).fourier()
+        HilbertArray(|a><b|,
+        array([[ 1.+0.j,  1.+0.j],
+               [ 1.+0.j, -1.+0.j]]))
+        
+        >>> (ha*hb).fourier()
+        HilbertArray(|a,b><a,b|,
+        array([[[[ 1.+0.j,  1.+0.j],
+                 [ 1.+0.j,  1.+0.j]],
+        <BLANKLINE>
+                [[ 1.+0.j,  0.+1.j],
+                 [-1.+0.j, -0.-1.j]]],
+        <BLANKLINE>
+        <BLANKLINE>
+               [[[ 1.+0.j, -1.+0.j],
+                 [ 1.-0.j, -1.+0.j]],
+        <BLANKLINE>
+                [[ 1.+0.j, -0.-1.j],
+                 [-1.+0.j,  0.+1.j]]]]))
+        """
+
+        if len(self.ket_set) == 0 or len(self.bra_set) == 0:
+            return (self * self.H).fourier()
+
+        cdef int N = self.assert_square()
+        cdef np.ndarray arr = np.array([[
+            self.base_field.fractional_phase(j*k, N)
+            for j in range(N)] for k in range(N)], dtype=self.base_field.dtype)
+
+        return self.array(data=arr, reshape=True)
+
     cpdef full_space(self):
         """
         Returns a TensorSubspace corresponding to the entire space.
@@ -961,7 +1062,7 @@ cdef class HilbertSpace:
 
         return TensorSubspace.empty(self.shape, hilb_space=self)
 
-    cpdef dim(self):
+    cpdef int dim(self):
         """
         Returns the dimension of this space.
 

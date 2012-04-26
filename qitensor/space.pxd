@@ -1,6 +1,8 @@
 cimport cpython
 cimport numpy as np
 
+from qitensor.array cimport HilbertArray
+
 cpdef create_space1(kets_and_bras)
 cpdef create_space2(frozenset ket_set, frozenset bra_set)
 cpdef long _shape_product(l)
@@ -24,24 +26,26 @@ cdef class HilbertSpace(object):
     cdef public addends
     cdef public P
 
-    cpdef bra_space(self)
-    cpdef ket_space(self)
+    cpdef HilbertSpace bra_space(self)
+    cpdef HilbertSpace ket_space(self)
     cpdef is_symmetric(self)
     cpdef is_square(self)
     cpdef assert_square(self)
-    cpdef diag(self, v)
+    cpdef HilbertArray diag(self, v)
     cpdef reshaped_np_matrix(self, m, input_axes=*)
     cpdef array(self, data=*, cpython.bool noinit_data=*, cpython.bool reshape=*, input_axes=*)
     cpdef random_array(self)
     cpdef random_unitary(self)
     cpdef random_isometry(self)
-    cpdef eye(self)
+    cpdef HilbertArray eye(self)
     cpdef basis_vec(self, idx)
     cpdef basis(self)
     cpdef hermitian_basis(self, normalize=*)
+    cpdef HilbertArray fourier_basis_state(self, int k)
+    cpdef HilbertArray fourier(self)
     cpdef full_space(self)
     cpdef empty_space(self)
-    cpdef dim(self)
+    cpdef int dim(self)
     cpdef index_iter(self)
     cpdef assert_ket_space(self)
     cpdef reshaped_sage_matrix(self, m, input_axes=*)

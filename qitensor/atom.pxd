@@ -18,7 +18,6 @@ cdef class HilbertAtom(HilbertSpace):
     cpdef _assert_compatible(self, HilbertAtom other)
     cpdef ket(self, idx)
     cpdef bra(self, idx)
-    cpdef fourier_basis_state(self, k)
     cpdef x_plus(self)
     cpdef x_minus(self)
     cpdef y_plus(self)

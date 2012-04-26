@@ -338,37 +338,6 @@ cdef class HilbertAtom(HilbertSpace):
 
     # Special states
 
-    cpdef fourier_basis_state(self, k):
-        """
-        Returns a state from the Fourier basis.
-
-        The returned state is :math:`\sum_j (1/\sqrt{D}) e^{2 \pi i j k/D} |j>`
-        where `D` is the dimension of the space and `j` is an integer
-        (regardless of the actual values of the index set).
-
-        >>> from qitensor import qudit, indexed_space
-        >>> import numpy
-        >>> numpy.set_printoptions(suppress = True)
-
-        >>> ha = qudit('a', 4)
-        >>> ha.fourier_basis_state(0)
-        HilbertArray(|a>,
-        array([ 0.5+0.j,  0.5+0.j,  0.5+0.j,  0.5+0.j]))
-        >>> ha.fourier_basis_state(1)
-        HilbertArray(|a>,
-        array([ 0.5+0.j ,  0.0+0.5j, -0.5+0.j , -0.0-0.5j]))
-        >>> hb = indexed_space('b', ['w', 'x', 'y', 'z'])
-        >>> hb.fourier_basis_state(0)
-        HilbertArray(|b>,
-        array([ 0.5+0.j,  0.5+0.j,  0.5+0.j,  0.5+0.j]))
-        """
-
-        ret = self.array()
-        N = len(self.indices)
-        for (i, key) in enumerate(self.indices):
-            ret[key] = self.base_field.fractional_phase(i*k, N)
-        return ret / self.base_field.sqrt(N)
-
     cpdef x_plus(self):
         """
         Returns a state with 1/sqrt(D) in each slot.

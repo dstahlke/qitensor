@@ -6,6 +6,7 @@ FINISH DOCS
     * ``sage -coverage qitensor/*.py``
 
 BUGS
+    * 'assert' doesn't give useful message now that Cython is being used
     * graph_codes.rst doctest gives Sage a segfault
     * redeclaring HilbertAtom can't change latex label
     * set formatting options on sage examples (including webpage)

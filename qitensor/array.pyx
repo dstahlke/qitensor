@@ -72,7 +72,8 @@ cdef class HilbertArray:
             #: Provides direct access to the underlying numpy array.
             self.nparray = None
         elif data is None:
-            assert input_axes is None
+            if not input_axes is None:
+                raise HilbertException("data parameter must be given when input_axes is given")
             self.nparray = np.zeros(hs.shape, dtype=hs.base_field.dtype)
         else:
             self.nparray = np.array(data, dtype=hs.base_field.dtype)
@@ -92,7 +93,8 @@ cdef class HilbertArray:
                 raise HilbertShapeError(np.shape(self.nparray), data_shape)
 
             if input_axes is not None:
-                assert frozenset(input_axes) == frozenset(self.axes)
+                if frozenset(input_axes) != frozenset(self.axes):
+                    raise MismatchedSpaceError("input_axes doesn't match array space")
                 shuffle = [ input_axes.index(x) for x in self.axes ]
                 self.nparray = self.nparray.transpose(shuffle)
 

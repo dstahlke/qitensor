@@ -9,7 +9,7 @@ from qitensor.basefield import HilbertBaseField
 import qitensor.atom
 cimport qitensor.atom
 
-__all__ = ['base_field_lookup', 'indexed_space', 'qubit', 'qudit']
+__all__ = ['base_field_lookup', 'indexed_space', 'qubit', 'qudit', 'GroupOpCyclic_factory', 'GroupOpTimes_factory']
 
 ##############################
 

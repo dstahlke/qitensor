@@ -849,12 +849,16 @@ cdef class HilbertArray:
         >>> x = ha.random_array()
         >>> (x/2).closeto(x*0.5)
         True
-        >>> # the following exception is thrown from within numpy
+        >>> # the following exception may be thrown from within numpy
         >>> x / x
         Traceback (most recent call last):
             ...
-        TypeError: unsupported operand type(s) for /: 'complex' and 'HilbertArray'
+        TypeError
         """
+
+        # FIXME - Cython seems to send self=float sometimes
+        if not isinstance(self, HilbertArray):
+            raise TypeError()
 
         ret = self.copy()
         ret /= other
@@ -894,7 +898,7 @@ cdef class HilbertArray:
         >>> x / x
         Traceback (most recent call last):
             ...
-        TypeError: unsupported operand type(s) for /: 'complex' and 'HilbertArray'
+        TypeError
         """
 
         ret = self.copy()
@@ -957,8 +961,8 @@ cdef class HilbertArray:
         Traceback (most recent call last):
             ...
         HilbertIndexError: 'Wrong number of indices given (4 for |a,b><a|)'
-        >>> y._index_key_to_map({ ha: 1, ha.H: 2})
-        {<a|: 2, |a>: 1}
+        >>> sorted(list(y._index_key_to_map({ ha: 1, ha.H: 2}).iteritems()))
+        [(|a>, 1), (<a|, 2)]
         >>> y._index_key_to_map({ ha: 1, hb.H: 2})
         Traceback (most recent call last):
             ...

@@ -257,7 +257,7 @@ class TensorSubspace(object):
         >>> from qitensor import TensorSubspace
         >>> spc = TensorSubspace.full((3, 5))
         >>> str(spc)
-        <TensorSubspace of dim 2 over space (3, 5)>
+        '<TensorSubspace of dim 15 over space (3, 5)>'
         """
 
         if self._hilb_space is None:
@@ -273,7 +273,7 @@ class TensorSubspace(object):
         >>> from qitensor import TensorSubspace
         >>> spc = TensorSubspace.full((3, 5))
         >>> str(spc)
-        <TensorSubspace of dim 2 over space (3, 5)>
+        '<TensorSubspace of dim 15 over space (3, 5)>'
         """
 
         return str(self)
@@ -290,7 +290,7 @@ class TensorSubspace(object):
         <TensorSubspace of dim 2 over space (3, 5)>
         >>> ~spc
         <TensorSubspace of dim 13 over space (3, 5)>
-        >>> spc.equiv(~(~perp))
+        >>> spc.equiv(~(~spc))
         True
         >>> (~TensorSubspace.full((3,5))).equiv(TensorSubspace.empty((3,5)))
         True
@@ -741,7 +741,7 @@ class TensorSubspace(object):
         >>> S = TensorSubspace.from_span(np.random.randn(4,10,10))
         >>> S[0] in S
         True
-        >>> S.equiv(TensorSpace.from_span([ x for x in S ]))
+        >>> S.equiv(TensorSubspace.from_span([ x for x in S ]))
         True
         """
 
@@ -778,7 +778,7 @@ class TensorSubspace(object):
         >>> from qitensor import TensorSubspace
         >>> x = TensorSubspace.from_span(np.random.randn(4,5,10))
         >>> y = TensorSubspace.from_span(np.random.randn(30,5,10))
-        >>> y > x)
+        >>> y > x
         False
         >>> y|x > x
         True
@@ -802,10 +802,7 @@ class TensorSubspace(object):
         False
         >>> x < y|x
         True
-        >>> y[0] < x
-        False
-        >>> y[0] < y
-        True
+        >>> #y[0] < x  # doesn't work - calls numpy's "<" operator
         """
 
         return other.contains(self)

@@ -106,7 +106,7 @@ cpdef long _shape_product(l):
 
     Used to convert shape to dimension.
 
-    >>> from qitensor import _shape_product
+    >>> from qitensor.space import _shape_product
     >>> _shape_product((1,2,3,4))
     24
     """

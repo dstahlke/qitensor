@@ -58,6 +58,8 @@ __all__ = \
     qitensor.subspace.__all__
 
 def doctest():
+    """Runs all doctests and unit tests."""
+
     import doctest
     import qitensor.tests.hilbert
     import qitensor.tests.experimental
@@ -69,6 +71,7 @@ def doctest():
     #qitensor.benchmark_py, \
     #qitensor.tests.bench, \
 
+    print "\nRunning doctests..."
     for m in \
         qitensor.array, \
         qitensor.arrayformatter, \
@@ -85,10 +88,12 @@ def doctest():
         qitensor.tests.experimental, \
         qitensor.tests.hilbert:
 
-        doctest.testmod(m)
+        print m.__name__, ('.'*(45-len(m.__name__))), doctest.testmod(m)
 
     # FIXME - these tests are probably obsoleted by the doctests.  It might not
     # be worth keeping them around.
+    print "\nRunning unit tests..."
+    import unittest
     suite = unittest.TestSuite([
         qitensor.tests.hilbert.suite(),
         qitensor.tests.experimental.suite(),

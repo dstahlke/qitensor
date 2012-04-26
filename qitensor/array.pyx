@@ -73,7 +73,7 @@ cdef class HilbertArray:
             self.nparray = None
         elif data is None:
             if not input_axes is None:
-                raise HilbertException("data parameter must be given when input_axes is given")
+                raise HilbertError("data parameter must be given when input_axes is given")
             self.nparray = np.zeros(hs.shape, dtype=hs.base_field.dtype)
         else:
             self.nparray = np.array(data, dtype=hs.base_field.dtype)

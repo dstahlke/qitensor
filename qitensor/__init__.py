@@ -56,3 +56,41 @@ __all__ = \
     qitensor.circuit.__all__ + \
     qitensor.arrayformatter.__all__ + \
     qitensor.subspace.__all__
+
+def doctest():
+    import doctest
+    import qitensor.tests.hilbert
+    import qitensor.tests.experimental
+
+    # Only works under Sage:
+    #qitensor.sagebasefield
+    # Benchmarks: no applicable doctests
+    #qitensor.benchmark_cy, \
+    #qitensor.benchmark_py, \
+    #qitensor.tests.bench, \
+
+    for m in \
+        qitensor.array, \
+        qitensor.arrayformatter, \
+        qitensor.atom, \
+        qitensor.basefield, \
+        qitensor.circuit, \
+        qitensor.exceptions, \
+        qitensor.factory, \
+        qitensor.space, \
+        qitensor.subspace, \
+        qitensor.experimental.cartan_decompose, \
+        qitensor.experimental.cartan_decompose_impl, \
+        qitensor.experimental.stabilizers, \
+        qitensor.tests.experimental, \
+        qitensor.tests.hilbert:
+
+        doctest.testmod(m)
+
+    # FIXME - these tests are probably obsoleted by the doctests.  It might not
+    # be worth keeping them around.
+    suite = unittest.TestSuite([
+        qitensor.tests.hilbert.suite(),
+        qitensor.tests.experimental.suite(),
+    ])
+    unittest.TextTestRunner().run(suite)

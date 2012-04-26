@@ -27,11 +27,9 @@ cmdclass = { }
 
 ######################################################################
 
-# FIXME - these tests are probably obsoleted by the doctests
 # Adapted from sympy
 class test_qitensor(Command):
-    """Runs all tests under the qitensor/ folder
-    """
+    """Runs tests."""
 
     description = "Automatically run the test suite for qitensor."
     user_options = []  # distutils complains if this is not here.
@@ -47,14 +45,16 @@ class test_qitensor(Command):
         pass
 
     def run(self):
-        import qitensor.tests.hilbert
-        import qitensor.tests.experimental
+        import sys
+        import os
+        # Tests must run on installed module, since the files under the source
+        # tree are all Cythonized.
+        cwd = os.path.abspath('.')
+        if cwd in sys.path:
+            sys.path.remove(cwd)
 
-        suite = unittest.TestSuite([
-            qitensor.tests.hilbert.suite(),
-            qitensor.tests.experimental.suite(),
-        ])
-        unittest.TextTestRunner().run(suite)
+        import qitensor
+        qitensor.doctest()
 
 cmdclass.update({'test': test_qitensor})
 

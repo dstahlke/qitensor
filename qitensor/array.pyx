@@ -39,6 +39,75 @@ def _unreduce_v1(space, nparray):
 
     return space.array(nparray)
 
+cdef class TensordotWisdom:
+    cdef tuple contract_axes
+    cdef list td_axes
+    cdef int out_num_axes
+    cdef HilbertSpace ret_space
+    cdef tuple transpose_axes
+
+    def __init__(self, hs, ohs, contraction_spaces):
+        cdef frozenset mul_space
+        if contraction_spaces is None:
+            mul_space = frozenset([x.H for x in hs.bra_set]) & ohs.ket_set
+        elif isinstance(contraction_spaces, frozenset):
+            mul_space = contraction_spaces
+            for x in mul_space:
+                if not isinstance(x, HilbertSpace):
+                    raise TypeError('contraction space must consist of '+
+                        'HilbertAtoms')
+                if x.is_dual():
+                    raise NotKetSpaceError('contraction space must consist of '+
+                        'kets')
+        elif isinstance(contraction_spaces, HilbertSpace):
+            if len(contraction_spaces.bra_set) > 0:
+                raise NotKetSpaceError('contraction space must consist of kets')
+            mul_space = contraction_spaces.ket_set
+        else:
+            raise TypeError('contraction space must be HilbertSpace '+
+                'or frozenset')
+
+        for x in mul_space:
+            assert isinstance(x, HilbertAtom)
+            assert not x.is_dual
+
+        cdef frozenset mul_H = frozenset([x.H for x in mul_space])
+        #print mul_space
+
+        cdef list mul_space_sorted = sorted(mul_space)
+        cdef list axes_self  = [hs._array_axes_lookup[x.H] for x in mul_space_sorted]
+        cdef list axes_other = [ohs._array_axes_lookup[x]  for x in mul_space_sorted]
+        self.contract_axes = (axes_self, axes_other)
+
+        self.td_axes = \
+            hs.sorted_kets + \
+            [x for x in hs.sorted_bras if not x in mul_H] + \
+            [x for x in ohs.sorted_kets if not x in mul_space] + \
+            ohs.sorted_bras
+
+        self.out_num_axes = len(self.td_axes)
+
+        cdef:
+            frozenset ket1
+            frozenset ket2
+            frozenset bra1
+            frozenset bra2
+
+        if self.out_num_axes:
+            ket1 = hs.ket_set
+            ket2 = (ohs.ket_set-mul_space)
+            bra1 = (hs.bra_set-mul_H)
+            bra2 = ohs.bra_set
+
+            if not (ket1.isdisjoint(ket2) and bra1.isdisjoint(bra2)):
+                raise DuplicatedSpaceError(
+                    create_space2(ket1 & ket2, bra1 & bra2))
+
+            self.ret_space = create_space2(ket1 | ket2, bra1 | bra2)
+            self.transpose_axes = tuple([self.td_axes.index(x) for x in self.ret_space._array_axes])
+
+cdef dict _td_wisdom_cache = dict()
+
 cdef class HilbertArray:
     def __init__(self, HilbertSpace space, data, cpython.bool noinit_data, cpython.bool reshape, input_axes):
         """
@@ -278,84 +347,23 @@ cdef class HilbertArray:
         if (contraction_spaces is None) and (hs._is_simple_dyad) and (hs == ohs) and (hs == hs.H):
             return self.space.array(np.dot(self.nparray, other.nparray))
 
-        cdef frozenset mul_space
-        if contraction_spaces is None:
-            mul_space = frozenset([x.H for x in hs.bra_set]) & ohs.ket_set
-        elif isinstance(contraction_spaces, frozenset):
-            mul_space = contraction_spaces
-            for x in mul_space:
-                if not isinstance(x, HilbertSpace):
-                    raise TypeError('contraction space must consist of '+
-                        'HilbertAtoms')
-                if x.is_dual():
-                    raise NotKetSpaceError('contraction space must consist of '+
-                        'kets')
-        elif isinstance(contraction_spaces, HilbertSpace):
-            if len(contraction_spaces.bra_set) > 0:
-                raise NotKetSpaceError('contraction space must consist of kets')
-            mul_space = contraction_spaces.ket_set
-        else:
-            raise TypeError('contraction space must be HilbertSpace '+
-                'or frozenset')
+        wisdom_key = (hs, ohs, contraction_spaces)
+        cdef TensordotWisdom wisdom = _td_wisdom_cache.get(wisdom_key, None)
+        if wisdom is None:
+            wisdom = TensordotWisdom(hs, ohs, contraction_spaces)
+            _td_wisdom_cache[wisdom_key] = wisdom
 
-        for x in mul_space:
-            assert isinstance(x, HilbertAtom)
-            assert not x.is_dual
-
-        cdef frozenset mul_H = frozenset([x.H for x in mul_space])
-        #print mul_space
-
-        cdef list mul_space_sorted = sorted(mul_space)
-        cdef list axes_self  = [self.get_dim(x.H) for x in mul_space_sorted]
-        cdef list axes_other = [other.get_dim(x)  for x in mul_space_sorted]
-        #print axes_self, axes_other
         cdef np.ndarray td = np.tensordot(self.nparray, other.nparray,
-            axes=(axes_self, axes_other))
+                axes=wisdom.contract_axes)
         assert td.dtype == hs.base_field.dtype
+        assert wisdom.out_num_axes == td.ndim
 
-        #print "hs.k", hs.sorted_kets
-        #print "hs.b", hs.sorted_bras
-        #print "ohs.k", ohs.sorted_kets
-        #print "ohs.b", ohs.sorted_bras
-        #print "cH", mul_H
-        #print "c", mul_space
-        cdef list td_axes = \
-            hs.sorted_kets + \
-            [x for x in hs.sorted_bras if not x in mul_H] + \
-            [x for x in ohs.sorted_kets if not x in mul_space] + \
-            ohs.sorted_bras
-        #print td_axes
-        #print td.shape
-        assert len(td_axes) == td.ndim
-
-        cdef:
-            frozenset ket1
-            frozenset ket2
-            frozenset bra1
-            frozenset bra2
-            HilbertSpace ret_space
-
-        if len(td_axes) == 0:
+        if wisdom.out_num_axes == 0:
             # convert 0-d array to scalar
             return td[()]
         else:
-            ket1 = hs.ket_set
-            ket2 = (ohs.ket_set-mul_space)
-            bra1 = (hs.bra_set-mul_H)
-            bra2 = ohs.bra_set
-
-            if not (ket1.isdisjoint(ket2) and bra1.isdisjoint(bra2)):
-                raise DuplicatedSpaceError(
-                    create_space2(ket1 & ket2, bra1 & bra2))
-
-            ret_space = create_space2(ket1 | ket2, bra1 | bra2)
-            #print 'ret', ret_space
-
-            ret = ret_space.array(None, True)
-            #print "ret", ret.axes
-            ret.nparray = td.transpose( \
-                tuple([td_axes.index(x) for x in ret.axes]))
-
+            ret = wisdom.ret_space.array(None, True)
+            ret.nparray = td.transpose(wisdom.transpose_axes)
             return ret
 
     cpdef transpose(self, tpose_axes=None):

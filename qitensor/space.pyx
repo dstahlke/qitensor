@@ -988,6 +988,7 @@ cdef class HilbertSpace:
     cpdef HilbertArray fourier(self):
         """
         Returns the Fourier transform gate.
+        The returned operator is :math:`\sum_{jk} (1/\sqrt{D}) e^{-2 \pi i j k/D} |j><k|`
 
         If the bra space or ket space is empty, then the nonempty of those two
         is used to form an operator space (i.e. ``self.O``).  If both the
@@ -1000,28 +1001,28 @@ cdef class HilbertSpace:
 
         >>> ha.fourier()
         HilbertArray(|a><a|,
-        array([[ 1.+0.j,  1.+0.j],
-               [ 1.+0.j, -1.+0.j]]))
+        array([[ 0.707107+0.j,  0.707107+0.j],
+               [ 0.707107+0.j, -0.707107-0.j]]))
 
         >>> (ha*hb.H).fourier()
         HilbertArray(|a><b|,
-        array([[ 1.+0.j,  1.+0.j],
-               [ 1.+0.j, -1.+0.j]]))
+        array([[ 0.707107+0.j,  0.707107+0.j],
+               [ 0.707107+0.j, -0.707107-0.j]]))
         
         >>> (ha*hb).fourier()
         HilbertArray(|a,b><a,b|,
-        array([[[[ 1.+0.j,  1.+0.j],
-                 [ 1.+0.j,  1.+0.j]],
+        array([[[[ 0.5+0.j ,  0.5+0.j ],
+                 [ 0.5+0.j ,  0.5+0.j ]],
         <BLANKLINE>
-                [[ 1.+0.j,  0.+1.j],
-                 [-1.+0.j, -0.-1.j]]],
+                [[ 0.5+0.j ,  0.0-0.5j],
+                 [-0.5-0.j , -0.0+0.5j]]],
         <BLANKLINE>
         <BLANKLINE>
-               [[[ 1.+0.j, -1.+0.j],
-                 [ 1.-0.j, -1.+0.j]],
+               [[[ 0.5+0.j , -0.5-0.j ],
+                 [ 0.5+0.j , -0.5-0.j ]],
         <BLANKLINE>
-                [[ 1.+0.j, -0.-1.j],
-                 [-1.+0.j,  0.+1.j]]]]))
+                [[ 0.5+0.j , -0.0+0.5j],
+                 [-0.5-0.j ,  0.0-0.5j]]]]))
         """
 
         if len(self.ket_set) == 0 or len(self.bra_set) == 0:
@@ -1029,8 +1030,9 @@ cdef class HilbertSpace:
 
         cdef int N = self.assert_square()
         cdef np.ndarray arr = np.array([[
-            self.base_field.fractional_phase(j*k, N)
+            self.base_field.fractional_phase(-j*k, N)
             for j in range(N)] for k in range(N)], dtype=self.base_field.dtype)
+        arr /= self.base_field.sqrt(N)
 
         return self.array(data=arr, reshape=True)
 

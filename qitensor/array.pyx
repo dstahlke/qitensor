@@ -8,19 +8,18 @@ numpy.array.  HilbertArray's are to be created using the
 
 import numpy as np
 cimport cpython
+cimport numpy as np
 
 from qitensor import have_sage
 from qitensor.exceptions import DuplicatedSpaceError, HilbertError, \
     HilbertIndexError, HilbertShapeError, \
     NotKetSpaceError, MismatchedSpaceError
-from qitensor.space import HilbertSpace, _shape_product
-from qitensor.space cimport HilbertSpace, _shape_product
+from qitensor.space import HilbertSpace, _shape_product, create_space1, create_space2
+from qitensor.space cimport HilbertSpace, _shape_product, create_space1, create_space2
 from qitensor.atom import HilbertAtom
 from qitensor.atom cimport HilbertAtom
 from qitensor.arrayformatter import FORMATTER
 from qitensor.subspace import TensorSubspace
-from qitensor.space import create_space1, create_space2
-from qitensor.space cimport create_space1, create_space2
 
 __all__ = ['HilbertArray']
 
@@ -39,9 +38,12 @@ def _unreduce_v1(space, nparray):
 
     return space.array(nparray)
 
+# This holds the result of all the difficult thinking that HilbertArray.tensordot() needs.
+# It is cached for speed.
+cdef dict _td_wisdom_cache = dict()
+#
 cdef class TensordotWisdom:
     cdef tuple contract_axes
-    cdef list td_axes
     cdef int out_num_axes
     cdef HilbertSpace ret_space
     cdef tuple transpose_axes
@@ -79,13 +81,13 @@ cdef class TensordotWisdom:
         cdef list axes_other = [ohs._array_axes_lookup[x]  for x in mul_space_sorted]
         self.contract_axes = (axes_self, axes_other)
 
-        self.td_axes = \
+        cdef list td_axes = \
             hs.sorted_kets + \
             [x for x in hs.sorted_bras if not x in mul_H] + \
             [x for x in ohs.sorted_kets if not x in mul_space] + \
             ohs.sorted_bras
 
-        self.out_num_axes = len(self.td_axes)
+        self.out_num_axes = len(td_axes)
 
         cdef:
             frozenset ket1
@@ -104,9 +106,7 @@ cdef class TensordotWisdom:
                     create_space2(ket1 & ket2, bra1 & bra2))
 
             self.ret_space = create_space2(ket1 | ket2, bra1 | bra2)
-            self.transpose_axes = tuple([self.td_axes.index(x) for x in self.ret_space._array_axes])
-
-cdef dict _td_wisdom_cache = dict()
+            self.transpose_axes = tuple([td_axes.index(x) for x in self.ret_space._array_axes])
 
 cdef class HilbertArray:
     def __init__(self, HilbertSpace space, data, cpython.bool noinit_data, cpython.bool reshape, input_axes):
@@ -203,7 +203,7 @@ cdef class HilbertArray:
         ret.nparray = self.nparray.copy()
         return ret
 
-    cpdef _reassign(self, other):
+    cpdef _reassign(self, HilbertArray other):
         """
         Used internally to change the contents of a HilbertArray without creating a new object.
 
@@ -339,25 +339,24 @@ cdef class HilbertArray:
         True
         """
 
-        cdef HilbertSpace hs = self.space
-        cdef HilbertSpace ohs = other.space
-        #print str(hs)+'*'+str(ohs)
+        #print str(self.space)+'*'+str(other.space)
 
-        hs.base_field.assert_same(ohs.base_field)
+        self.space.base_field.assert_same(other.space.base_field)
 
-        # shortcut for common case
-        if (contraction_spaces is None) and (hs._is_simple_dyad) and (hs == ohs) and (hs == hs.H):
-            return self.space.array(np.dot(self.nparray, other.nparray))
+        # Shortcut for common case.
+        # Not needed now that wisdom optimization is used.
+        #if (contraction_spaces is None) and (self.space._is_simple_dyad) and (self.space == other.space) and (self.space == self.space.H):
+        #    return self.space.array(np.dot(self.nparray, other.nparray))
 
-        wisdom_key = (hs, ohs, contraction_spaces)
+        wisdom_key = (self.space, other.space, contraction_spaces)
         cdef TensordotWisdom wisdom = _td_wisdom_cache.get(wisdom_key, None)
         if wisdom is None:
-            wisdom = TensordotWisdom(hs, ohs, contraction_spaces)
+            wisdom = TensordotWisdom(self.space, other.space, contraction_spaces)
             _td_wisdom_cache[wisdom_key] = wisdom
 
         cdef np.ndarray td = np.tensordot(self.nparray, other.nparray,
                 axes=wisdom.contract_axes)
-        assert td.dtype == hs.base_field.dtype
+        assert td.dtype == self.space.base_field.dtype
         assert wisdom.out_num_axes == td.ndim
 
         if wisdom.out_num_axes == 0:
@@ -1270,8 +1269,9 @@ cdef class HilbertArray:
                [ 3.-4.j,  7.-8.j]]))
         """
 
+        cdef object xxx = self.space.base_field # FIXME - need to forget type to avoid Cython error
         return self.np_matrix_transform( \
-            self.space.base_field.mat_adjoint, \
+            xxx.mat_adjoint, \
             transpose_dims=True)
 
     @property
@@ -1296,8 +1296,9 @@ cdef class HilbertArray:
         True
         """
 
+        cdef object xxx = self.space.base_field # FIXME - need to forget type to avoid Cython error
         return self.np_matrix_transform( \
-            self.space.base_field.mat_inverse, \
+            xxx.mat_inverse, \
             transpose_dims=True)
 
     @property
@@ -1479,8 +1480,9 @@ cdef class HilbertArray:
                [ 5.-6.j,  7.-8.j]]))
         """
 
+        cdef object xxx = self.space.base_field # FIXME - need to forget type to avoid Cython error
         return self.np_matrix_transform( \
-            self.space.base_field.mat_conj)
+            xxx.mat_conj)
 
     def trace(self, axes=None):
         """
@@ -2287,7 +2289,7 @@ cdef class HilbertArray:
         """
 
         return self.np_matrix_transform( \
-            lambda x: self.space.base_field.mat_simplify(x, full=True))
+            lambda x: self.space.base_field.mat_simplify(x, True))
 
     def _matrix_(self, R=None):
         """

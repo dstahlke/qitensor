@@ -2,6 +2,7 @@ cimport cpython
 cimport numpy as np
 
 from qitensor.array cimport HilbertArray
+from qitensor.basefield cimport HilbertBaseField
 
 cpdef create_space1(kets_and_bras)
 cpdef create_space2(frozenset ket_set, frozenset bra_set)
@@ -19,7 +20,7 @@ cdef class HilbertSpace(object):
     cdef readonly cpython.bool _is_simple_dyad
     cdef readonly list _array_axes
     cdef readonly dict _array_axes_lookup
-    cdef readonly base_field
+    cdef readonly HilbertBaseField base_field
     cdef readonly HilbertSpace _prime
 
     # for direct sum

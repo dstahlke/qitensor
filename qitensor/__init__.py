@@ -70,9 +70,11 @@ def doctest():
     #qitensor.benchmark_cy, \
     #qitensor.benchmark_py, \
     #qitensor.tests.bench, \
+    # These are unit tests, they don't contain doctests
+    #qitensor.tests.experimental, \
+    #qitensor.tests.hilbert:
 
-    print "\nRunning doctests..."
-    for m in \
+    doctest_modules = [ \
         qitensor.array, \
         qitensor.arrayformatter, \
         qitensor.atom, \
@@ -85,9 +87,10 @@ def doctest():
         qitensor.experimental.cartan_decompose, \
         qitensor.experimental.cartan_decompose_impl, \
         qitensor.experimental.stabilizers, \
-        qitensor.tests.experimental, \
-        qitensor.tests.hilbert:
+    ]
 
+    print "\nRunning doctests..."
+    for m in doctest_modules:
         print m.__name__, ('.'*(45-len(m.__name__))), doctest.testmod(m)
 
     # FIXME - these tests are probably obsoleted by the doctests.  It might not

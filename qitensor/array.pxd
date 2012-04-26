@@ -8,7 +8,7 @@ cdef class HilbertArray:
     cdef public np.ndarray nparray
 
     cpdef copy(self)
-    cpdef _reassign(self, other)
+    cpdef _reassign(self, HilbertArray other)
     cpdef get_dim(self, atom)
     cpdef _assert_same_axes(self, other)
     cpdef set_data(self, new_data)

@@ -5,7 +5,7 @@ cpdef _factory(dtype)
 
 cdef class HilbertBaseField:
     cdef readonly dtype
-    cdef readonly unique_id
+    cdef readonly str unique_id
     cdef readonly sage_ring
 
     cpdef assert_same(self, HilbertBaseField other)

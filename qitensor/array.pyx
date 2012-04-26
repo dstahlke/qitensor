@@ -126,13 +126,15 @@ cdef class HilbertArray:
         sage: TestSuite(x).run()
         """
 
-        hs = space
+        cdef HilbertSpace hs = space
         # (Sphinx docstring)
         #: The HilbertSpace of this array.
         self.space = hs
         # (Sphinx docstring)
         #: An array telling which HilbertAtom corresponds to each axis of ``self.nparray``.
         self.axes = hs._array_axes
+
+        cdef tuple data_shape
 
         if noinit_data:
             assert data is None

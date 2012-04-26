@@ -1159,6 +1159,15 @@ cdef class HilbertArray:
 
         return (row_space, col_space)
 
+    cpdef diag(self):
+        """
+        Returns the diagonal elements of this operator, as a ket vector.
+        Only applicable to square operators.
+        """
+
+        cdef int D = self.space.assert_square()
+        return self.space.ket_space().array(np.diagonal(self.nparray.reshape(D, D)), False, True)
+
     cpdef as_np_matrix(self, dtype=None, row_space=None, col_space=None):
         """
         Returns the underlying data as a numpy.matrix.  Returns a copy, not a view.

@@ -23,6 +23,7 @@ cdef class HilbertArray:
     cpdef _get_set_item(self, key, do_set=*, set_val=*)
     cpdef _space_string(self, spc_set)
     cpdef _get_row_col_spaces(self, row_space=*, col_space=*)
+    cpdef diag(self)
     cpdef as_np_matrix(self, dtype=*, row_space=*, col_space=*)
     cpdef np_matrix_transform(self, f, transpose_dims=*)
     cpdef det(self)

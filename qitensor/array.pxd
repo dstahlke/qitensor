@@ -1,3 +1,4 @@
+cimport cpython
 cimport numpy as np
 
 from qitensor.space cimport HilbertSpace
@@ -41,6 +42,7 @@ cdef class HilbertArray:
     cpdef entropy(self, normalize=*, checks=*)
     cpdef purity(self, normalize=*, checks=*)
     cpdef QR(self, inner_space=*)
+    cpdef tuple measure(self, HilbertSpace spc=*, cpython.bool normalize=*)
     cpdef span(self, axes=*)
     cpdef sage_matrix(self, R=*)
     cpdef sage_block_matrix(self, R=*)

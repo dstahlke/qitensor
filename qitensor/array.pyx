@@ -2195,6 +2195,65 @@ cdef class HilbertArray:
 
         return (Q, R)
 
+    cpdef tuple measure(self, HilbertSpace spc=None, cpython.bool normalize=False):
+        """
+        Performs a measurement of a quantum state (ket or density operator) in
+        the computational basis.
+
+        The result is random, with probability distribution consistent with the
+        laws of quantum mechanics.  The return value is a tuple, with the first
+        element being the index corresponding to the measurement outcome and
+        the second element being the density operator corresponding to the
+        state of the remaining subsystems (or the value 1 if there are none).
+
+        FIXME - this function is under development and the usage will change.
+        For example, for a ket input, the "remaining subsystems" state
+        should be returned as a ket rather than a density operator.
+
+        FIXME - doctests
+        #>>> from qitensor import qudit
+        #>>> ha=qudit('a', 3); hb=qudit('b', 4); x = (ha*hb).random_array()
+        #>>> x.measure()
+        """
+
+        if len(self.space.ket_set) == 0:
+            raise HilbertError("measure doesn't apply to a bra space")
+        if len(self.space.bra_set) == 0:
+            return self.O.measure(spc)
+        if self.space != self.space.H:
+            raise HilbertError("measure only applies to kets or density operators")
+
+        if spc is None:
+            spc = self.space.ket_space()
+
+        if spc.O == self.space:
+            reduced = self
+        else:
+            reduced = self.trace(self.space / spc.O)
+
+        prob = reduced.diag().nparray
+        sum_prob = np.sum(prob)
+        if sum_prob == 0:
+            raise HilbertError("state was equal to zero")
+        if not normalize:
+            if abs(sum_prob - 1) > 1e-12:
+                raise HilbertError("state was not normalized")
+        prob /= sum_prob
+
+        flatidx = np.argmax(np.cumsum(prob.flatten()) > np.random.rand())
+        idx = np.unravel_index(flatidx, prob.shape)
+
+        if spc.O == self.space:
+            remaining = 1
+        else:
+            remaining = self[dict(zip(spc.sorted_kets, idx) + zip(spc.H.sorted_bras, idx))]
+            remaining /= remaining.trace()
+
+        if len(idx) == 1:
+            idx = idx[0]
+
+        return (idx, remaining)
+
     cpdef span(self, axes='all'):
         """
         Returns a TensorSubspace for the column/row/mixed space of this array.

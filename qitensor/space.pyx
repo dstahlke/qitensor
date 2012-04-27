@@ -12,7 +12,7 @@ import operator
 
 from qitensor import have_sage
 from qitensor.exceptions import DuplicatedSpaceError, HilbertError, \
-    HilbertError, HilbertShapeError, NotKetSpaceError
+    MismatchedSpaceError, HilbertShapeError, NotKetSpaceError
 import qitensor.atom
 from qitensor.arrayformatter import FORMATTER
 from qitensor.subspace import TensorSubspace
@@ -511,6 +511,20 @@ cdef class HilbertSpace:
 
     def __rmul__(self, other):
         return self.__mul__(other)
+
+    def __div__(self, other):
+        """
+        Returns a HilbertSpace ``ret`` with the property that ``other*ret==self``.
+        An error is thrown if such a relation is not possible.
+        """
+
+        if not isinstance(other, HilbertSpace):
+            raise TypeError('HilbertSpace can only be divided by HilbertSpace')
+        if other.bra_ket_set == self.bra_ket_set:
+            raise MismatchedSpaceError("dividing "+repr(self)+" by itself would result in 1-dimensional space")
+        if not other.bra_ket_set < self.bra_ket_set:
+            raise MismatchedSpaceError(repr(self)+" doesn't contain "+repr(other))
+        return create_space1(self.bra_ket_set - other.bra_ket_set)
 
     cpdef HilbertArray diag(self, v):
         """

@@ -5,7 +5,8 @@ FINISH DOCS
     * better way to run Sage doctests?
     * ``sage -coverage qitensor/*.py``
 
-BUGS
+BUGS/FEATURES
+    * support sympy
     * 'assert' doesn't give useful message now that Cython is being used
     * graph_codes.rst doctest gives Sage a segfault
     * redeclaring HilbertAtom can't change latex label

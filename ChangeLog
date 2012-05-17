@@ -3,6 +3,7 @@
 	* HilbertSpace.fourier()
 	* HilbertArray.diag()
 	* HilbertArray.measure()
+	* HilbertSpace.random_density()
 
 === qitensor-0.9 (Dan Stahlke, 2011-04-17) ===
 	* random_isometry

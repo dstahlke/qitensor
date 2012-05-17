@@ -707,7 +707,7 @@ cdef class HilbertSpace:
 
         return HilbertArray(self, data, noinit_data, reshape, input_axes)
 
-    cpdef random_array(self):
+    cpdef HilbertArray random_array(self):
         """
         Returns a ``HilbertArray`` with random values.
 
@@ -722,7 +722,7 @@ cdef class HilbertSpace:
         """
         return self.array(self.base_field.random_array(self.shape))
 
-    cpdef random_unitary(self):
+    cpdef HilbertArray random_unitary(self):
         """
         Returns a random unitary.
 
@@ -767,7 +767,7 @@ cdef class HilbertSpace:
         ret = np.multiply(q, ph)
         return self.reshaped_np_matrix(ret)
 
-    cpdef random_isometry(self):
+    cpdef HilbertArray random_isometry(self):
         """
         Returns a random isometry.
 
@@ -797,6 +797,42 @@ cdef class HilbertSpace:
         U = self.ket_space().O.random_unitary()
         iso = U.as_np_matrix()[:, :db]
         return self.reshaped_np_matrix(iso)
+
+    cpdef HilbertArray random_density(self):
+        """
+        Returns a random density matrix.
+
+        >>> from qitensor import qubit, qudit
+
+        >>> ha = qubit('a')
+        >>> hb = qudit('b', 3)
+        >>> ha.random_density().space
+        |a><a|
+        >>> ha.H.random_density().space
+        |a><a|
+        >>> ha.O.random_density().space
+        |a><a|
+        >>> (ha*hb).random_density().space
+        |a,b><a,b|
+        >>> (ha*hb.H).random_density()
+        Traceback (most recent call last):
+            ...
+        HilbertError: 'not a symmetric operator space: |a><b|'
+        >>> tr = (ha*hb).random_density().trace()
+        >>> np.abs(tr - 1) < 1e-14
+        True
+        """
+
+        if len(self.ket_set) == 0:
+            return self.H.random_density()
+        if len(self.bra_set) > 0 and self.bra_set != self.H.bra_set:
+            raise HilbertError('not a symmetric operator space: '+str(self))
+
+        ket_spc = self.ket_space()
+        eig = np.random.rand(ket_spc.dim())
+        eig /= np.sum(eig)
+        U = ket_spc.random_unitary()
+        return U * ket_spc.diag(eig) * U.H
 
     cpdef HilbertArray eye(self):
         """

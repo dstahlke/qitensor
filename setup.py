@@ -10,10 +10,8 @@ import re
 try:
     import Cython
     from Cython.Distutils import build_ext
-    # Lower versions give code that causes segfault.  Currently you need to
-    # install Cython from the development repos.  Version 0.16.beta0 is tested
-    # to work.  Sage only has 0.15.1, so for this reason the spkg must contain
-    # the *.c files.
+    # Lower versions give code that causes segfault.  Version 0.16 and above is
+    # tested to work.
     use_cython = (Cython.__version__ >= '0.16')
 except ImportError:
     use_cython = False

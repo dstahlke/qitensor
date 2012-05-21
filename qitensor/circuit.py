@@ -2,9 +2,10 @@
 This module contains functions related to quantum circuits.
 """
 
-from qitensor import HilbertAtom, HilbertError
+import numpy as np
+from qitensor import HilbertAtom, HilbertError, HilbertShapeError
 
-__all__ = ['cphase', 'cnot', 'max_entangled']
+__all__ = ['cphase', 'cnot', 'swap', 'max_entangled']
 
 def cphase(h1, h2):
     """
@@ -34,6 +35,8 @@ def cphase(h1, h2):
             [ 0.+0.j,  0.+0.j,  0.+0.j, -1.+0.j]])
     """
 
+    # FIXME - support tensor product inputs
+    # FIXME - check that inputs are ket spaces
     for h in (h1, h2):
         if not isinstance(h, HilbertAtom):
             raise TypeError('spaces must be instance of HilbertAtom')
@@ -74,6 +77,7 @@ def cnot(h1, h2):
             [ 0.+0.j,  1.+0.j,  0.+0.j,  0.+0.j]])
     """
 
+    # FIXME - check that inputs are ket spaces
     for h in (h1, h2):
         if not isinstance(h, HilbertAtom):
             raise TypeError('spaces must be instance of HilbertAtom')
@@ -85,6 +89,47 @@ def cnot(h1, h2):
     ret[{ h1: h1.indices[1], h1.H: h1.indices[1] }] = [[0, 1], [1, 0]]
 
     return ret
+
+def swap(h1, h2):
+    """
+    Returns the swap gate.
+
+    The given spaces must be of the same dimension.
+
+    >>> from qitensor import qubit, qudit, swap
+    >>> ha = qubit('a')
+    >>> hb = qudit('b', 4)
+    >>> hc = qubit('c')
+    >>> swap(ha, hc).as_np_matrix()
+    matrix([[ 1.+0.j,  0.+0.j,  0.+0.j,  0.+0.j],
+            [ 0.+0.j,  0.+0.j,  1.+0.j,  0.+0.j],
+            [ 0.+0.j,  1.+0.j,  0.+0.j,  0.+0.j],
+            [ 0.+0.j,  0.+0.j,  0.+0.j,  1.+0.j]])
+    >>> swap(ha, hb).as_np_matrix()
+    Traceback (most recent call last):
+        ...
+    HilbertShapeError: '2 vs. 4'
+    >>> psi = (ha*hc).random_array()
+    >>> phi = hb.random_array()
+    >>> psi2 = hb.array(psi.nparray, reshape=True)
+    >>> phi2 = (ha*hc).array(phi.nparray, reshape=True)
+    >>> (psi2*phi2 - swap(ha*hc, hb)*psi*phi).norm() < 1e-14
+    True
+    """
+
+    for h in (h1, h2):
+        h.assert_ket_space()
+
+    if h1.dim() != h2.dim():
+        raise HilbertShapeError(h1.dim(), h2.dim())
+
+    arr = np.zeros((h1.dim(), h2.dim(), h1.dim(), h2.dim()))
+    for i in range(h1.dim()):
+        for j in range(h2.dim()):
+            arr[i, j, j, i] = 1
+    
+    axes = sum([ x._array_axes for x in (h1, h2, h1.H, h2.H) ], [])
+    return (h1*h2).O.array(arr, reshape=True, input_axes=axes)
 
 def max_entangled(h1, h2):
     """

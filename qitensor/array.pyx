@@ -1623,6 +1623,26 @@ cdef class HilbertArray:
         return self.np_matrix_transform( \
             lambda x: self.space.base_field.mat_expm(x, q))
 
+    def logm(self):
+        """
+        Return the matrix logarithm of this array.
+
+        It is required that the dimension of the bra space be equal to the
+        dimension of the ket space.
+
+        >>> import numpy
+        >>> from qitensor import qubit
+        >>> numpy.set_printoptions(suppress = True)
+        >>> ha = qubit('a')
+        >>> hb = qubit('b')
+        >>> op = ha.X * hb.Z
+        >>> (op.logm().expm() - op).norm() < 1e-14
+        True
+        """
+
+        return self.np_matrix_transform( \
+            lambda x: self.space.base_field.mat_logm(x))
+
     cpdef svd(self, full_matrices=True, inner_space=None):
         """
         Return the singular value decomposition of this array.

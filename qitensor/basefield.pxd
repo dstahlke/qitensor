@@ -28,6 +28,7 @@ cdef class HilbertBaseField:
     cpdef np.ndarray mat_n(self, np.ndarray mat, prec=*, digits=*)
     cpdef np.ndarray mat_simplify(self, np.ndarray mat, full=*)
     cpdef np.ndarray mat_expm(self, np.ndarray mat, q)
+    cpdef np.ndarray mat_logm(self, np.ndarray mat)
     cpdef np.ndarray mat_pow(self, np.ndarray mat, n)
     cpdef mat_svd(self, np.ndarray mat, full_matrices)
     cpdef mat_svd_vals(self, np.ndarray mat)

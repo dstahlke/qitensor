@@ -145,6 +145,10 @@ cdef class HilbertBaseField:
         import scipy.linalg
         return scipy.linalg.expm(mat, q)
 
+    cpdef np.ndarray mat_logm(self, np.ndarray mat):
+        import scipy.linalg
+        return scipy.linalg.logm(mat, True)
+
     cpdef np.ndarray mat_pow(self, np.ndarray mat, n):
         return mat**n
 

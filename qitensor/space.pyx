@@ -1167,16 +1167,18 @@ cdef class HilbertSpace:
 
         See also: :func:`indices`, :func:`index_iter`
 
-        >>> from qitensor import qubit, qudit, indexed_space
+        >>> from qitensor import qubit
         >>> ha = qubit('a')
-        >>> hb = qudit('b', 3)
+        >>> hb = qubit('b')
 
-        >>> list((ha*hb.H).index_iter_dict())
-        [{|a>: 0, <b|: 0}, {|a>: 0, <b|: 1}, {|a>: 0, <b|: 2}, {|a>: 1, <b|: 0}, {|a>: 1, <b|: 1}, {|a>: 1, <b|: 2}]
+        >>> list((ha*hb.H).index_iter_dict()) == [{ha: 0, hb.H: 0}, {ha: 0, hb.H: 1}, {ha: 1, hb.H: 0}, {ha: 1, hb.H: 1}]
+        True
 
-        >>> x = ha.random_unitary()
-        >>> [ x[idx].space  for idx in ha.index_iter_dict() ]
-        [<a|, <a|]
+        >>> x = (ha*hb.H).random_unitary()
+        >>> x.space
+        |a><b|
+        >>> [ x[idx].space for idx in ha.index_iter_dict() ]
+        [<b|, <b|]
         >>> [ "%.3f" % x[idx].norm() for idx in ha.index_iter_dict() ]
         ['1.000', '1.000']
         """

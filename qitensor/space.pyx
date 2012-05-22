@@ -1133,25 +1133,55 @@ cdef class HilbertSpace:
 
     cpdef index_iter(self):
         """
-        Returns an iterator over the indices of a space.
+        Returns an iterator over the indices of this space.  Each returned
+        value is a tuple.
 
-        See also: :func:`indices`
+        See also: :func:`indices`, :func:`index_iter_dict`
 
         >>> from qitensor import qubit, qudit, indexed_space
         >>> ha = qubit('a')
         >>> hb = qudit('b', 5)
         >>> hc = indexed_space('c', ['x', 'y', 'z'])
 
+        >>> list(ha.index_iter())
+        [(0,), (1,)]
+
+        >>> list((ha*hc).index_iter())
+        [(0, 'x'), (0, 'y'), (0, 'z'), (1, 'x'), (1, 'y'), (1, 'z')]
+
         >>> len(list( (ha*hb*hc).index_iter() )) == (ha*hb*hc).dim()
         True
 
         >>> x = (ha * hb * hc.H).random_array()
-        >>> sum(abs(x[idx])**2 for idx in x.space.index_iter()) - x.norm()**2 < 1e-12
+        >>> norm2 = sum(abs(x[idx])**2 for idx in x.space.index_iter())
+        >>> abs(norm2 - x.norm()**2) < 1e-12
         True
         """
 
-        axes = self.sorted_kets + self.sorted_bras
-        return itertools.product(*[s.indices for s in axes])
+        return itertools.product(*[s.indices for s in self._array_axes])
+
+    def index_iter_dict(self):
+        """
+        Returns an iterator over the indices of a space.  Each returned value
+        is a dictionary.
+
+        See also: :func:`indices`, :func:`index_iter`
+
+        >>> from qitensor import qubit, qudit, indexed_space
+        >>> ha = qubit('a')
+        >>> hb = qudit('b', 3)
+
+        >>> list((ha*hb.H).index_iter_dict())
+        [{|a>: 0, <b|: 0}, {|a>: 0, <b|: 1}, {|a>: 0, <b|: 2}, {|a>: 1, <b|: 0}, {|a>: 1, <b|: 1}, {|a>: 1, <b|: 2}]
+
+        >>> x = ha.random_unitary()
+        >>> [ x[idx].space  for idx in ha.index_iter_dict() ]
+        [<a|, <a|]
+        >>> [ "%.3f" % x[idx].norm() for idx in ha.index_iter_dict() ]
+        ['1.000', '1.000']
+        """
+
+        return ( dict(zip(self._array_axes, idx)) for idx in self.index_iter() )
 
     cpdef assert_ket_space(self):
         """

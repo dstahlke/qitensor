@@ -1,10 +1,11 @@
 === qitensor-0.10dev (Dan Stahlke, ongoing) ===
 	* can run doctests via 'setup.py test'
 	* HilbertSpace.fourier()
+	* HilbertSpace.random_density()
+	* HilbertSpace.index_iter_dict()
 	* HilbertArray.diag()
 	* HilbertArray.measure()
 	* HilbertArray.logm()
-	* HilbertSpace.random_density()
 	* circuits.swap()
 
 === qitensor-0.9 (Dan Stahlke, 2011-04-17) ===

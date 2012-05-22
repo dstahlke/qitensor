@@ -18,8 +18,8 @@ cdef class HilbertSpace(object):
     cdef readonly tuple shape
     cdef readonly long _dim
     cdef readonly cpython.bool _is_simple_dyad
-    cdef readonly list _array_axes
-    cdef readonly dict _array_axes_lookup
+    cdef readonly list axes
+    cdef readonly dict axes_lookup
     cdef readonly HilbertBaseField base_field
     cdef readonly HilbertSpace _prime
 

@@ -77,8 +77,8 @@ cdef class TensordotWisdom:
         #print mul_space
 
         cdef list mul_space_sorted = sorted(mul_space)
-        cdef list axes_self  = [hs._array_axes_lookup[x.H] for x in mul_space_sorted]
-        cdef list axes_other = [ohs._array_axes_lookup[x]  for x in mul_space_sorted]
+        cdef list axes_self  = [hs.axes_lookup[x.H] for x in mul_space_sorted]
+        cdef list axes_other = [ohs.axes_lookup[x]  for x in mul_space_sorted]
         self.contract_axes = (axes_self, axes_other)
 
         cdef list td_axes = \
@@ -106,7 +106,7 @@ cdef class TensordotWisdom:
                     create_space2(ket1 & ket2, bra1 & bra2))
 
             self.ret_space = create_space2(ket1 | ket2, bra1 | bra2)
-            self.transpose_axes = tuple([td_axes.index(x) for x in self.ret_space._array_axes])
+            self.transpose_axes = tuple([td_axes.index(x) for x in self.ret_space.axes])
 
 cdef class HilbertArray:
     def __init__(self, HilbertSpace space, data, cpython.bool noinit_data, cpython.bool reshape, input_axes):
@@ -132,7 +132,7 @@ cdef class HilbertArray:
         self.space = hs
         # (Sphinx docstring)
         #: An array telling which HilbertAtom corresponds to each axis of ``self.nparray``.
-        self.axes = hs._array_axes
+        self.axes = hs.axes
 
         cdef tuple data_shape
 
@@ -239,7 +239,7 @@ cdef class HilbertArray:
         array([  3.+0.j,  12.+0.j])
         """
 
-        return self.space._array_axes_lookup[atom]
+        return self.space.axes_lookup[atom]
 
     cpdef _assert_same_axes(self, other):
         """

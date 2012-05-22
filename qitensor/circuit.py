@@ -128,7 +128,7 @@ def swap(h1, h2):
         for j in range(h2.dim()):
             arr[i, j, j, i] = 1
     
-    axes = sum([ x._array_axes for x in (h1, h2, h1.H, h2.H) ], [])
+    axes = sum([ x.axes for x in (h1, h2, h1.H, h2.H) ], [])
     return (h1*h2).O.array(arr, reshape=True, input_axes=axes)
 
 def max_entangled(h1, h2):

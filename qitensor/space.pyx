@@ -185,8 +185,8 @@ cdef class HilbertSpace:
         self._dim = _shape_product(self.shape)
         self._is_simple_dyad = len(bra_set)==1 and len(ket_set)==1
 
-        self._array_axes = self.sorted_kets + self.sorted_bras
-        self._array_axes_lookup = dict((s, self._array_axes.index(s)) for s in self._array_axes)
+        self.axes = self.sorted_kets + self.sorted_bras
+        self.axes_lookup = dict((s, self.axes.index(s)) for s in self.axes)
 
     def __reduce__(self):
         """
@@ -1158,7 +1158,7 @@ cdef class HilbertSpace:
         True
         """
 
-        return itertools.product(*[s.indices for s in self._array_axes])
+        return itertools.product(*[s.indices for s in self.axes])
 
     def index_iter_dict(self):
         """
@@ -1181,7 +1181,7 @@ cdef class HilbertSpace:
         ['1.000', '1.000']
         """
 
-        return ( dict(zip(self._array_axes, idx)) for idx in self.index_iter() )
+        return ( dict(zip(self.axes, idx)) for idx in self.index_iter() )
 
     cpdef assert_ket_space(self):
         """

@@ -13,7 +13,7 @@ try:
     # Lower versions give code that causes segfault.  Version 0.16 and above is
     # tested to work.
     use_cython = (Cython.__version__ >= '0.16')
-except ImportError:
+except Exception:
     use_cython = False
 
 version = [m.group(1) for m in [re.search('__version__ = "(.*)"', line) for line in open('qitensor/__init__.py').readlines()] if m is not None][0]

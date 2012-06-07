@@ -1,5 +1,6 @@
 """
-HilbertSpaces are built of HilbertAtoms.  They represent the spaces that
+HilbertSpaces are tensor products of HilbertAtoms (although individual
+HilbertAtoms are also HilbertSpaces).  They represent the spaces that
 HilbertArrays live in.  A HilbertSpace is typically created by applying the
 multiplication operator to HilbertAtoms or other HilbertSpaces.
 """

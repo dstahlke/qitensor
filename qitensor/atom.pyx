@@ -1,8 +1,9 @@
 """
-HilbertAtom repsenents the individible unit of HilbertSpace.  At the same time,
-HilbertSpace is a base class for HilbertAtom.  These are combined into larger
-product spaces by using the multiplication operator.  HilbertAtoms should be
-created using the factory functions in :mod:`qitensor.factory`.
+HilbertAtom repsenents the individible unit of HilbertSpace (i.e.
+qubits or qudits).  At the same time, HilbertSpace is a base class for
+HilbertAtom.  These are combined into larger product spaces by using the
+multiplication operator.  HilbertAtoms should be created using the factory
+functions in :mod:`qitensor.factory`.
 """
 
 #import weakref

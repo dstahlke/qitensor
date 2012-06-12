@@ -141,9 +141,9 @@ cdef class HilbertBaseField:
     cpdef np.ndarray mat_simplify(self, np.ndarray mat, full=False): # pylint: disable=W0613
         return mat
 
-    cpdef np.ndarray mat_expm(self, np.ndarray mat, q):
+    cpdef np.ndarray mat_expm(self, np.ndarray mat):
         import scipy.linalg
-        return scipy.linalg.expm(mat, q)
+        return scipy.linalg.expm(mat)
 
     cpdef np.ndarray mat_logm(self, np.ndarray mat):
         import scipy.linalg

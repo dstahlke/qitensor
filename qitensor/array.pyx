@@ -1599,16 +1599,12 @@ cdef class HilbertArray:
 
         return working
 
-    def expm(self, q=7):
+    def expm(self):
         """
         Return the matrix exponential of this array.
 
         It is required that the dimension of the bra space be equal to the
         dimension of the ket space.
-
-        :param q: order of the Pade approximation (see the scipy.linalg.expm
-            documentation for details)
-        :type q: integer; default 7
 
         >>> import numpy
         >>> from qitensor import qubit
@@ -1621,7 +1617,7 @@ cdef class HilbertArray:
         """
 
         return self.np_matrix_transform( \
-            lambda x: self.space.base_field.mat_expm(x, q))
+            lambda x: self.space.base_field.mat_expm(x))
 
     def logm(self):
         """

@@ -22,6 +22,39 @@ from qitensor.array cimport HilbertArray
 
 __all__ = ['HilbertSpace']
 
+# helper function for hadamard
+cdef int _countbits(int i):
+    """
+    Count the number of set bits.
+
+    # FIXME
+    >>> _countbits(0xfeedf00d)
+    """
+
+    cdef int n = 0
+    while i:
+        n += i & 1
+        i >>= 1
+    return n
+
+# helper function for hadamard
+cdef int _int_log2(int i):
+    """
+    Returns the log2 of the input if input is a power of 2, otherwise returns -1.
+
+    # FIXME
+    >>> [_int_log2(i) for i in (0, 1, 32, 33)]
+    """
+
+    cdef int n = 0
+    while not i & 1:
+        i >>= 1
+        n += 1
+    if i == 1:
+        return n
+    else:
+        return -1
+
 def _unreduce_v1(ket_set, bra_set):
     """
     This is the function that handles restoring a pickle.
@@ -1082,6 +1115,44 @@ cdef class HilbertSpace:
         cdef int N = self.assert_square()
         cdef np.ndarray arr = np.array([[
             self.base_field.fractional_phase(-j*k, N)
+            for j in range(N)] for k in range(N)], dtype=self.base_field.dtype)
+        arr /= self.base_field.sqrt(N)
+
+        return self.array(data=arr, reshape=True)
+
+    cpdef HilbertArray hadamard(self):
+        """
+        Returns the Hadamard matrix.  Only applies if the dimension of the space is a power of 2.
+        The returned operator is :math:`\sum_{jk} (1/\sqrt{D}) (-1)^{j \dot k} |j><k|` where j, k are bitstrings.
+
+        >>> from qitensor import qubit, qudit
+        >>> import numpy as np
+        >>> import numpy.linalg as linalg
+
+        >>> ha = qubit('a')
+        >>> ha.hadamard()
+        HilbertArray(|a><a|,
+        array([[ 0.707107+0.j,  0.707107+0.j],
+               [ 0.707107+0.j, -0.707107+0.j]]))
+        >>> ha.hadamard() == ha.O.hadamard()
+        True
+
+        >>> hb = [qubit('b%d' % i) for i in range(5)]
+        >>> U = np.product([ h.hadamard() for h in hb ])
+        >>> hc = qudit('c', 2**5)
+        >>> V = hc.hadamard()
+        >>> linalg.norm( U.as_np_matrix() - V.as_np_matrix() ) < 1e-14
+        """
+
+        if len(self.ket_set) == 0 or len(self.bra_set) == 0:
+            return (self * self.H).hadamard()
+
+        cdef int N = self.assert_square()
+        if _int_log2(N) < 0:
+            raise HilbertShapeError("Hadamard matrix only defined if dimension is a power of 2")
+
+        cdef np.ndarray arr = np.array([[
+            -1 if (1 & _countbits(j&k)) else 1
             for j in range(N)] for k in range(N)], dtype=self.base_field.dtype)
         arr /= self.base_field.sqrt(N)
 

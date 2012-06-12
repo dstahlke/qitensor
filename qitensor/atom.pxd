@@ -28,7 +28,6 @@ cdef class HilbertAtom(HilbertSpace):
     cpdef pauliX(self, h=*, left=*)
     cpdef pauliY(self)
     cpdef pauliZ(self, order=*)
-    cpdef hadamard(self)
     cpdef gateS(self)
     cpdef gateT(self)
     cpdef _create_addend_isoms(self)

@@ -636,28 +636,6 @@ cdef class HilbertAtom(HilbertSpace):
         """
         return self.pauliZ()
 
-    cpdef hadamard(self):
-        """
-        Returns the Hadamard operator.
-
-        This is only available for qubit spaces.
-
-        >>> from qitensor import qubit
-        >>> import numpy
-        >>> numpy.set_printoptions(suppress = True, precision = 6)
-
-        >>> ha = qubit('a')
-        >>> ha.hadamard()
-        HilbertArray(|a><a|,
-        array([[ 0.707107+0.j,  0.707107+0.j],
-               [ 0.707107+0.j, -0.707107+0.j]]))
-        """
-
-        if len(self.indices) != 2:
-            raise NotImplementedError("hadamard is only implemented for qubits")
-        else:
-            return self.O.array([[1, 1], [1, -1]]) / self.base_field.sqrt(2)
-
     cpdef gateS(self):
         """
         Returns the S-gate operator.

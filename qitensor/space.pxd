@@ -45,6 +45,7 @@ cdef class HilbertSpace(object):
     cpdef hermitian_basis(self, normalize=*)
     cpdef HilbertArray fourier_basis_state(self, int k)
     cpdef HilbertArray fourier(self)
+    cpdef HilbertArray hadamard(self)
     cpdef full_space(self)
     cpdef empty_space(self)
     cpdef int dim(self)

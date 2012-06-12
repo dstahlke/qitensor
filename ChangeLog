@@ -1,6 +1,7 @@
 === qitensor-0.10dev (Dan Stahlke, ongoing) ===
 	* can run doctests via 'setup.py test'
 	* HilbertSpace.fourier()
+	* HilbertSpace.hadamard() for any space of dimension a power of 2
 	* HilbertSpace.random_density()
 	* HilbertSpace.index_iter_dict()
 	* HilbertArray.diag()

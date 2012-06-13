@@ -1610,10 +1610,8 @@ cdef class HilbertArray:
         >>> from qitensor import qubit
         >>> numpy.set_printoptions(suppress = True)
         >>> ha = qubit('a')
-        >>> (ha.X * numpy.pi * 1j).expm()
-        HilbertArray(|a><a|,
-        array([[-1.+0.j,  0.+0.j],
-               [ 0.+0.j, -1.+0.j]]))
+        >>> ((ha.X * numpy.pi * 1j).expm() + ha.eye()).norm() < 1e-12
+        True
         """
 
         return self.np_matrix_transform( \

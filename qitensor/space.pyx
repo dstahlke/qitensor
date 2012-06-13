@@ -1142,6 +1142,7 @@ cdef class HilbertSpace:
         >>> hc = qudit('c', 2**5)
         >>> V = hc.hadamard()
         >>> linalg.norm( U.as_np_matrix() - V.as_np_matrix() ) < 1e-14
+        True
         """
 
         if len(self.ket_set) == 0 or len(self.bra_set) == 0:

@@ -1116,9 +1116,12 @@ cdef class HilbertSpace:
 
         cdef np.ndarray arr = np.zeros((N, N), dtype=self.base_field.dtype)
         cdef int j, k
+        for k in range(N):
+            arr[1, k] = self.base_field.fractional_phase(-k, N)
         for j in range(N):
+            if j == 1: continue
             for k in range(N):
-                arr[j, k] = self.base_field.fractional_phase(-j*k, N)
+                arr[j, k] = arr[1, (j*k)%N]
 
         arr /= self.base_field.sqrt(N)
 

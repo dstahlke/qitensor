@@ -2,6 +2,7 @@
 	* can run doctests via 'setup.py test'
 	* HilbertSpace.fourier()
 	* HilbertSpace.hadamard() for any space of dimension a power of 2
+	* HilbertSpace.haar_matrix()
 	* HilbertSpace.random_density()
 	* HilbertSpace.index_iter_dict()
 	* HilbertArray.diag()

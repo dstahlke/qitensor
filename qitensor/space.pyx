@@ -1126,8 +1126,11 @@ cdef class HilbertSpace:
 
     cpdef HilbertArray hadamard(self):
         """
-        Returns the Hadamard matrix.  Only applies if the dimension of the space is a power of 2.
-        The returned operator is :math:`\sum_{jk} (1/\sqrt{D}) (-1)^{j \dot k} |j><k|` where j, k are bitstrings.
+        Returns the Hadamard matrix.
+        Only applies if the dimension of the space is a power of 2.
+        The returned operator is
+            :math:`\sum_{jk} (1/\sqrt{D}) (-1)^{j \cdot k} |j><k|`
+        where j, k are bitstrings.
 
         >>> from qitensor import qubit, qudit
         >>> import numpy as np
@@ -1163,6 +1166,62 @@ cdef class HilbertSpace:
                 arr[j, k] = -1 if (1 & _countbits(j&k)) else 1
 
         arr /= self.base_field.sqrt(N)
+
+        return self.array(data=arr, reshape=True)
+
+    cpdef HilbertArray haar_matrix(self):
+        """
+        Returns the unitary matrix for the Haar wavelet transform.  Only
+        applies if the dimension of the space is a power of 2.
+
+        >>> from qitensor import qudit
+
+        >>> ha = qudit('a', 1)
+        >>> ha.haar_matrix()
+        HilbertArray(|a><a|,
+        array([[ 1.+0.j]]))
+
+        >>> ha = qudit('a', 2)
+        >>> ha.haar_matrix()
+        HilbertArray(|a><a|,
+        array([[ 0.707107+0.j,  0.707107+0.j],
+               [ 0.707107+0.j, -0.707107+0.j]]))
+
+        >>> ha = qudit('a', 4)
+        >>> ha.haar_matrix()
+        HilbertArray(|a><a|,
+        array([[ 0.500000+0.j,  0.500000+0.j,  0.500000+0.j,  0.500000+0.j],
+               [ 0.500000+0.j,  0.500000+0.j, -0.500000+0.j, -0.500000+0.j],
+               [ 0.707107+0.j, -0.707107+0.j,  0.000000+0.j,  0.000000+0.j],
+               [ 0.000000+0.j,  0.000000+0.j,  0.707107+0.j, -0.707107+0.j]]))
+
+        >>> ha.haar_matrix() == ha.O.haar_matrix()
+        True
+        """
+
+        if len(self.ket_set) == 0 or len(self.bra_set) == 0:
+            return (self * self.H).haar_matrix()
+
+        cdef int N = self.assert_square()
+        cdef int n = _int_log2(N)
+        if n < 0:
+            raise HilbertShapeError("Hadamard matrix only defined if dimension is a power of 2")
+
+        cdef np.ndarray arr = np.zeros((N, N), dtype=self.base_field.dtype)
+
+        arr[0,:] = 1 / self.base_field.sqrt(N)
+        cdef int row, col, i, j, k
+        row = 1
+        for i in range(1, n+1):
+            step = 1<<(n-i)
+            v = 1 / self.base_field.sqrt(step << 1)
+            col = 0
+            for j in range(1<<(i-1)):
+                for k in range(step):
+                    arr[row, col+k] = v
+                    arr[row, col+k+step] = -v
+                row += 1
+                col += step+step
 
         return self.array(data=arr, reshape=True)
 

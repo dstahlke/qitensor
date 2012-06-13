@@ -14,7 +14,7 @@ cdef class HilbertBaseField:
     cpdef latex_formatter(self, data, dollar_if_tex)
     cpdef input_cast_function(self)
     cpdef complex_unit(self)
-    cpdef fractional_phase(self, a, b)
+    cpdef fractional_phase(self, int a, int b)
     cpdef sqrt(self, x)
     cpdef xlog2x(self, x)
     cpdef np.ndarray random_array(self, shape)

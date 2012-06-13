@@ -94,7 +94,7 @@ cdef class HilbertBaseField:
     cpdef complex_unit(self):
         return 1j
 
-    cpdef fractional_phase(self, a, b):
+    cpdef fractional_phase(self, int a, int b):
         return np.exp(2j * np.pi * a / b)
 
     cpdef sqrt(self, x):

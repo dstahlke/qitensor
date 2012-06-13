@@ -51,7 +51,7 @@ cdef class SageHilbertBaseField(HilbertBaseField):
     cpdef input_cast_function(self):
         return self.sage_ring
 
-    cpdef fractional_phase(self, a, b):
+    cpdef fractional_phase(self, int a, int b):
         return self.sage_ring(sage.all.exp(2 * sage.all.pi * sage.all.I * a / b))
 
     cpdef sqrt(self, x):

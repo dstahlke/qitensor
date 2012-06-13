@@ -27,7 +27,7 @@ cdef class HilbertAtom(HilbertSpace):
     cpdef bloch(self, theta, phi)
     cpdef pauliX(self, h=*, left=*)
     cpdef pauliY(self)
-    cpdef pauliZ(self, order=*)
+    cpdef pauliZ(self, int order=*)
     cpdef gateS(self)
     cpdef gateT(self)
     cpdef _create_addend_isoms(self)

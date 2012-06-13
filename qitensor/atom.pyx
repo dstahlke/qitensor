@@ -528,7 +528,7 @@ cdef class HilbertAtom(HilbertSpace):
             j = self.base_field.complex_unit()
             return self.O.array([[0, -j], [j, 0]])
 
-    cpdef pauliZ(self, order=1):
+    cpdef pauliZ(self, int order=1):
         r"""
         Returns the generalized Pauli Z operator.
 

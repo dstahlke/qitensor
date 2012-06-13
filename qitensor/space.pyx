@@ -1113,9 +1113,13 @@ cdef class HilbertSpace:
             return (self * self.H).fourier()
 
         cdef int N = self.assert_square()
-        cdef np.ndarray arr = np.array([[
-            self.base_field.fractional_phase(-j*k, N)
-            for j in range(N)] for k in range(N)], dtype=self.base_field.dtype)
+
+        cdef np.ndarray arr = np.zeros((N, N), dtype=self.base_field.dtype)
+        cdef int j, k
+        for j in range(N):
+            for k in range(N):
+                arr[j, k] = self.base_field.fractional_phase(-j*k, N)
+
         arr /= self.base_field.sqrt(N)
 
         return self.array(data=arr, reshape=True)
@@ -1152,9 +1156,12 @@ cdef class HilbertSpace:
         if _int_log2(N) < 0:
             raise HilbertShapeError("Hadamard matrix only defined if dimension is a power of 2")
 
-        cdef np.ndarray arr = np.array([[
-            -1 if (1 & _countbits(j&k)) else 1
-            for j in range(N)] for k in range(N)], dtype=self.base_field.dtype)
+        cdef np.ndarray arr = np.zeros((N, N), dtype=self.base_field.dtype)
+        cdef int j, k
+        for j in range(N):
+            for k in range(N):
+                arr[j, k] = -1 if (1 & _countbits(j&k)) else 1
+
         arr /= self.base_field.sqrt(N)
 
         return self.array(data=arr, reshape=True)

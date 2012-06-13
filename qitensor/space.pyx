@@ -1160,7 +1160,7 @@ cdef class HilbertSpace:
 
         cdef int N = self.assert_square()
         if _int_log2(N) < 0:
-            raise HilbertShapeError("Hadamard matrix only defined if dimension is a power of 2")
+            raise HilbertError("Hadamard matrix only defined if dimension is a power of 2")
 
         cdef np.ndarray arr = np.zeros((N, N), dtype=self.base_field.dtype)
         cdef int j, k

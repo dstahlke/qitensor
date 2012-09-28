@@ -13,3 +13,4 @@ BUGS/FEATURES
     * detect when running under 'ipython qtconsole' and disable mathjax in html
     * sage doctests in python files give sphinx error
     * wrong exceptions are thrown
+    * printing large array is slow (time taken in array_html_block_table)

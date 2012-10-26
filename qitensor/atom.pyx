@@ -465,15 +465,15 @@ cdef class HilbertAtom(HilbertSpace):
         """
         Returns the Pauli X operator.
 
-        If `h` is not given, then the operator [[0, 1], [1, 0]] is returned (an
-        error is thrown if this is not a qubit space).
-
         If `h` is given, then the group Pauli X operator is returned.
         If ``left`` is True, the return value is :math:`\sum_g |g><h*g|`.
         If ``left`` is False, the return value is :math:`\sum_g |g><g*h|`.
         For qudit spaces, the default group operation is modular addition.  For
         indexed_space spaces the default operation is multiplication, and an
         error is thrown if the index set is not closed under this operation.
+
+        If `h` is not given, the default of `1` is used for cyclic addition
+        groups (the default group), otherwise an error is thrown.
 
         NOTE: some people use a convention that is a transpose of this!
 
@@ -488,25 +488,33 @@ cdef class HilbertAtom(HilbertSpace):
                [ 1.+0.j,  0.+0.j]]))
 
         >>> hb = qudit('b', 3)
-        >>> hb.pauliX(1)
+        >>> hb.pauliX()
         HilbertArray(|b><b|,
         array([[ 0.+0.j,  1.+0.j,  0.+0.j],
                [ 0.+0.j,  0.+0.j,  1.+0.j],
                [ 1.+0.j,  0.+0.j,  0.+0.j]]))
+
+        >>> hb.pauliX(2)
+        HilbertArray(|b><b|,
+        array([[ 0.+0.j,  0.+0.j,  1.+0.j],
+               [ 1.+0.j,  0.+0.j,  0.+0.j],
+               [ 0.+0.j,  1.+0.j,  0.+0.j]]))
         """
 
         if h is None:
-            if len(self.indices) != 2:
-                raise NotImplementedError("h param is required except for qubits")
-            else:
+            if len(self.indices) == 2:
                 return self.O.array([[0, 1], [1, 0]])
-        else:
-            ret = self.O.array()
-            gop = self.group_op
-            for g in self.indices:
-                bra = gop.op(h, g) if left else gop.op(g, h)
-                ret[{ self: g, self.H: bra }] = 1
-            return ret
+            if self.group_op.__class__ == qitensor.factory.GroupOpCyclic_impl:
+                h = 1
+            else:
+                raise NotImplementedError("h param is required for pauliX when groups are used")
+
+        ret = self.O.array()
+        gop = self.group_op
+        for g in self.indices:
+            bra = gop.op(h, g) if left else gop.op(g, h)
+            ret[{ self: g, self.H: bra }] = 1
+        return ret
 
     cpdef pauliY(self):
         """

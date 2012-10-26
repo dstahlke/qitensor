@@ -10,6 +10,7 @@
 	* HilbertArray.logm()
 	* circuits.swap()
 	* remove deprecated 'q' param for expm
+	* allow pauliX without arg for cyclic groups
 
 === qitensor-0.9 (Dan Stahlke, 2011-04-17) ===
 	* random_isometry

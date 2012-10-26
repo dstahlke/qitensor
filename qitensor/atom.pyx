@@ -294,13 +294,13 @@ cdef class HilbertAtom(HilbertSpace):
 
         >>> from qitensor import qubit, indexed_space
         >>> ha = qubit('a')
-        >>> hx = indexed_space('x', ['x', 'y', 'z'])
+        >>> hb = indexed_space('b', ['x', 'y', 'z'])
 
         >>> ha.ket(0)
         HilbertArray(|a>,
         array([ 1.+0.j,  0.+0.j]))
 
-        >>> hx.ket('y')
+        >>> hb.ket('y')
         HilbertArray(|x>,
         array([ 0.+0.j,  1.+0.j,  0.+0.j]))
         """
@@ -321,13 +321,13 @@ cdef class HilbertAtom(HilbertSpace):
 
         >>> from qitensor import qubit, indexed_space
         >>> ha = qubit('a')
-        >>> hx = indexed_space('x', ['x', 'y', 'z'])
+        >>> hb = indexed_space('b', ['x', 'y', 'z'])
 
         >>> ha.bra(0)
         HilbertArray(<a|,
         array([ 1.+0.j,  0.+0.j]))
 
-        >>> hx.bra('y')
+        >>> hb.bra('y')
         HilbertArray(<x|,
         array([ 0.+0.j,  1.+0.j,  0.+0.j]))
         """
@@ -475,6 +475,8 @@ cdef class HilbertAtom(HilbertSpace):
         indexed_space spaces the default operation is multiplication, and an
         error is thrown if the index set is not closed under this operation.
 
+        NOTE: some people use a convention that is a transpose of this!
+
         See also: :func:`X`
 
         >>> from qitensor import qubit, qudit
@@ -536,6 +538,8 @@ cdef class HilbertAtom(HilbertSpace):
             only useful for spaces that are larger than qubits.
         :type order: integer; default 1
 
+        The return value is :math:`\sum_k e^{2 \pi i k / d} |k><k|`.
+
         See also: :func:`Z`
 
         >>> from qitensor import qubit, indexed_space
@@ -548,16 +552,16 @@ cdef class HilbertAtom(HilbertSpace):
         array([[ 1.+0.j,  0.+0.j],
                [ 0.+0.j, -1.+0.j]]))
 
-        >>> hx = indexed_space('x', ['x', 'y', 'z', 'w'])
-        >>> hx.pauliZ()
-        HilbertArray(|x><x|,
+        >>> hb = indexed_space('b', ['x', 'y', 'z', 'w'])
+        >>> hb.pauliZ()
+        HilbertArray(|b><b|,
         array([[ 1.+0.j,  0.+0.j,  0.+0.j,  0.+0.j],
                [ 0.+0.j,  0.+1.j,  0.+0.j,  0.+0.j],
                [ 0.+0.j,  0.+0.j, -1.+0.j,  0.+0.j],
                [ 0.+0.j,  0.+0.j,  0.+0.j, -0.-1.j]]))
 
-        >>> hx.pauliZ(2)
-        HilbertArray(|x><x|,
+        >>> hb.pauliZ(2)
+        HilbertArray(|b><b|,
         array([[ 1.+0.j,  0.+0.j,  0.+0.j,  0.+0.j],
                [ 0.+0.j, -1.+0.j,  0.+0.j,  0.+0.j],
                [ 0.+0.j,  0.+0.j,  1.-0.j,  0.+0.j],
@@ -626,8 +630,8 @@ cdef class HilbertAtom(HilbertSpace):
         array([[ 1.+0.j,  0.+0.j],
                [ 0.+0.j, -1.+0.j]]))
 
-        >>> hx = indexed_space('x', ['x', 'y', 'z', 'w'])
-        >>> hx.Z
+        >>> hb = indexed_space('b', ['x', 'y', 'z', 'w'])
+        >>> hb.Z
         HilbertArray(|x><x|,
         array([[ 1.+0.j,  0.+0.j,  0.+0.j,  0.+0.j],
                [ 0.+0.j,  0.+1.j,  0.+0.j,  0.+0.j],

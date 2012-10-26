@@ -301,7 +301,7 @@ cdef class HilbertAtom(HilbertSpace):
         array([ 1.+0.j,  0.+0.j]))
 
         >>> hb.ket('y')
-        HilbertArray(|x>,
+        HilbertArray(|b>,
         array([ 0.+0.j,  1.+0.j,  0.+0.j]))
         """
 
@@ -328,7 +328,7 @@ cdef class HilbertAtom(HilbertSpace):
         array([ 1.+0.j,  0.+0.j]))
 
         >>> hb.bra('y')
-        HilbertArray(<x|,
+        HilbertArray(<b|,
         array([ 0.+0.j,  1.+0.j,  0.+0.j]))
         """
 
@@ -640,7 +640,7 @@ cdef class HilbertAtom(HilbertSpace):
 
         >>> hb = indexed_space('b', ['x', 'y', 'z', 'w'])
         >>> hb.Z
-        HilbertArray(|x><x|,
+        HilbertArray(|b><b|,
         array([[ 1.+0.j,  0.+0.j,  0.+0.j,  0.+0.j],
                [ 0.+0.j,  0.+1.j,  0.+0.j,  0.+0.j],
                [ 0.+0.j,  0.+0.j, -1.+0.j,  0.+0.j],

@@ -33,36 +33,50 @@ def cphase(h1, h2):
             [ 0.+0.j,  1.+0.j,  0.+0.j,  0.+0.j],
             [ 0.+0.j,  0.+0.j,  1.+0.j,  0.+0.j],
             [ 0.+0.j,  0.+0.j,  0.+0.j, -1.+0.j]])
+
+    >>> U = cphase(ha*ha.prime, hb*hb.prime)
+    >>> V01 = ha.bra(0) * ha.prime.bra(1) * U * ha.ket(0) * ha.prime.ket(1)
+    >>> (V01 - (hb*hb.prime).diag([1, 1j, -1, -1j])).norm() < 1e-14
+    True
+    >>> V10 = ha.bra(1) * ha.prime.bra(0) * U * ha.ket(1) * ha.prime.ket(0)
+    >>> (V10 - (hb*hb.prime).diag([1, -1, 1, -1])).norm() < 1e-14
+    True
+
+    >>> cphase(ha*ha.prime, hb)
+    Traceback (most recent call last):
+        ...
+    HilbertError: 'spaces must be of the same dimension'
+
+    >>> cphase(ha.H, hb)
+    Traceback (most recent call last):
+        ...
+    NotKetSpaceError: '<a|'
     """
 
-    # FIXME - support tensor product inputs
-    # FIXME - check that inputs are ket spaces
     for h in (h1, h2):
-        if not isinstance(h, HilbertAtom):
-            raise TypeError('spaces must be instance of HilbertAtom')
+        h.assert_ket_space()
 
     field = h1.base_field
 
-    D1 = len(h1.indices)
-    D2 = len(h2.indices)
-    if D1 != D2:
+    d = h1.dim()
+    if h2.dim() != d:
         raise HilbertError('spaces must be of the same dimension')
 
     ret = (h1*h2).O.array()
-    for j in range(len(h1.indices)):
-        for k in range(len(h2.indices)):
-            ret[j, k, j, k] = field.fractional_phase(j*k, D1)
-
+    for (j, a) in enumerate(h1.index_iter()):
+        for (k, b) in enumerate(h2.index_iter()):
+            ret[{ h1: a, h1.H: a, h2: b, h2.H: b }] = field.fractional_phase(j*k, d)
     return ret
 
-def cnot(h1, h2):
+def cnot(h1, h2, left=True):
     """
     Returns the controlled-not (controlled-X) gate.
 
-    The given spaces must be HilbertAtom spaces (i.e. not tensor products), and
-    must be qubits.
+    The given spaces must be HilbertAtom spaces (i.e. not tensor products).
+    FIXME - need docs for non-qubit case
+    FIXME - doctest for group_op
 
-    >>> from qitensor import qubit, cnot
+    >>> from qitensor import qubit, qudit, cnot
     >>> ha = qubit('a')
     >>> hb = qubit('b')
     >>> cnot(ha, hb).as_np_matrix()
@@ -75,18 +89,32 @@ def cnot(h1, h2):
             [ 0.+0.j,  0.+0.j,  0.+0.j,  1.+0.j],
             [ 0.+0.j,  0.+0.j,  1.+0.j,  0.+0.j],
             [ 0.+0.j,  1.+0.j,  0.+0.j,  0.+0.j]])
+
+    >>> hc = qudit('a', 3)
+    >>> hc.bra(1) * cnot(hc, hc.prime) * hc.ket(1)
+    HilbertArray(|a'><a'|,
+    array([[ 0.+0.j,  1.+0.j,  0.+0.j],
+           [ 0.+0.j,  0.+0.j,  1.+0.j],
+           [ 1.+0.j,  0.+0.j,  0.+0.j]]))
     """
 
-    # FIXME - check that inputs are ket spaces
     for h in (h1, h2):
+        h.assert_ket_space()
         if not isinstance(h, HilbertAtom):
             raise TypeError('spaces must be instance of HilbertAtom')
 
-    if len(h1.indices) != 2 or len(h2.indices) != 2:
-        raise NotImplementedError("cnot is only implemented for qubits")
+    # this is redundent to the next test, but provides a more understandable error message
+    if h1.dim() != h2.dim():
+        raise HilbertShapeError(h1.dim(), h2.dim())
+    if h1.indices != h2.indices:
+        raise HilbertError('spaces must have the same index set: ' + \
+            str(h1.indices)+' vs. '+str(h2.indices))
+    if h1.group_op != h2.group_op:
+        raise HilbertError('spaces must have the same group_op')
 
-    ret = (h1*h2).eye()
-    ret[{ h1: h1.indices[1], h1.H: h1.indices[1] }] = [[0, 1], [1, 0]]
+    ret = (h1*h2).O.array()
+    for x in h1.indices:
+        ret[{ h1: x, h1.H: x }] = h2.pauliX(x, left)
 
     return ret
 
@@ -127,7 +155,7 @@ def swap(h1, h2):
     for i in range(h1.dim()):
         for j in range(h2.dim()):
             arr[i, j, j, i] = 1
-    
+
     axes = sum([ x.axes for x in (h1, h2, h1.H, h2.H) ], [])
     return (h1*h2).O.array(arr, reshape=True, input_axes=axes)
 
@@ -168,17 +196,30 @@ def max_entangled(h1, h2):
            [ 0.0+0.j,  0.5+0.j,  0.0+0.j,  0.0+0.j],
            [ 0.0+0.j,  0.0+0.j,  0.5+0.j,  0.0+0.j],
            [ 0.0+0.j,  0.0+0.j,  0.0+0.j,  0.5+0.j]]))
+
+    >>> psi1 = max_entangled(ha, ha.prime) * max_entangled(hb, hb.prime)
+    >>> psi2 = max_entangled(ha*hb, (ha*hb).prime)
+    >>> (psi1 - psi2).norm() < 1e-14
+    True
+
+    >>> max_entangled(ha*ha.prime, hb)
+    Traceback (most recent call last):
+        ...
+    HilbertError: 'spaces must be of the same dimension'
+
+    >>> max_entangled(ha.H, hb)
+    Traceback (most recent call last):
+        ...
+    NotKetSpaceError: '<a|'
     """
 
     for h in (h1, h2):
-        if not isinstance(h, HilbertAtom):
-            raise TypeError('spaces must be instance of HilbertAtom')
+        h.assert_ket_space()
 
     field = h1.base_field
 
-    D1 = len(h1.indices)
-    D2 = len(h2.indices)
-    if D1 != D2:
+    d = h1.dim()
+    if h2.dim() != d:
         raise HilbertError('spaces must be of the same dimension')
 
-    return (h1*h2).array(field.eye(D1) / field.sqrt(D1), reshape=True)
+    return (h1.H * h2).eye().transpose(h1) / field.sqrt(d)

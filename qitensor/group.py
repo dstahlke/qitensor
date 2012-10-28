@@ -108,6 +108,24 @@ class DihedralGroup_impl(Group):
 
 _dihedral_group_cache = {}
 def dihedral_group(n):
+    """
+    Return the dihedral group S_n.
+
+    >>> S3 = dihedral_group(3)
+    >>> S3.order
+    6
+    >>> S3.elements
+    [<S3.r0>, <S3.r1>, <S3.r2>, <S3.s0>, <S3.s1>, <S3.s2>]
+    >>> S3.e
+    <S3.r0>
+    >>> S3.r1 * S3.s0
+    <S3.s1>
+
+    >>> import pickle
+    >>> id(S3) == id(pickle.loads(pickle.dumps(S3)))
+    True
+    """
+
     if n not in _dihedral_group_cache:
         _dihedral_group_cache[n] = DihedralGroup_impl(n, True)
     return _dihedral_group_cache[n]

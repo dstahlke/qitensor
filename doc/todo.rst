@@ -4,6 +4,7 @@ TODO
 FINISH DOCS
     * better way to run Sage doctests?
     * ``sage -coverage qitensor/*.py``
+    * docs/doctests for sympy support
 
 BUGS/FEATURES
     * support sympy

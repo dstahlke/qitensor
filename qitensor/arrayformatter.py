@@ -67,6 +67,18 @@ class HilbertArrayFormatter(object):
         else:
             return lambda x: sage.all.latex(x)
 
+    def sympy_scalar_latex_formatter(self, data, dollar_if_tex):
+        """
+        Formats Sympy scalar for latex.
+        """
+
+        import sympy
+
+        if dollar_if_tex:
+            return lambda x: '$'+sympy.latex(x)+'$'
+        else:
+            return lambda x: sympy.latex(x)
+
     def array_str(self, arr):
         """
         Creates string for HilbertArray.

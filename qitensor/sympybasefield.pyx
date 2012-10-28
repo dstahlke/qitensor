@@ -3,8 +3,8 @@
 import numpy as np
 cimport numpy as np
 cimport cpython
-
 import sympy
+
 from qitensor.basefield import HilbertBaseField
 from qitensor.basefield cimport HilbertBaseField
 from qitensor.arrayformatter import FORMATTER
@@ -19,6 +19,12 @@ cpdef do_simplify_full(x):
 cpdef do_cast_to_sympy(x):
     # FIXME - best way?
     return sympy.Integer(0) + x
+
+cpdef to_n(x):
+    return sympy.N(x)
+
+cpdef do_conj(x):
+    return sympy.conjugate(x)
 
 cpdef _factory(dtype):
     """Don't call this, use base_field_lookup instead."""
@@ -58,38 +64,25 @@ cdef class SympyHilbertBaseField(HilbertBaseField):
     cpdef xlog2x(self, x):
         return 0 if x<=0 else x*sympy.log(x)/sympy.log(2)
 
-    cpdef np.ndarray eye(self, long size):
-        return np.eye(size)
-
     cpdef np.ndarray mat_n(self, np.ndarray m, prec=None, digits=None):
-        raise NotImplementedError()
+        # FIXME - handle digits param
+        return np.vectorize(to_n, otypes=[self.dtype])(m)
 
     cpdef np.ndarray mat_simplify(self, np.ndarray m, full=False):
-        if full:
-            return np.vectorize(do_simplify_full, otypes=[self.dtype])(m)
-        else:
-            raise NotImplementedError()
-
-    cpdef np.ndarray mat_adjoint(self, np.ndarray m):
-        raise NotImplementedError()
+        return np.vectorize(sympy.simplify, otypes=[self.dtype])(m)
 
     cpdef np.ndarray mat_inverse(self, np.ndarray m):
-        raise NotImplementedError()
+        sm = sympy.Matrix(m)
+        sm = sm.inverse_GE()
+        raise np.matrix(sm)
 
     cpdef mat_det(self, np.ndarray m):
-        raise NotImplementedError()
+        sm = sympy.Matrix(m)
+        return sm.det()
 
     cpdef mat_norm(self, np.ndarray arr):
         return self.sqrt(np.sum(arr * np.conj(arr)))
 
-    cpdef np.ndarray mat_conj(self, np.ndarray m):
-        raise NotImplementedError()
-
     cpdef np.ndarray mat_pow(self, np.ndarray m, n):
-        raise NotImplementedError()
-
-    cpdef mat_eig(self, np.ndarray m, cpython.bool hermit):
-        raise NotImplementedError()
-
-    cpdef mat_eigvals(self, np.ndarray m, cpython.bool hermit):
-        raise NotImplementedError()
+        sm = sympy.Matrix(m)
+        return np.matrix(sm ** n)

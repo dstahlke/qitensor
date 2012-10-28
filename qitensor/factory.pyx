@@ -99,7 +99,13 @@ _base_field_factories.append(qitensor.basefield._factory)
 if have_sage:
     import qitensor.sagebasefield
     _base_field_factories.append(qitensor.sagebasefield._factory)
-    
+
+try:
+    import qitensor.sympybasefield
+    _base_field_factories.append(qitensor.sympybasefield._factory)
+except ImportError:
+    pass
+
 cpdef base_field_lookup(dtype):
     r"""
     Returns the HilbertBaseField for the given data type.

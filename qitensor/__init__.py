@@ -87,6 +87,7 @@ def doctest():
         qitensor.space, \
         qitensor.subspace, \
         qitensor.group, \
+        qitensor.sympybasefield, \
         qitensor.experimental.cartan_decompose, \
         qitensor.experimental.cartan_decompose_impl, \
         qitensor.experimental.stabilizers, \

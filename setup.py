@@ -64,6 +64,7 @@ ext_names = [
     "benchmark_cy",
     "factory",
     "sagebasefield",
+    "sympybasefield",
     "space"
 ]
 

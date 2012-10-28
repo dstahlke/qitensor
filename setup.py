@@ -3,7 +3,6 @@
 from distutils.core import setup
 from distutils.core import Command
 from distutils.extension import Extension
-import unittest
 import re
 
 # http://stackoverflow.com/a/4515279/1048959

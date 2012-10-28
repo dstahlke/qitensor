@@ -479,7 +479,7 @@ cdef class HilbertAtom(HilbertSpace):
 
         See also: :func:`X`
 
-        >>> from qitensor import qubit, qudit
+        >>> from qitensor import qubit, qudit, indexed_space, dihedral_group
 
         >>> ha = qubit('a')
         >>> ha.pauliX()
@@ -499,6 +499,13 @@ cdef class HilbertAtom(HilbertSpace):
         array([[ 0.+0.j,  0.+0.j,  1.+0.j],
                [ 1.+0.j,  0.+0.j,  0.+0.j],
                [ 0.+0.j,  1.+0.j,  0.+0.j]]))
+
+        >>> S3 = dihedral_group(3)
+        >>> hc = indexed_space('c', S3.elements)
+        >>> np.all([hc.pauliX(f) * hc.ket(f*g) == hc.ket(g) for f in S3.elements for g in S3.elements])
+        True
+        >>> np.all([hc.pauliX(f, left=False) * hc.ket(g*f) == hc.ket(g) for f in S3.elements for g in S3.elements])
+        True
         """
 
         if h is None:

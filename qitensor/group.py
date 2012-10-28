@@ -1,4 +1,6 @@
-#!/usr/bin/python
+"""
+Simple implementation of groups, based upon Cayley tables.
+"""
 
 __all__ = ['Group', 'dihedral_group']
 

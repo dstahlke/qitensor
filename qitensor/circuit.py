@@ -76,7 +76,7 @@ def cnot(h1, h2, left=True):
     FIXME - need docs for non-qubit case
     FIXME - doctest for group_op
 
-    >>> from qitensor import qubit, qudit, cnot
+    >>> from qitensor import qubit, qudit, indexed_space, dihedral_group, cnot
     >>> ha = qubit('a')
     >>> hb = qubit('b')
     >>> cnot(ha, hb).as_np_matrix()
@@ -96,6 +96,13 @@ def cnot(h1, h2, left=True):
     array([[ 0.+0.j,  1.+0.j,  0.+0.j],
            [ 0.+0.j,  0.+0.j,  1.+0.j],
            [ 1.+0.j,  0.+0.j,  0.+0.j]]))
+
+    >>> S3 = dihedral_group(3)
+    >>> hd = indexed_space('d', S3.elements)
+    >>> hd.bra(S3.r1) * cnot(hd, hd.prime) * hd.ket(S3.r1) == hd.prime.pauliX(S3.r1)
+    True
+    >>> hd.bra(S3.r1) * cnot(hd, hd.prime, left=False) * hd.ket(S3.r1) == hd.prime.pauliX(S3.r1, left=False)
+    True
     """
 
     for h in (h1, h2):

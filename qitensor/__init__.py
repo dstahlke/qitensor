@@ -45,6 +45,7 @@ from qitensor.circuit import *
 import qitensor.experimental
 from qitensor.arrayformatter import *
 from qitensor.subspace import *
+from qitensor.group import *
 
 __all__ = \
     qitensor.exceptions.__all__ + \
@@ -55,7 +56,8 @@ __all__ = \
     qitensor.factory.__all__ + \
     qitensor.circuit.__all__ + \
     qitensor.arrayformatter.__all__ + \
-    qitensor.subspace.__all__
+    qitensor.subspace.__all__ + \
+    qitensor.group.__all__
 
 def doctest():
     """Runs all doctests and unit tests."""
@@ -84,6 +86,7 @@ def doctest():
         qitensor.factory, \
         qitensor.space, \
         qitensor.subspace, \
+        qitensor.group, \
         qitensor.experimental.cartan_decompose, \
         qitensor.experimental.cartan_decompose_impl, \
         qitensor.experimental.stabilizers, \

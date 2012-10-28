@@ -111,6 +111,7 @@ def dihedral_group(n):
     """
     Return the dihedral group S_n.
 
+    >>> from qitensor import dihedral_group
     >>> S3 = dihedral_group(3)
     >>> S3.order
     6

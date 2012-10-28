@@ -87,7 +87,6 @@ cdef class SympyHilbertBaseField(HilbertBaseField):
         return self.sqrt(np.sum(arr * np.conj(arr)))
 
     cpdef np.ndarray mat_conj(self, np.ndarray mat):
-        print 'foo' # FIXME
         return np.vectorize(do_conj, otypes=[self.dtype])(mat)
 
     cpdef np.ndarray mat_adjoint(self, np.ndarray mat):

@@ -8,7 +8,8 @@ Examples
    entangling_power
    map_state_duality
    group_indices
-   symbolic
+   symbolic_sage
+   symbolic_sympy
    graph_codes
    pickle
    pickle_sage

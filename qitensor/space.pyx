@@ -27,8 +27,8 @@ cdef int _countbits(int i):
     """
     Count the number of set bits.
 
-    # FIXME
     >>> _countbits(0xfeedf00d)
+    FIXME - doctest doesn't run?
     """
 
     cdef int n = 0
@@ -42,8 +42,8 @@ cdef int _int_log2(int i):
     """
     Returns the log2 of the input if input is a power of 2, otherwise returns -1.
 
-    # FIXME
     >>> [_int_log2(i) for i in (0, 1, 32, 33)]
+    FIXME - doctest doesn't run?
     """
 
     cdef int n = 0
@@ -1132,7 +1132,7 @@ cdef class HilbertSpace:
         Returns the Hadamard matrix.
         Only applies if the dimension of the space is a power of 2.
         The returned operator is
-            :math:`\sum_{jk} (1/\sqrt{D}) (-1)^{j \cdot k} |j><k|`
+        :math:`\sum_{jk} (1/\sqrt{D}) (-1)^{j \cdot k} |j><k|`
         where j, k are bitstrings.
 
         >>> from qitensor import qubit, qudit

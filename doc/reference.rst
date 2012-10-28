@@ -9,4 +9,5 @@ Reference
    array
    circuit
    subspace
+   group
    experimental

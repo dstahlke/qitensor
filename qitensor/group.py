@@ -57,9 +57,9 @@ class Group(object):
             assert h is not None
             self.itab.append(h)
 
-        self.assert_is_group()
+        self._assert_is_group()
 
-    def assert_is_group(self):
+    def _assert_is_group(self):
         for f in self.elements:
             assert f/f == self.e
             for g in self.elements:

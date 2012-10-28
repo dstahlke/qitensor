@@ -1,10 +1,21 @@
 #!/usr/bin/python
 
+__all__ = ['Group', 'dihedral_group']
+
+def _unreduce_group_element_v1(group, idx):
+    return group.elements[idx]
+
 class GroupElement(object):
     def __init__(self, group, idx, name):
         self.group = group
         self.idx = idx
         self.name = name
+
+    def __reduce__(self):
+        """
+        Tells pickle how to store this object.
+        """
+        return _unreduce_group_element_v1, (self.group, self.idx)
 
     def __hash__(self): return self.idx
 
@@ -62,33 +73,41 @@ class Group(object):
 
     def __str__(self): return self.name
 
-def _dihedral_factory(n):
-    r = ['r%d' % i for i in range(n)]
-    s = ['s%d' % i for i in range(n)]
-    elements = r + s
+class DihedralGroup_impl(Group):
+    def __init__(self, n=0, trust_me=False):
+        if not trust_me:
+            raise Exception('construct this through the dihedral_group(n) function')
 
-    mtab = [[None for i in range(n*2)] for j in range(n*2)]
-    for i in range(n):
-        for j in range(n):
-            mtab[i  ][j  ] = r[(i+j)%n]
-            mtab[i  ][j+n] = s[(i+j)%n]
-            mtab[i+n][j  ] = s[(i-j)%n]
-            mtab[i+n][j+n] = r[(i-j)%n]
+        r = ['r%d' % i for i in range(n)]
+        s = ['s%d' % i for i in range(n)]
+        elements = r + s
 
-    group = Group('S%d'%n, elements, mtab)
-    group.r = group.elements[:n]
-    group.s = group.elements[n:]
+        mtab = [[None for i in range(n*2)] for j in range(n*2)]
+        for i in range(n):
+            for j in range(n):
+                mtab[i  ][j  ] = r[(i+j)%n]
+                mtab[i  ][j+n] = s[(i+j)%n]
+                mtab[i+n][j  ] = s[(i-j)%n]
+                mtab[i+n][j+n] = r[(i-j)%n]
 
-    for i in range(n):
-        group.__dict__[r[i]] = group.r[i]
-        group.__dict__[s[i]] = group.s[i]
+        Group.__init__(self, 'S%d'%n, elements, mtab)
+        self.r = self.elements[:n]
+        self.s = self.elements[n:]
 
-    return group
+        for i in range(n):
+            self.__dict__[r[i]] = self.r[i]
+            self.__dict__[s[i]] = self.s[i]
+
+    def __reduce__(self):
+        """
+        Tells pickle how to store this object.
+        """
+        return _unreduce_dihedral_group_v1, (len(self.r),)
 
 _dihedral_group_cache = {}
 def dihedral_group(n):
     if n not in _dihedral_group_cache:
-        _dihedral_group_cache[n] = _dihedral_factory(n)
+        _dihedral_group_cache[n] = DihedralGroup_impl(n, True)
     return _dihedral_group_cache[n]
 
-S3 = dihedral_group(3)
+_unreduce_dihedral_group_v1 = dihedral_group

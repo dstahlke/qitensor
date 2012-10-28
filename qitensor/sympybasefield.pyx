@@ -58,6 +58,9 @@ cdef class SympyHilbertBaseField(HilbertBaseField):
     cpdef fractional_phase(self, int a, int b):
         return sympy.exp(2 * sympy.pi * sympy.I * sympy.Rational(a, b))
 
+    cpdef np.ndarray eye(self, long size):
+        return np.diag([sympy.Integer(1)] * size)
+
     cpdef sqrt(self, x):
         return sympy.sqrt(x)
 
@@ -74,7 +77,7 @@ cdef class SympyHilbertBaseField(HilbertBaseField):
     cpdef np.ndarray mat_inverse(self, np.ndarray m):
         sm = sympy.Matrix(m)
         sm = sm.inverse_GE()
-        raise np.matrix(sm)
+        return np.matrix(sm)
 
     cpdef mat_det(self, np.ndarray m):
         sm = sympy.Matrix(m)
@@ -82,6 +85,13 @@ cdef class SympyHilbertBaseField(HilbertBaseField):
 
     cpdef mat_norm(self, np.ndarray arr):
         return self.sqrt(np.sum(arr * np.conj(arr)))
+
+    cpdef np.ndarray mat_conj(self, np.ndarray mat):
+        print 'foo' # FIXME
+        return np.vectorize(do_conj, otypes=[self.dtype])(mat)
+
+    cpdef np.ndarray mat_adjoint(self, np.ndarray mat):
+        return np.transpose(self.mat_conj(mat))
 
     cpdef np.ndarray mat_pow(self, np.ndarray m, n):
         sm = sympy.Matrix(m)

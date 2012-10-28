@@ -27,6 +27,22 @@ dstahlke@gmail.com
 
 == Changelog ==
 
+=== qitensor-0.10 (Dan Stahlke, 2012-10-27) ===
+	* can run doctests via 'setup.py test'
+	* HilbertSpace.fourier()
+	* HilbertSpace.hadamard() for any space of dimension a power of 2
+	* HilbertSpace.haar_matrix()
+	* HilbertSpace.random_density()
+	* HilbertSpace.index_iter_dict()
+	* HilbertArray.diag()
+	* HilbertArray.measure()
+	* HilbertArray.logm()
+	* circuits.swap()
+	* remove deprecated 'q' param for expm
+	* allow pauliX without arg for cyclic groups
+	* circuits functions handle non-qubit case
+	* 'group' module
+
 === qitensor-0.9 (Dan Stahlke, 2011-04-17) ===
 	* random_isometry
 	* doctest fixes for sage

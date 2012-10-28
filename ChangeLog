@@ -1,4 +1,7 @@
-=== qitensor-0.10dev (Dan Stahlke, ongoing) ===
+=== qitensor-0.11dev (Dan Stahlke, ongoing) ===
+	* no changes yet
+
+=== qitensor-0.10 (Dan Stahlke, 2012-10-27) ===
 	* can run doctests via 'setup.py test'
 	* HilbertSpace.fourier()
 	* HilbertSpace.hadamard() for any space of dimension a power of 2

@@ -2492,6 +2492,21 @@ cdef class HilbertArray:
         latex = FORMATTER.array_latex_block_table(self, use_hline=True)
         return '$$'+latex+'$$'
 
+    def _repr_png_(self):
+        """
+        Returns a latex representation, for Sage.
+        """
+
+        if not FORMATTER.ipy_table_format_mode == 'png':
+            return None
+
+        # the following is adapted from sympyprint.py
+        from IPython.lib.latextools import latex_to_png
+        s = FORMATTER.array_latex_block_table(self, use_hline=True)
+        # As matplotlib does not support display style, dvipng backend is used here.
+        png = latex_to_png(s, backend='dvipng', wrap=True)
+        return png
+
     def _repr_html_(self):
         """
         Returns the HTML representation, for IPython.

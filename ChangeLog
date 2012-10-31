@@ -1,6 +1,8 @@
 === qitensor-0.11dev (Dan Stahlke, ongoing) ===
 	* no changes yet
 	* sympy support
+	* added PNG renderers, for qtconsole (still need to find a way to
+	  detect qtconsole)
 
 === qitensor-0.10 (Dan Stahlke, 2012-10-27) ===
 	* can run doctests via 'setup.py test'

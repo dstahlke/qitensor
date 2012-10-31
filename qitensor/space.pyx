@@ -512,6 +512,21 @@ cdef class HilbertSpace:
             return None
         return '$'+self._latex_()+'$'
 
+    def _repr_png_(self):
+        """
+        Returns a PNG representation, for IPython.
+        """
+
+        if not FORMATTER.ipy_space_format_mode == 'png':
+            return None
+
+        # the following is adapted from sympyprint.py
+        from IPython.lib.latextools import latex_to_png
+        s = self._latex_()
+        # As matplotlib does not support display style, dvipng backend is used here.
+        png = latex_to_png(s, backend='dvipng', wrap=True)
+        return png
+
     def _latex_(self):
         """
         Returns a latex representation, for Sage.

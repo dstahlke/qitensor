@@ -9,7 +9,7 @@ import numpy as np
 from qitensor import have_sage
 from qitensor.exceptions import HilbertError
 
-__all__ = ['set_qitensor_printoptions', 'get_qitensor_printoptions', 'HilbertArrayFormatter']
+__all__ = ['set_qitensor_printoptions', 'get_qitensor_printoptions', 'setup_qitensor_for_qtconsole', 'HilbertArrayFormatter']
 
 class HilbertArrayFormatter(object):
     def __init__(self):
@@ -327,11 +327,11 @@ class HilbertArrayFormatter(object):
 
         :param ipy_table_format_mode: Which mode to use for formatting arrays in
             the IPython notebook.
-        :type ipy_table_format_mode: string ('html', 'latex', 'plain')
+        :type ipy_table_format_mode: string ('html', 'latex', 'png', 'plain')
 
         :param ipy_space_format_mode: Which mode to use for formatting HilbertSpace
             labels in the IPython notebook.
-        :type ipy_space_format_mode: string ('latex', 'plain')
+        :type ipy_space_format_mode: string ('latex', 'png', 'plain')
 
         qitensor also makes use of the ``suppress`` and ``precision`` options from
         numpy.set_printoptions.
@@ -348,10 +348,10 @@ class HilbertArrayFormatter(object):
         if use_latex_label_in_html is not None:
             self.use_latex_label_in_html = bool(use_latex_label_in_html)
         if ipy_table_format_mode is not None:
-            assert ipy_table_format_mode in ['html', 'latex', 'plain']
+            assert ipy_table_format_mode in ['html', 'latex', 'png', 'plain']
             self.ipy_table_format_mode = ipy_table_format_mode
         if ipy_space_format_mode is not None:
-            assert ipy_space_format_mode in ['latex', 'plain']
+            assert ipy_space_format_mode in ['latex', 'png', 'plain']
             self.ipy_space_format_mode = ipy_space_format_mode
 
     # NOTE: this is normally accessed via get_qitensor_printoptions
@@ -371,6 +371,16 @@ class HilbertArrayFormatter(object):
             "ipy_space_format_mode"   : self.ipy_space_format_mode,
         }
 
+    def setup_for_qtconsole(self):
+        """
+        Sets good printing options for IPython QTconsole.
+        """
+
+        self.set_printoptions(ipy_table_format_mode='png', ipy_space_format_mode='png')
+        # FIXME - latex_to_png is limited in its allowed colors
+        self.set_printoptions(zero_color_latex='yellow')
+
 FORMATTER = HilbertArrayFormatter()
 set_qitensor_printoptions = FORMATTER.set_printoptions
 get_qitensor_printoptions = FORMATTER.get_printoptions
+setup_qitensor_for_qtconsole = FORMATTER.setup_for_qtconsole

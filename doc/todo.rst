@@ -13,3 +13,4 @@ BUGS/FEATURES
     * sage doctests in python files give sphinx error
     * wrong exceptions are thrown
     * printing large array is slow (time taken in array_html_block_table)
+    * row_space option for expm, logm, det, pinv, etc.

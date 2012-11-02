@@ -1215,7 +1215,7 @@ cdef class HilbertArray:
         v = self.nparray.transpose(axes).reshape(col_size, row_size)
         return np.matrix(v, dtype=dtype)
 
-    cpdef np_matrix_transform(self, f, transpose_dims=False):
+    cpdef np_matrix_transform(self, f, transpose_dims=False, row_space=None, col_space=None):
         """
         Performs a numpy matrix operation.
 
@@ -1224,11 +1224,19 @@ cdef class HilbertArray:
         :param transpose_dims: if True, the resultant Hilbert space is
             transposed
         :type transpose_dims: bool
+        :param row_space: the HilbertSpace to use for the row space of the matrix,
+            default is the bra space of the input array.
+        :type row_space: HilbertSpace, list, or tuple
+        :param col_space: the HilbertSpace to use for the column space of the matrix,
+            default is the ket space of the input array.
+        :type col_space: HilbertSpace, list, or tuple
 
-        >>> from qitensor import qubit
+        >>> from qitensor import qubit, qudit
         >>> import numpy.linalg
         >>> ha = qubit('a')
         >>> hb = qubit('b')
+        >>> hc = qudit('c', 4)
+
         >>> x = (ha * hb.H).random_array()
         >>> x.space
         |a><b|
@@ -1237,14 +1245,38 @@ cdef class HilbertArray:
         |b><a|
         >>> y == x.I
         True
+
+        >>> v = ha.random_array()
+        >>> (v.np_matrix_transform(lambda x: x*2) - v*2).norm() < 1e-14
+        True
+
+        >>> w = (ha*hc*hb.H).random_array()
+        >>> wi = w.np_matrix_transform(numpy.linalg.inv, transpose_dims=True, row_space=hc)
+        >>> wi == w.inv(hc)
+        True
         """
 
-        m = self.as_np_matrix()
+        #m = self.as_np_matrix()
+        #m = f(m)
+        #out_hilb = self.space
+        #if transpose_dims:
+        #    out_hilb = out_hilb.H
+        #return out_hilb.reshaped_np_matrix(m)
+
+        rowcol_kw = { 'row_space': row_space, 'col_space': col_space }
+        (row_space, col_space) = self._get_row_col_spaces(**rowcol_kw)
+
+        m = self.as_np_matrix(**rowcol_kw)
         m = f(m)
-        out_hilb = self.space
+
         if transpose_dims:
-            out_hilb = out_hilb.H
-        return out_hilb.reshaped_np_matrix(m)
+            out_hilb = self.space.H
+            out_axes = [x.H for x in row_space+col_space]
+        else:
+            out_hilb = self.space
+            out_axes = col_space+row_space
+
+        return out_hilb.array(m, reshape=True, input_axes=out_axes)
 
     @property
     def H(self):
@@ -1282,6 +1314,10 @@ cdef class HilbertArray:
         It is required that the dimension of the bra space be equal to the
         dimension of the ket space.
 
+        This is just a shortcut for ``self.inv()``, which offers more options.
+
+        See also: :func:`inv`
+
         >>> from qitensor import qubit, qudit
         >>> ha = qubit('a')
         >>> x = ha.O.random_array()
@@ -1296,10 +1332,7 @@ cdef class HilbertArray:
         True
         """
 
-        cdef object xxx = self.space.base_field # FIXME - need to forget type to avoid Cython error
-        return self.np_matrix_transform( \
-            xxx.mat_inverse, \
-            transpose_dims=True)
+        return self.inv()
 
     @property
     def T(self):
@@ -1435,6 +1468,50 @@ cdef class HilbertArray:
         """
 
         return self / self.norm()
+
+    cpdef inv(self, row_space=None):
+        """
+        Returns the matrix inverse of this array.
+
+        :param row_space: the HilbertSpace to use for the row space of the matrix,
+            default is the bra space of the input array.  This parameter allows
+            computing the inverse of the cross operator.
+        :type row_space: HilbertSpace, list, or tuple
+
+        See also: :func:`I`
+
+        >>> from qitensor import qubit, qudit
+        >>> import numpy.linalg
+        >>> ha = qubit('a')
+        >>> hb = qubit('b')
+        >>> hc = qudit('c', 4)
+
+        >>> x = ha.O.random_array()
+        >>> (x * x.inv() - ha.eye()).norm() < 1e-13
+        True
+
+        >>> y = (ha * hb * hc.H).random_array()
+        >>> (y.space, y.inv().space)
+        (|a,b><c|, |c><a,b|)
+        >>> (y * y.inv() - (ha * hb).eye()).norm() < 1e-13
+        True
+        >>> (y.inv() * y - hc.eye()).norm() < 1e-13
+        True
+
+        >>> z = (ha * hc * hb.H).random_array()
+        >>> (z.space, z.inv(hc).space)
+        (|a,c><b|, |b><a,c|)
+        >>> ((z * z.inv(hc)).trace(ha) - hc.eye()).norm() < 1e-14
+        True
+        >>> (z.inv(hc).tensordot(z, contraction_spaces=hc) - (ha*hb).O.eye()).norm() < 1e-14
+        True
+        """
+
+        cdef object xxx = self.space.base_field # FIXME - need to forget type to avoid Cython error
+        return self.np_matrix_transform( \
+            xxx.mat_inverse, \
+            transpose_dims=True,
+            row_space=row_space)
 
     def pinv(self, rcond=1e-15):
         """

@@ -3,6 +3,8 @@
 	* sympy support
 	* added PNG renderers, for qtconsole (still need to find a way to
 	  detect qtconsole)
+	* HilbertArray.inv() method, which allows taking inverse of cross
+	  operator
 
 === qitensor-0.10 (Dan Stahlke, 2012-10-27) ===
 	* can run doctests via 'setup.py test'

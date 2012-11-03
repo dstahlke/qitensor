@@ -575,6 +575,14 @@ cdef class HilbertSpace:
             raise MismatchedSpaceError(repr(self)+" doesn't contain "+repr(other))
         return create_space1(self.bra_ket_set - other.bra_ket_set)
 
+    def __truediv__(self, other):
+        """
+        Returns a HilbertSpace ``ret`` with the property that ``other*ret==self``.
+        An error is thrown if such a relation is not possible.
+        """
+
+        return self.__div__(other)
+
     cpdef HilbertArray diag(self, v):
         """
         Create a diagonal operator from the given 1-d list.

@@ -1200,7 +1200,7 @@ cdef class HilbertArray:
         """
 
         # shortcut for common case
-        if self.space._is_simple_dyad:
+        if self.space._is_simple_dyad and row_space is None and col_space is None:
             return np.matrix(self.nparray, dtype=dtype)
 
         rowcol_kw = { 'row_space': row_space, 'col_space': col_space }

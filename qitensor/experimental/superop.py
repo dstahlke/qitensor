@@ -6,17 +6,12 @@ from qitensor import qudit, NotKetSpaceError, HilbertArray
 # FIXME - use exceptions rather than assert
 
 class Superoperator(object):
-    def __init__(self, ha, hb, hc, J, check_tp=True):
+    def __init__(self, ha, hb, m):
         self.ha = self._to_ket_space(ha)
         self.hb = self._to_ket_space(hb)
-        self.hc = self._to_ket_space(hc)
+        self.m = np.matrix(m)
 
-        assert J.space == self.hb * self.hc * self.ha.H
-
-        if check_tp and (J.H*J - ha.eye()).norm() > 1e-14:
-            raise ValueError('channel is not trace preserving')
-
-        self.J = J
+        assert m.shape == (self.hb.O.dim(), self.ha.O.dim())
 
     @classmethod
     def _make_environ_spc(cls, espc_def, field, dim):
@@ -35,14 +30,23 @@ class Superoperator(object):
         raise NotKetSpaceError('need a bra, ket, or self-adjoint space, not '+str(spc))
 
     def __str__(self):
-        return '<Superoperator( '+str(self.ha.O)+' to '+str(self.hb.O)+' )>'
+        return 'Superoperator( '+str(self.ha.O)+' to '+str(self.hb.O)+' )'
 
     def __repr__(self):
         return str(self)
 
+    def as_matrix(self):
+        return self.m
+
     def __call__(self, rho):
         assert rho.space.bra_ket_set >= self.ha.O.bra_ket_set
-        return (self.J * rho * self.J.H).trace(self.hc)
+        (row_space, col_space) = rho._get_row_col_spaces(col_space=self.ha.O)
+        ret_vec = self.m * rho.as_np_matrix(col_space=self.ha.O)
+        if len(row_space):
+            out_space = self.hb.O * np.prod(row_space)
+        else:
+            out_space = self.hb.O
+        return out_space.array(ret_vec, reshape=True, input_axes=self.hb.O.axes+row_space)
 
     def __mul__(self, other):
         if isinstance(other, Superoperator):
@@ -52,8 +56,11 @@ class Superoperator(object):
             raise ValueError()
 
         # hopefully `other` is a scalar
-        s = self.ha.base_field.sqrt(other)
-        return Superoperator(self.ha, self.hb, self.hc, self.J*s, check_tp=False)
+        return Superoperator(self.ha, self.hb, self.m*other)
+
+    def __rmul__(self, other):
+        # hopefully `other` is a scalar
+        return self * other
 
     def __add__(self, other):
         """
@@ -61,8 +68,8 @@ class Superoperator(object):
         >>> from qitensor.experimental.superop import Superoperator
         >>> ha = qudit('a', 4)
         >>> hb = qudit('b', 3)
-        >>> E1 = Superoperator.random(ha, hb)
-        >>> E2 = Superoperator.random(ha, hb)
+        >>> E1 = CP_Map.random(ha, hb)
+        >>> E2 = CP_Map.random(ha, hb)
         >>> rho = ha.random_density()
         >>> chi = (E1*0.2 + E2*0.8)(rho)
         >>> xi  = E1(rho)*0.2 + E2(rho)*0.8
@@ -76,43 +83,143 @@ class Superoperator(object):
         assert self.ha == other.ha
         assert self.hb == other.hb
 
-        m = self.as_matrix() + other.as_matrix()
-        return Superoperator.from_matrix(m, self.ha, self.hb, check_tp=False)
+        return Superoperator(self.ha, self.hb, self.m + other.m)
+
+    @classmethod
+    def from_function(cls, ha, f):
+        """
+        >>> from qitensor import qudit
+        >>> from qitensor.experimental.superop import Superoperator
+        >>> ha = qudit('a', 3)
+        >>> hb = qubit('b')
+        >>> E = Superoperator.from_function(ha, lambda rho: rho.T)
+        >>> rho = (ha*hb).random_density()
+        >>> (E(rho) - rho.transpose(ha)).norm()
+
+        >>> Superoperator.from_function(ha, lambda rho: rho.H)
+        Traceback (most recent call last):
+            ...
+        ValueError: function was not linear
+        """
+
+        ha = cls._to_ket_space(ha)
+        hb = f(ha.eye()).space
+        assert hb == hb.H
+        hb = hb.ket_space()
+
+        m = np.zeros((hb.dim()**2, ha.dim()**2), ha.base_field.dtype)
+        for (i, x) in enumerate(ha.O.index_iter()):
+            m[:, i] = f(ha.O.basis_vec(x)).nparray.flatten()
+
+        E = Superoperator(ha, hb, m)
+
+        rho = ha.random_density()
+        if (E(rho) - f(rho)).norm() > 1e-14:
+            raise ValueError('function was not linear')
+
+        return E
+
+#    @classmethod
+#    def convex_combination(cls, Elist, Plist, espc_def=None):
+#        """
+#        >>> from qitensor import qudit
+#        >>> from qitensor.experimental.superop import Superoperator
+#        >>> ha = qudit('a', 4)
+#        >>> hb = qudit('b', 3)
+#        >>> E1 = CP_Map.random(ha, hb)
+#        >>> E2 = CP_Map.random(ha, hb)
+#        >>> E = Superoperator.convex_combination((E1, E2), (0.2, 0.8))
+#        >>> rho = ha.random_density()
+#        >>> (E(rho) - (E1(rho)*0.2 + E2(rho)*0.8)).norm() < 1e-14
+#        True
+#        """
+#
+#        assert len(Elist) == len(Plist)
+#        assert np.abs(np.sum(Plist) - 1) < 1e-14
+#
+#        E0 = Elist[0]
+#
+#        for E in Elist:
+#            assert E.ha == E0.ha
+#            assert E.hb == E0.hb
+#
+#        m = np.sum([ E.m*p for (E, p) in zip(Elist, Plist) ], axis=0)
+#
+#        return Superoperator(E0.ha, E0.hb, m)
+
+class CP_Map(Superoperator):
+    def __init__(self, ha, hb, hc, J, check_tp=True):
+        """
+        >>> ha = qudit('a', 2)
+        >>> hb = qudit('b', 2)
+        >>> hd = qudit('d', 3)
+        >>> rho = (ha*hd).random_density()
+        >>> E = CP_Map.random(ha, hb)
+        >>> ((E.J * rho * E.J.H).trace(E.hc) - E(rho)).norm() < 1e-14
+        True
+        """
+
+        ha = self._to_ket_space(ha)
+        hb = self._to_ket_space(hb)
+        hc = self._to_ket_space(hc)
+
+        assert J.space == hb * hc * ha.H
+
+        if check_tp and (J.H*J - ha.eye()).norm() > 1e-14:
+            raise ValueError('channel is not trace preserving')
+
+        da = ha.dim()
+        db = hb.dim()
+        t = np.zeros((db, da, db, da), dtype=ha.base_field.dtype)
+        for j in hc.index_iter():
+            op = J[{ hc: j }].as_np_matrix(row_space=ha.H)
+            t += np.tensordot(op, op.conj(), axes=([],[]))
+        t = t.transpose([0,2,1,3])
+        t = t.reshape(db**2, da**2)
+        t = np.matrix(t)
+
+        super(CP_Map, self).__init__(ha, hb, t)
+
+        self.J = J
+        self.hc = hc
+
+    def __str__(self):
+        return 'CP_Map( '+str(self.ha.O)+' to '+str(self.hb.O)+' )'
+
+    def __repr__(self):
+        return str(self)
 
     def compl(self):
         # FIXME - cache this (circularly)
         return Superoperator(self.ha, self.hc, self.hb, self.J, check_tp=False)
 
-    def as_four_tensor(self):
-        # FIXME - untested
-        da = self.ha.dim()
-        db = self.hb.dim()
-        ret = np.zeros((db, da, db, da), dtype=self.ha.base_field.dtype)
-        for j in self.hc.index_iter():
-            op = self.J[{ self.hc: j }].as_np_matrix(row_space=self.ha.H)
-            ret += np.tensordot(op, op.conj(), axes=([],[]))
-        return ret
+    def __mul__(self, other):
+        if isinstance(other, Superoperator):
+            raise NotImplementedError() # FIXME
 
-    def as_matrix(self):
-        da = self.ha.dim()
-        db = self.hb.dim()
-        t = self.as_four_tensor()
-        t = t.transpose([0,2,1,3])
-        t = t.reshape(db**2, da**2)
-        return np.matrix(t)
+        if isinstance(other, HilbertArray):
+            raise ValueError()
+
+        # hopefully `other` is a scalar
+        s = self.ha.base_field.sqrt(other)
+        return CP_Map(self.ha, self.hb, self.hc, self.J*s, check_tp=False)
+
+    def __rmul__(self, other):
+        # hopefully `other` is a scalar
+        return self * other
 
     @classmethod
-    def from_matrix(cls, m, spc_in, spc_out, espc_def=None):
+    def from_matrix(cls, m, spc_in, spc_out, espc_def=None, check_tp=True):
         """
         >>> from qitensor import qudit
         >>> from qitensor.experimental.superop import Superoperator
         >>> ha = qudit('a', 2)
         >>> hb = qudit('b', 3)
         >>> hx = qudit('x', 5)
-        >>> E1 = Superoperator.random(ha*hb, hx)
-        >>> E2 = Superoperator.random(hx, ha*hb)
+        >>> E1 = CP_Map.random(ha*hb, hx)
+        >>> E2 = CP_Map.random(hx, ha*hb)
         >>> m = E2.as_matrix() * E1.as_matrix()
-        >>> E3 = Superoperator.from_matrix(m, ha*hb, ha*hb)
+        >>> E3 = CP_Map.from_matrix(m, ha*hb, ha*hb)
         >>> rho = (ha*hb).random_density()
         >>> (E2(E1(rho)) - E3(rho)).norm() < 1e-14
         True
@@ -145,35 +252,14 @@ class Superoperator(object):
         for i in range(da*db):
             J[{ hc: i }] = (hb * ha.H).array(ev[:,i] * np.sqrt(ew[i]), reshape=True)
 
-        return Superoperator(ha, hb, hc, J)
+        return cls(ha, hb, hc, J, check_tp=check_tp)
 
-    @classmethod
-    def convex_combination(cls, Elist, Plist, espc_def=None):
-        """
-        >>> from qitensor import qudit
-        >>> from qitensor.experimental.superop import Superoperator
-        >>> ha = qudit('a', 4)
-        >>> hb = qudit('b', 3)
-        >>> E1 = Superoperator.random(ha, hb)
-        >>> E2 = Superoperator.random(ha, hb)
-        >>> E = Superoperator.convex_combination((E1, E2), (0.2, 0.8))
-        >>> rho = ha.random_density()
-        >>> (E(rho) - (E1(rho)*0.2 + E2(rho)*0.8)).norm() < 1e-14
-        True
-        """
-
-        assert len(Elist) == len(Plist)
-        assert np.abs(np.sum(Plist) - 1) < 1e-14
-
-        E0 = Elist[0]
-
-        for E in Elist:
-            assert E.ha == E0.ha
-            assert E.hb == E0.hb
-
-        m = np.sum([ E.as_matrix()*p for (E, p) in zip(Elist, Plist) ], axis=0)
-
-        return cls.from_matrix(m, E0.ha, E0.hb, espc_def)
+    def __add__(self, other):
+        ret = super(CP_Map, self).__add__(other)
+        if isinstance(other, CP_Map):
+            return CP_Map.from_matrix(ret.m, ret.ha, ret.hb, check_tp=False)
+        else:
+            return ret
 
     @classmethod
     def random(cls, spc_in, spc_out, espc_def=None):
@@ -188,12 +274,12 @@ class Superoperator(object):
     def unitary(cls, U, espc_def=None):
         """
         >>> from qitensor import qubit
-        >>> from qitensor.experimental.superop import Superoperator
+        >>> from qitensor.experimental.superop import CP_Map
         >>> ha = qubit('a')
         >>> hb = qubit('b')
         >>> U = ha.random_unitary()
         >>> rho = (ha*hb).random_density()
-        >>> E = Superoperator.unitary(U)
+        >>> E = CP_Map.unitary(U)
         >>> (E(rho) - U*rho*U.H).norm() < 1e-14
         True
         """
@@ -208,11 +294,11 @@ class Superoperator(object):
     def identity(cls, spc, espc_def=None):
         """
         >>> from qitensor import qubit
-        >>> from qitensor.experimental.superop import Superoperator
+        >>> from qitensor.experimental.superop import CP_Map
         >>> ha = qubit('a')
         >>> hb = qubit('b')
         >>> rho = (ha*hb).random_density()
-        >>> E = Superoperator.identity(ha)
+        >>> E = CP_Map.identity(ha)
         >>> (E(rho) - rho).norm() < 1e-14
         True
         """
@@ -223,15 +309,14 @@ class Superoperator(object):
     def totally_noisy(cls, spc, espc_def=None):
         """
         >>> from qitensor import qudit
-        >>> from qitensor.experimental.superop import Superoperator
+        >>> from qitensor.experimental.superop import CP_Map
         >>> ha = qudit('a', 5)
         >>> rho = ha.random_density()
-        >>> E = Superoperator.totally_noisy(ha)
+        >>> E = CP_Map.totally_noisy(ha)
         >>> (E(rho) - ha.eye()/ha.dim()).norm() < 1e-14
         True
         """
 
-        # FIXME - check definition and name
         ha = cls._to_ket_space(spc)
         d = ha.dim()
         d2 = d*d
@@ -246,22 +331,21 @@ class Superoperator(object):
     def noisy(cls, spc, p, espc_def=None):
         """
         >>> from qitensor import qudit
-        >>> from qitensor.experimental.superop import Superoperator
+        >>> from qitensor.experimental.superop import CP_Map
         >>> ha = qudit('a', 5)
         >>> rho = ha.random_density()
-        >>> E = Superoperator.noisy(ha, 0.2)
+        >>> E = CP_Map.noisy(ha, 0.2)
         >>> (E(rho) - 0.8*rho - 0.2*ha.eye()/ha.dim()).norm() < 1e-14
         True
         """
 
-        # FIXME - check definition and name
         assert 0 <= p <= 1
         E0 = cls.totally_noisy(spc)
         E1 = cls.identity(spc)
-        return cls.convex_combination((E0, E1), (p, 1-p))
+        return p*E0 + (1-p)*E1
 
-ha = qudit('a', 2)
-rho = ha.random_density()
-E = Superoperator.noisy(ha, 0.2)
-print rho
-print E(rho)
+#ha = qudit('a', 2)
+#hb = qudit('b', 2)
+#hd = qudit('d', 3)
+#rho = (ha*hd).random_density()
+#E = CP_Map.random(ha, hb)

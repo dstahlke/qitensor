@@ -77,7 +77,11 @@ class Superoperator(object):
         assert self.hb == other.hb
 
         m = self.as_matrix() + other.as_matrix()
-        return Superoperator.from_matrix(m, self.ha, self.hb)
+        return Superoperator.from_matrix(m, self.ha, self.hb, check_tp=False)
+
+    def compl(self):
+        # FIXME - cache this (circularly)
+        return Superoperator(self.ha, self.hc, self.hb, self.J, check_tp=False)
 
     def as_four_tensor(self):
         # FIXME - untested

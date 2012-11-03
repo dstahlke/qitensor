@@ -40,6 +40,7 @@ cdef class HilbertSpace(object):
     cpdef HilbertArray random_isometry(self)
     cpdef HilbertArray random_density(self)
     cpdef HilbertArray eye(self)
+    cpdef HilbertArray fully_mixed(self)
     cpdef basis_vec(self, idx)
     cpdef basis(self)
     cpdef hermitian_basis(self, normalize=*)

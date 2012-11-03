@@ -5,6 +5,8 @@
 	  detect qtconsole)
 	* HilbertArray.inv() method, which allows taking inverse of cross
 	  operator
+	* HilbertSpace.fully_mixed()
+	* superoperators module (experimental)
 
 === qitensor-0.10 (Dan Stahlke, 2012-10-27) ===
 	* can run doctests via 'setup.py test'

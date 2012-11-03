@@ -927,6 +927,33 @@ cdef class HilbertSpace:
 
         return self.array(self.base_field.eye(bra_size), reshape=True)
 
+    cpdef HilbertArray fully_mixed(self):
+        """
+        Returns the fully mixed state.
+
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> hb = qubit('b')
+
+        >>> ha.fully_mixed()
+        HilbertArray(|a><a|,
+        array([[ 0.5+0.j,  0.0+0.j],
+               [ 0.0+0.j,  0.5+0.j]]))
+
+        >>> ha.fully_mixed() == ha.H.fully_mixed()
+        True
+        >>> ha.fully_mixed() == ha.O.fully_mixed()
+        True
+        """
+
+        if len(self.ket_set) == 0 or len(self.bra_set) == 0:
+            return (self * self.H).fully_mixed()
+
+        if self.bra_set != self.H.bra_set:
+            raise HilbertError('not a symmetric operator space: '+str(self))
+
+        return self.eye() / self.ket_space().dim()
+
     cpdef basis_vec(self, idx):
         """
         Returns a ``HilbertArray`` corresponding to a basis vector.

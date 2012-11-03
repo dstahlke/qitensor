@@ -88,13 +88,14 @@ class Superoperator(object):
     @classmethod
     def from_function(cls, ha, f):
         """
-        >>> from qitensor import qudit
+        >>> from qitensor import qubit, qudit
         >>> from qitensor.experimental.superop import Superoperator
         >>> ha = qudit('a', 3)
         >>> hb = qubit('b')
         >>> E = Superoperator.from_function(ha, lambda rho: rho.T)
         >>> rho = (ha*hb).random_density()
-        >>> (E(rho) - rho.transpose(ha)).norm()
+        >>> (E(rho) - rho.transpose(ha)).norm() < 1e-14
+        True
 
         >>> Superoperator.from_function(ha, lambda rho: rho.H)
         Traceback (most recent call last):

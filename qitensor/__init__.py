@@ -91,6 +91,7 @@ def doctest():
         qitensor.experimental.cartan_decompose, \
         qitensor.experimental.cartan_decompose_impl, \
         qitensor.experimental.stabilizers, \
+        qitensor.experimental.superop, \
     ]
 
     print "\nRunning doctests..."

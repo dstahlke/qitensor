@@ -3,6 +3,8 @@ import itertools
 
 from qitensor import qudit, NotKetSpaceError, HilbertArray
 
+toler = 1e-12
+
 # FIXME - use exceptions rather than assert
 
 class Superoperator(object):
@@ -115,10 +117,13 @@ class Superoperator(object):
         E = Superoperator(ha, hb, m)
 
         rho = ha.random_density()
-        if (E(rho) - f(rho)).norm() > 1e-14:
+        if (E(rho) - f(rho)).norm() > toler:
             raise ValueError('function was not linear')
 
         return E
+
+    def upgrade_to_cp_map(self, espc_def=None, check_tp=True):
+        return CP_Map.from_matrix(self.m, self.ha, self.hb, espc_def=espc_def, check_tp=check_tp)
 
 #    @classmethod
 #    def convex_combination(cls, Elist, Plist, espc_def=None):
@@ -136,7 +141,7 @@ class Superoperator(object):
 #        """
 #
 #        assert len(Elist) == len(Plist)
-#        assert np.abs(np.sum(Plist) - 1) < 1e-14
+#        assert np.abs(np.sum(Plist) - 1) < toler
 #
 #        E0 = Elist[0]
 #
@@ -166,7 +171,7 @@ class CP_Map(Superoperator):
 
         assert J.space == hb * hc * ha.H
 
-        if check_tp and (J.H*J - ha.eye()).norm() > 1e-14:
+        if check_tp and (J.H*J - ha.eye()).norm() > toler:
             raise ValueError('channel is not trace preserving')
 
         da = ha.dim()
@@ -238,13 +243,16 @@ class CP_Map(Superoperator):
 
         field = ha.base_field
 
-        if field.mat_norm(np.transpose(np.conj(t)) - t) > 1e-14:
-            raise ValueError("matrix didn't correspond to a totally positive superoperator")
+        if field.mat_norm(np.transpose(np.conj(t)) - t) > toler:
+            raise ValueError("matrix didn't correspond to a totally positive "+
+                "superoperator (cross operator not self-adjoint)")
 
         (ew, ev) = field.mat_eig(t, True)
 
-        if np.min(ew) < 0:
-            raise ValueError("matrix didn't correspond to a totally positive superoperator")
+        if np.min(ew) < -toler:
+            raise ValueError("matrix didn't correspond to a totally positive "+
+                "superoperator (min eig="+str(np.min(ew))+")")
+        ew = np.where(ew < 0, 0, ew)
 
         hc = cls._make_environ_spc(espc_def, ha.base_field, da*db)
 
@@ -314,7 +322,7 @@ class CP_Map(Superoperator):
         >>> ha = qudit('a', 5)
         >>> rho = ha.random_density()
         >>> E = CP_Map.totally_noisy(ha)
-        >>> (E(rho) - ha.eye()/ha.dim()).norm() < 1e-14
+        >>> (E(rho) - ha.fully_mixed()).norm() < 1e-14
         True
         """
 
@@ -336,7 +344,7 @@ class CP_Map(Superoperator):
         >>> ha = qudit('a', 5)
         >>> rho = ha.random_density()
         >>> E = CP_Map.noisy(ha, 0.2)
-        >>> (E(rho) - 0.8*rho - 0.2*ha.eye()/ha.dim()).norm() < 1e-14
+        >>> (E(rho) - 0.8*rho - 0.2*ha.fully_mixed()).norm() < 1e-14
         True
         """
 

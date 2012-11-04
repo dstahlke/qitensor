@@ -10,6 +10,8 @@ types (e.g. SR).  This, too, is accessed through ``base_field_lookup`` or by
 passing the ``dtype`` parameter.
 """
 
+from __future__ import division
+
 import numpy as np
 cimport numpy as np
 import numpy.random
@@ -98,7 +100,7 @@ cdef class HilbertBaseField:
         return np.exp(2j * np.pi * a / b)
 
     cpdef frac(self, p, q):
-        return p/float(q) if isinstance(q, int) else p/q
+        return p/q
 
     cpdef sqrt(self, x):
         return np.sqrt(x)

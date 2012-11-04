@@ -58,6 +58,9 @@ cdef class SympyHilbertBaseField(HilbertBaseField):
     cpdef fractional_phase(self, int a, int b):
         return sympy.exp(2 * sympy.pi * sympy.I * sympy.Rational(a, b))
 
+    cpdef frac(self, p, q):
+        return sympy.Integer(1)*p/q
+
     cpdef np.ndarray eye(self, long size):
         return np.diag([sympy.Integer(1)] * size)
 

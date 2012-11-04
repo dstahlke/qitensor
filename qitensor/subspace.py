@@ -3,6 +3,8 @@
 import numpy as np
 import numpy.linalg as linalg
 
+# FIXME - pickling
+
 # This is the only thing that is exported.
 __all__ = ['TensorSubspace']
 

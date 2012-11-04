@@ -6,6 +6,9 @@ from qitensor import qudit, NotKetSpaceError, HilbertArray
 toler = 1e-12
 
 # FIXME - use exceptions rather than assert
+# FIXME - pickling
+
+__all__ = ['Superoperator', 'CP_Map']
 
 class Superoperator(object):
     def __init__(self, ha, hb, m):

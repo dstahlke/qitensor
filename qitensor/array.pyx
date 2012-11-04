@@ -1436,6 +1436,51 @@ cdef class HilbertArray:
 
         return self.space.base_field.mat_norm(self.nparray)
 
+    cpdef trace_norm(self, row_space=None, col_space=None):
+        """
+        Returns the sum of the singular values of this operator.
+
+        :param row_space: the HilbertSpace to use for the row space of the matrix,
+            default is the bra space of the input array.
+        :type row_space: HilbertSpace, list, or tuple
+        :param col_space: the HilbertSpace to use for the column space of the matrix,
+            default is the ket space of the input array.
+        :type col_space: HilbertSpace, list, or tuple
+
+        >>> from qitensor import qudit
+        >>> ha = qudit('a', 3)
+        >>> sv = [2, 3, 7]
+        >>> M = ha.random_unitary() * ha.diag(sv) * ha.random_unitary()
+        >>> abs(M.trace_norm() - 12) < 1e-14
+        True
+        """
+
+        return self.schatten_norm(1, row_space=row_space, col_space=col_space)
+
+    cpdef schatten_norm(self, p, row_space=None, col_space=None):
+        """
+        Returns the Schatten p-norm of this operator.
+
+        :param row_space: the HilbertSpace to use for the row space of the matrix,
+            default is the bra space of the input array.
+        :type row_space: HilbertSpace, list, or tuple
+        :param col_space: the HilbertSpace to use for the column space of the matrix,
+            default is the ket space of the input array.
+        :type col_space: HilbertSpace, list, or tuple
+
+        >>> from qitensor import qubit, qudit
+        >>> ha = qudit('a', 3)
+        >>> sv = [2, 3, 7]
+        >>> M = ha.random_unitary() * ha.diag(sv) * ha.random_unitary()
+        >>> np.abs(M.schatten_norm(1) - np.sum([x for x in sv])) < 1e-14
+        True
+        >>> np.abs(M.schatten_norm(4) - np.sum([x**4 for x in sv])**(1.0/4.0)) < 1e-14
+        True
+        """
+
+        sv = self.singular_vals(row_space=row_space, col_space=col_space)
+        return np.sum([ x**p for x in sv ]) ** self.space.base_field.frac(1, p)
+
     cpdef normalize(self):
         """
         Normalizes array in-place.

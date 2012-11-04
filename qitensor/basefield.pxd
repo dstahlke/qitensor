@@ -15,6 +15,7 @@ cdef class HilbertBaseField:
     cpdef input_cast_function(self)
     cpdef complex_unit(self)
     cpdef fractional_phase(self, int a, int b)
+    cpdef frac(self, a, b)
     cpdef sqrt(self, x)
     cpdef xlog2x(self, x)
     cpdef np.ndarray random_array(self, shape)

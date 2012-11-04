@@ -98,7 +98,7 @@ cdef class HilbertBaseField:
         return np.exp(2j * np.pi * a / b)
 
     cpdef frac(self, p, q):
-        return complex(p) / complex(q)
+        return p/float(q) if isinstance(q, int) else p/q
 
     cpdef sqrt(self, x):
         return np.sqrt(x)

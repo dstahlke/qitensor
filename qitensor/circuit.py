@@ -6,7 +6,10 @@ import numpy as np
 from qitensor import HilbertAtom, HilbertArray, HilbertError, \
         HilbertShapeError, MismatchedSpaceError
 
-__all__ = ['cphase', 'cnot', 'swap', 'controlled_U', 'toffoli', 'max_entangled']
+__all__ = [
+    'cphase', 'cnot', 'swap', 'controlled_U',
+    'toffoli', 'fredkin', 'max_entangled',
+]
 
 def cphase(h1, h2):
     """
@@ -198,6 +201,23 @@ def toffoli(ha, hb, hc):
     """
 
     return controlled_U(ha, cnot(hb, hc))
+
+def fredkin(ha, hb, hc):
+    """
+    FIXME - docs
+
+    >>> from qitensor import qubit, fredkin
+    >>> ha = qubit('a')
+    >>> hb = qubit('b')
+    >>> hc = qubit('c')
+    >>> U = fredkin(ha, hb, hc)
+    >>> U * ha.ket(0) == (hb*hc).eye() * ha.ket(0)
+    True
+    >>> U * ha.ket(1) == swap(hb, hc) * ha.ket(1)
+    True
+    """
+
+    return controlled_U(ha, swap(hb, hc))
 
 def swap(h1, h2):
     """

@@ -11,6 +11,7 @@
 	* HilbertArray.schatten_norm()
 	* circuits.controlled_U
 	* circuits.toffoli
+	* circuits.fredkin
 
 === qitensor-0.10 (Dan Stahlke, 2012-10-27) ===
 	* can run doctests via 'setup.py test'

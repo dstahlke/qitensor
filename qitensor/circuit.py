@@ -3,9 +3,10 @@ This module contains functions related to quantum circuits.
 """
 
 import numpy as np
-from qitensor import HilbertAtom, HilbertError, HilbertShapeError
+from qitensor import HilbertAtom, HilbertArray, HilbertError, \
+        HilbertShapeError, MismatchedSpaceError
 
-__all__ = ['cphase', 'cnot', 'swap', 'max_entangled']
+__all__ = ['cphase', 'cnot', 'swap', 'controlled_U', 'toffoli', 'max_entangled']
 
 def cphase(h1, h2):
     """
@@ -124,6 +125,79 @@ def cnot(h1, h2, left=True):
         ret[{ h1: x, h1.H: x }] = h2.pauliX(x, left)
 
     return ret
+
+def controlled_U(cspc, U):
+    """
+    FIXME - docs
+
+    >>> from qitensor import qubit, qudit, controlled_U, cnot, swap
+    >>> ha = qubit('a')
+    >>> hb = qubit('b')
+    >>> hc = qubit('c')
+    >>> hd = qudit('d', 3)
+
+    >>> controlled_U(ha, hb.X) == cnot(ha, hb)
+    True
+    >>> controlled_U(ha, [hb.Z, hb.Z * hb.X]) == hb.Z * cnot(ha, hb)
+    True
+
+    >>> U = controlled_U(hd, [ha.X, ha.Y, ha.Z])
+    >>> U * hd.ket(0) == ha.X * hd.ket(0)
+    True
+    >>> U * hd.ket(1) == ha.Y * hd.ket(1)
+    True
+    >>> U * hd.ket(2) == ha.Z * hd.ket(2)
+    True
+
+    >>> V = controlled_U(ha, cnot(hb, hc))
+    >>> V * ha.ket(0) == (hb*hc).eye() * ha.ket(0)
+    True
+    >>> V * ha.ket(1) == cnot(hb, hc) * ha.ket(1)
+    True
+    """
+
+    if isinstance(U, HilbertArray):
+        if cspc.dim() != 2:
+            raise HilbertShapeError(cspc.dim(), 2)
+        U = [U.space.eye(), U]
+
+    Ulist = list(U)
+    U = None
+
+    for U in Ulist:
+        if U.space != U.H.space:
+            raise HilbertError('not an operator: '+str(U.space))
+        if U.space != Ulist[0].space:
+            raise MismatchedSpaceError('operators act on different spaces: '+
+                str(U.space)+' vs. '+str(Ulist[0].space))
+
+    if len(Ulist) != cspc.dim():
+        raise HilbertShapeError(cspc.dim(), len(Ulist))
+
+    cspc.assert_ket_space()
+
+    ret = (cspc.O * Ulist[0].space).array()
+    for (v, U) in zip(cspc.index_iter(), Ulist):
+        ret[{ cspc: v, cspc.H: v }] = U
+
+    return ret
+
+def toffoli(ha, hb, hc):
+    """
+    FIXME - docs
+
+    >>> from qitensor import qubit, toffoli
+    >>> ha = qubit('a')
+    >>> hb = qubit('b')
+    >>> hc = qubit('c')
+    >>> U = toffoli(ha, hb, hc)
+    >>> U * ha.ket(0) == (hb*hc).eye() * ha.ket(0)
+    True
+    >>> U * ha.ket(1) == cnot(hb, hc) * ha.ket(1)
+    True
+    """
+
+    return controlled_U(ha, cnot(hb, hc))
 
 def swap(h1, h2):
     """

@@ -12,7 +12,7 @@ cdef class HilbertArray:
     cpdef _reassign(self, HilbertArray other)
     cpdef get_dim(self, atom)
     cpdef _assert_same_axes(self, other)
-    cpdef assert_density_matrix(self, check_hermitian=*, check_normalized=*)
+    cpdef assert_density_matrix(self, check_hermitian=*, check_normalized=*, check_positive=*)
     cpdef set_data(self, new_data)
     cpdef tensordot(self, HilbertArray other, contraction_spaces=*)
     cpdef transpose(self, tpose_axes=*)

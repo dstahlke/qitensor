@@ -263,8 +263,12 @@ cdef class HilbertArray:
             raise MismatchedSpaceError('Mismatched HilbertSpaces: '+
                 repr(self.space)+' vs. '+repr(other.space))
 
-    cpdef assert_density_matrix(self, check_hermitian=True, check_normalized=True):
+    cpdef assert_density_matrix(self, \
+        check_hermitian=True, check_normalized=True, check_positive=True \
+    ):
         """
+        Throws an error unless the input is a density matrix.
+
         >>> from qitensor import qubit
         >>> ha = qubit('a')
         >>> hb = qubit('b')
@@ -287,7 +291,15 @@ cdef class HilbertArray:
         Traceback (most recent call last):
             ...
         HilbertError: 'not a density matrix: not Hermitian'
+
+        >>> U = ha.random_unitary()
+        >>> (U * ha.diag([ 1.1, -0.1 ]) * U.H).assert_density_matrix()
+        Traceback (most recent call last):
+            ...
+        HilbertError: 'not a density matrix: had negative eigenvalue (-0.1)'
         """
+
+        toler = 1e-9
 
         if not self.space.is_symmetric():
             raise HilbertError("not a density matrix: "+str(self.space))
@@ -297,8 +309,14 @@ cdef class HilbertArray:
 
         if check_normalized:
             tr = self.trace()
-            if abs(tr - 1) > 1e-9:
+            if abs(tr - 1) > toler:
                 raise HilbertError('density matrix was not normalized: trace='+str(tr))
+
+        if check_positive:
+            ew = np.min(self.eigvals(hermit=True))
+            if ew < toler:
+                raise HilbertError('not a density matrix: had negative eigenvalue ('+
+                    str(ew)+')')
 
     cpdef set_data(self, new_data):
         """
@@ -2253,13 +2271,16 @@ cdef class HilbertArray:
         """
 
         self.assert_density_matrix(
-            check_hermitian=checks, \
-            check_normalized=(checks and not normalize))
+            check_hermitian=checks,
+            check_normalized=(checks and not normalize),
+            # we do our own positivity check
+            check_positive=False,
+        )
 
         schmidt = self.eigvals(hermit=True)
 
         if normalize:
-            schmidt /= self.trace()
+            schmidt /= abs(self.trace())
 
         if checks:
             # should have been taken care of by normalization above
@@ -2297,21 +2318,17 @@ cdef class HilbertArray:
         0.5
         """
 
-        if not self.space.is_symmetric():
-            raise HilbertError("bra and ket spaces must be the same")
+        self.assert_density_matrix(
+            check_hermitian=checks,
+            check_normalized=(checks and not normalize),
+            # positivity doesn't really matter
+            check_positive=False,
+        )
 
-        if checks and not (self == self.H or np.allclose(self.nparray, self.H.nparray)):
-            raise HilbertError("density matrix must be Hermitian")
+        purity = (self*self).trace()
 
-        norm = self.trace()
         if normalize:
-            densmat = self / norm
-        else:
-            if checks and abs(norm-1) > 1e-9:
-                raise HilbertError('density matrix was not normalized: norm='+str(norm))
-            densmat = self
-
-        purity = (densmat*densmat).trace()
+            purity /= self.trace() ** 2
 
         assert abs(purity.imag) < 1e-12
         return purity.real

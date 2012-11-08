@@ -263,6 +263,43 @@ cdef class HilbertArray:
             raise MismatchedSpaceError('Mismatched HilbertSpaces: '+
                 repr(self.space)+' vs. '+repr(other.space))
 
+    cpdef assert_density_matrix(self, check_hermitian=True, check_normalized=True):
+        """
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> hb = qubit('b')
+
+        >>> ha.random_density().assert_density_matrix()
+        >>> # small errors are accepted
+        >>> (ha.random_density() + ha.O.random_array()*1e-14).assert_density_matrix()
+
+        >>> ha.eye().assert_density_matrix()
+        Traceback (most recent call last):
+            ...
+        HilbertError: 'density matrix was not normalized: trace=(2+0j)'
+
+        >>> (ha.ket(0) * hb.bra(0)).assert_density_matrix()
+        Traceback (most recent call last):
+            ...
+        HilbertError: 'not a density matrix: |a><b|'
+
+        >>> ha.random_unitary().assert_density_matrix()
+        Traceback (most recent call last):
+            ...
+        HilbertError: 'not a density matrix: not Hermitian'
+        """
+
+        if not self.space.is_symmetric():
+            raise HilbertError("not a density matrix: "+str(self.space))
+
+        if check_hermitian and not (self == self.H or self.closeto(self.H)):
+            raise HilbertError("not a density matrix: not Hermitian")
+
+        if check_normalized:
+            tr = self.trace()
+            if abs(tr - 1) > 1e-9:
+                raise HilbertError('density matrix was not normalized: trace='+str(tr))
+
     cpdef set_data(self, new_data):
         """
         Sets this array equal to the given argument.
@@ -2215,21 +2252,14 @@ cdef class HilbertArray:
         True
         """
 
-        if not self.space.is_symmetric():
-            raise HilbertError("bra and ket spaces must be the same")
+        self.assert_density_matrix(
+            check_hermitian=checks, \
+            check_normalized=(checks and not normalize))
 
-        if checks and not (self == self.H or np.allclose(self.nparray, self.H.nparray)):
-            raise HilbertError("density matrix must be Hermitian")
+        schmidt = self.eigvals(hermit=True)
 
-        norm = self.trace()
         if normalize:
-            densmat = self / norm
-        else:
-            if checks and abs(norm-1) > 1e-9:
-                raise HilbertError('density matrix was not normalized: norm='+str(norm))
-            densmat = self
-
-        schmidt = densmat.eigvals(hermit=True)
+            schmidt /= self.trace()
 
         if checks:
             # should have been taken care of by normalization above

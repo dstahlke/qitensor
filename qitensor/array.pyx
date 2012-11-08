@@ -314,7 +314,7 @@ cdef class HilbertArray:
 
         if check_positive:
             ew = np.min(self.eigvals(hermit=True))
-            if ew < toler:
+            if ew < -toler:
                 raise HilbertError('not a density matrix: had negative eigenvalue ('+
                     str(ew)+')')
 
@@ -2332,6 +2332,75 @@ cdef class HilbertArray:
 
         assert abs(purity.imag) < 1e-12
         return purity.real
+
+    def mutual_info(self, ha, hb):
+        """
+        FIXME - docs
+        FIXME - untested
+        """
+
+        if ha == ha.O:
+            ha = ha.ket_space()
+        if hb == hb.O:
+            hb = hb.ket_space()
+
+        ha.assert_ket_space()
+        hb.assert_ket_space()
+
+        self.assert_density_matrix()
+
+        spc = self.space.ket_space()
+
+        if ha.ket_set & hb.ket_set:
+            raise MismatchedSpaceError('spaces are not disjoint: '+str(ha)+' vs. '+str(hb))
+        if not (ha.ket_set <= spc.ket_set):
+            raise MismatchedSpaceError('space not part of array: '+str(ha)+' vs. '+str(spc))
+        if not (hb.ket_set <= spc.ket_set):
+            raise MismatchedSpaceError('space not part of array: '+str(hb)+' vs. '+str(spc))
+
+        if ha*hb == spc:
+            Sab = self.entropy()
+        else:
+            Sab = self.trace(spc / (ha*hb)).entropy()
+
+        Sa = self.trace(spc / ha).entropy()
+        Sb = self.trace(spc / hb).entropy()
+
+        return Sa + Sb - Sab
+
+    def relative_entropy(self, other):
+        """
+        FIXME - docs
+        FIXME - fails doctests
+        FIXME - can't handle small negative eigvals
+
+        >>> from qitensor import qudit
+        >>> ha = qudit('a', 3)
+        >>> hb = qudit('b', 4)
+
+        >>> rho = (ha*hb).random_density()
+        >>> rho_a = rho.trace(hb)
+        >>> rho_b = rho.trace(ha)
+        # FIXME - doctest fails
+        >>> abs(rho.relative_entropy(rho_a * rho_b) - rho.mutual_info(ha, hb)) < 1e-14
+        True
+
+        >>> sigma = (ha*hb).random_density()
+        >>> re1 = rho.relative_entropy(sigma)
+        >>> re2 = -(rho * sigma.logm()).trace() - rho.entropy()
+        # FIXME - doctest fails
+        >>> abs(re1 - re2) < 1e-14
+        True
+        """
+
+        self.assert_density_matrix()
+        other.assert_density_matrix()
+        self._assert_same_axes(other)
+
+        ret = (self * (self.logm() - other.logm())).trace()
+
+        assert abs(ret.imag) < 1e-12
+        return ret.real
 
     cpdef QR(self, inner_space=None):
         """

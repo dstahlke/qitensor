@@ -1213,14 +1213,36 @@ cdef class HilbertArray:
 
         return (row_space, col_space)
 
-    cpdef diag(self):
+    cpdef diag(self, as_np=False):
         """
-        Returns the diagonal elements of this operator, as a ket vector.
-        Only applicable to square operators.
+        Returns the diagonal elements of this operator, as a ket vector (if as_np=False) or as
+        a numpy array (if as_np=True).  Only applicable to square operators.
+
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> hb = qubit('b')
+        >>> A = ha.O.array([[1,2],[3,4]])
+        >>> B = hb.O.array([[1,10],[100,1000]])
+        >>> A.diag()
+        HilbertArray(|a>,
+        array([ 1.+0.j,  4.+0.j]))
+        >>> A.diag(as_np=True)
+        array([ 1.+0.j,  4.+0.j])
+        >>> (A*B).diag()
+        HilbertArray(|a,b>,
+        array([[  1.00000000e+00+0.j,   1.00000000e+03+0.j],
+               [  4.00000000e+00+0.j,   4.00000000e+03+0.j]]))
+        >>> (A*B).diag(as_np=True)
+        array([  1.00000000e+00+0.j,   1.00000000e+03+0.j,   4.00000000e+00+0.j,
+                 4.00000000e+03+0.j])
         """
 
         cdef int D = self.space.assert_square()
-        return self.space.ket_space().array(np.diagonal(self.nparray.reshape(D, D)), False, True)
+        np_diag = np.diagonal(self.nparray.reshape(D, D))
+        if as_np:
+            return np_diag
+        else:
+            return self.space.ket_space().array(np_diag, False, True)
 
     cpdef as_np_matrix(self, dtype=None, row_space=None, col_space=None):
         """
@@ -2336,7 +2358,6 @@ cdef class HilbertArray:
     def mutual_info(self, ha, hb):
         """
         FIXME - docs
-        FIXME - untested
         """
 
         if ha == ha.O:
@@ -2368,11 +2389,9 @@ cdef class HilbertArray:
 
         return Sa + Sb - Sab
 
-    def relative_entropy(self, other):
+    def relative_entropy(self, other, toler=1e-12):
         """
         FIXME - docs
-        FIXME - fails doctests
-        FIXME - can't handle small negative eigvals
 
         >>> from qitensor import qudit
         >>> ha = qudit('a', 3)
@@ -2381,26 +2400,50 @@ cdef class HilbertArray:
         >>> rho = (ha*hb).random_density()
         >>> rho_a = rho.trace(hb)
         >>> rho_b = rho.trace(ha)
-        # FIXME - doctest fails
         >>> abs(rho.relative_entropy(rho_a * rho_b) - rho.mutual_info(ha, hb)) < 1e-14
         True
 
         >>> sigma = (ha*hb).random_density()
         >>> re1 = rho.relative_entropy(sigma)
-        >>> re2 = -(rho * sigma.logm()).trace() - rho.entropy()
-        # FIXME - doctest fails
-        >>> abs(re1 - re2) < 1e-14
+        >>> re2 = (rho * (rho.logm() - sigma.logm())).trace() / np.log(2)
+        >>> abs(re1 - re2) < 1e-13
         True
+
+        >>> U = ha.random_unitary()
+        >>> r = U * ha.diag([0.3, 0.7, 0]) * U.H
+        >>> r.relative_entropy(r) < 1e-12
+        True
+        >>> # A little fuzz is tolerated...
+        >>> s = U * ha.diag([0.3, 0.7, 1e-13]) * U.H
+        >>> s /= s.trace()
+        >>> abs(s.relative_entropy(r)) < 1e-10
+        True
+        >>> # ... but too much fuzz is not.
+        >>> t = U * ha.diag([0.3, 0.7, 1e-6]) * U.H
+        >>> t /= t.trace()
+        >>> t.relative_entropy(r)
+        inf
         """
 
         self.assert_density_matrix()
         other.assert_density_matrix()
         self._assert_same_axes(other)
+        bf = self.space.base_field
 
-        ret = (self * (self.logm() - other.logm())).trace()
+        (W, V) = other.eig(hermit=True)
+        arr1 = (V.H*self*V).diag(as_np=True)
+        arr2 = W.diag(as_np=True)
+        q = np.sum([ \
+            0 if x<=toler else \
+            -bf.infty() if y<=toler else \
+            x*bf.log2(y) for (x, y) in zip(arr1, arr2) \
+        ])
+        ret = -q-self.entropy()
 
-        assert abs(ret.imag) < 1e-12
-        return ret.real
+        assert abs(ret.imag) < toler
+        ret = ret.real
+        assert ret > -toler*10
+        return 0 if ret < 0 else ret
 
     cpdef QR(self, inner_space=None):
         """

@@ -45,6 +45,9 @@ cdef class SageHilbertBaseField(HilbertBaseField):
     cpdef complex_unit(self):
         return self.sage_ring(sage.all.I)
 
+    cpdef infty(self):
+        return self.Infinity # FIXME - untested
+
     cpdef latex_formatter(self, data, dollar_if_tex):
         return FORMATTER.sage_scalar_latex_formatter(data, dollar_if_tex)
 
@@ -59,6 +62,9 @@ cdef class SageHilbertBaseField(HilbertBaseField):
 
     cpdef sqrt(self, x):
         return self.sage_ring(sage.all.sqrt(x))
+
+    cpdef log2(self, x):
+        return self.sage_ring(sage.all.log(x)/sage.all.log2)
 
     cpdef xlog2x(self, x):
         return self.sage_ring(0 if x<=0 else x*sage.all.log(x)/sage.all.log2)

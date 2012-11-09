@@ -49,6 +49,9 @@ cdef class SympyHilbertBaseField(HilbertBaseField):
     cpdef complex_unit(self):
         return sympy.I
 
+    cpdef infty(self):
+        return sympy.oo
+
     cpdef latex_formatter(self, data, dollar_if_tex):
         return FORMATTER.sympy_scalar_latex_formatter(data, dollar_if_tex)
 
@@ -66,6 +69,9 @@ cdef class SympyHilbertBaseField(HilbertBaseField):
 
     cpdef sqrt(self, x):
         return sympy.sqrt(x)
+
+    cpdef log2(self, x):
+        return sympy.log(x)/sympy.log(2)
 
     cpdef xlog2x(self, x):
         return 0 if x<=0 else x*sympy.log(x)/sympy.log(2)

@@ -1,7 +1,8 @@
 import numpy as np
 import itertools
 
-from qitensor import qudit, NotKetSpaceError, HilbertArray
+from qitensor import qudit, NotKetSpaceError, \
+    HilbertSpace, HilbertArray, HilbertError
 
 toler = 1e-12
 
@@ -14,7 +15,7 @@ class Superoperator(object):
     def __init__(self, ha, hb, m):
         self.ha = self._to_ket_space(ha)
         self.hb = self._to_ket_space(hb)
-        self.m = np.matrix(m)
+        self._m = np.matrix(m)
 
         assert m.shape == (self.hb.O.dim(), self.ha.O.dim())
 
@@ -22,6 +23,13 @@ class Superoperator(object):
     def _make_environ_spc(cls, espc_def, field, dim):
         if espc_def is None:
             espc_def = 'environ_'+str(np.random.randint(1e12))
+
+        if isinstance(espc_def, HilbertSpace):
+            if espc_def.dim() < dim:
+                raise HilbertError('environment space not big enough: %d vs %d'
+                    % (espc_def.dim(), dim))
+            return espc_def
+
         return qudit(espc_def, dim, dtype=field)
 
     @classmethod
@@ -41,12 +49,12 @@ class Superoperator(object):
         return str(self)
 
     def as_matrix(self):
-        return self.m
+        return self._m
 
     def __call__(self, rho):
         assert rho.space.bra_ket_set >= self.ha.O.bra_ket_set
         (row_space, col_space) = rho._get_row_col_spaces(col_space=self.ha.O)
-        ret_vec = self.m * rho.as_np_matrix(col_space=self.ha.O)
+        ret_vec = self._m * rho.as_np_matrix(col_space=self.ha.O)
         if len(row_space):
             out_space = self.hb.O * np.prod(row_space)
         else:
@@ -61,7 +69,7 @@ class Superoperator(object):
             raise ValueError()
 
         # hopefully `other` is a scalar
-        return Superoperator(self.ha, self.hb, self.m*other)
+        return Superoperator(self.ha, self.hb, self._m*other)
 
     def __rmul__(self, other):
         # hopefully `other` is a scalar
@@ -88,7 +96,7 @@ class Superoperator(object):
         assert self.ha == other.ha
         assert self.hb == other.hb
 
-        return Superoperator(self.ha, self.hb, self.m + other.m)
+        return Superoperator(self.ha, self.hb, self._m + other._m)
 
     @classmethod
     def from_function(cls, ha, f):
@@ -126,7 +134,7 @@ class Superoperator(object):
         return E
 
     def upgrade_to_cp_map(self, espc_def=None, check_tp=True):
-        return CP_Map.from_matrix(self.m, self.ha, self.hb, espc_def=espc_def, check_tp=check_tp)
+        return CP_Map.from_matrix(self._m, self.ha, self.hb, espc_def=espc_def, check_tp=check_tp)
 
 #    @classmethod
 #    def convex_combination(cls, Elist, Plist, espc_def=None):
@@ -152,12 +160,12 @@ class Superoperator(object):
 #            assert E.ha == E0.ha
 #            assert E.hb == E0.hb
 #
-#        m = np.sum([ E.m*p for (E, p) in zip(Elist, Plist) ], axis=0)
+#        m = np.sum([ E._m*p for (E, p) in zip(Elist, Plist) ], axis=0)
 #
 #        return Superoperator(E0.ha, E0.hb, m)
 
 class CP_Map(Superoperator):
-    def __init__(self, ha, hb, hc, J, check_tp=True):
+    def __init__(self, ha, hb, hc, J, check_tp=True, _complimentary_channel=None):
         """
         >>> ha = qudit('a', 2)
         >>> hb = qudit('b', 2)
@@ -192,15 +200,17 @@ class CP_Map(Superoperator):
         self.J = J
         self.hc = hc
 
+        if _complimentary_channel is None:
+            self.C = CP_Map(self.ha, self.hc, self.hb, self.J, check_tp=False, \
+                _complimentary_channel=self)
+        else:
+            self.C = _complimentary_channel
+
     def __str__(self):
         return 'CP_Map( '+str(self.ha.O)+' to '+str(self.hb.O)+' )'
 
     def __repr__(self):
         return str(self)
-
-    def compl(self):
-        # FIXME - cache this (circularly)
-        return Superoperator(self.ha, self.hc, self.hb, self.J, check_tp=False)
 
     def __mul__(self, other):
         if isinstance(other, Superoperator):
@@ -266,10 +276,22 @@ class CP_Map(Superoperator):
 
         return cls(ha, hb, hc, J, check_tp=check_tp)
 
+    @classmethod
+    def from_kraus(cls, ops, espc_def=None):
+        ops = list(ops)
+        op_spc = ops[0].space
+        dc = len(ops)
+        hc = cls._make_environ_spc(espc_def, op_spc.base_field, dc)
+        J = (op_spc * hc).array()
+        for (i, op) in enumerate(ops):
+            J[{ hc: i }] = op
+
+        return cls(op_spc.bra_space(), op_spc.ket_space(), hc, J)
+
     def __add__(self, other):
         ret = super(CP_Map, self).__add__(other)
         if isinstance(other, CP_Map):
-            return CP_Map.from_matrix(ret.m, ret.ha, ret.hb, check_tp=False)
+            return CP_Map.from_matrix(ret._m, ret.ha, ret.hb, check_tp=False)
         else:
             return ret
 

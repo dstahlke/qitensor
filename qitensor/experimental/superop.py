@@ -102,7 +102,7 @@ class Superoperator(object):
     def from_function(cls, ha, f):
         """
         >>> from qitensor import qubit, qudit
-        >>> from qitensor.experimental.superop import Superoperator
+        >>> from qitensor.experimental.superop import Superoperator, CP_Map
         >>> ha = qudit('a', 3)
         >>> hb = qubit('b')
         >>> E = Superoperator.from_function(ha, lambda rho: rho.T)
@@ -114,6 +114,11 @@ class Superoperator(object):
         Traceback (most recent call last):
             ...
         ValueError: function was not linear
+
+        >>> CP_Map.from_function(ha, lambda rho: rho.T)
+        Traceback (most recent call last):
+            ...
+        ValueError: matrix didn't correspond to a totally positive superoperator (min eig=-1.0)
         """
 
         ha = cls._to_ket_space(ha)
@@ -130,6 +135,9 @@ class Superoperator(object):
         rho = ha.random_density()
         if (E(rho) - f(rho)).norm() > toler:
             raise ValueError('function was not linear')
+
+        if cls == CP_Map:
+            E = E.upgrade_to_cp_map()
 
         return E
 

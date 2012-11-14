@@ -1,13 +1,14 @@
 import numpy as np
 import itertools
 
-from qitensor import qudit, NotKetSpaceError, \
+from qitensor import qudit, direct_sum, NotKetSpaceError, \
     HilbertSpace, HilbertArray, HilbertError
 
 toler = 1e-12
 
 # FIXME - use exceptions rather than assert
 # FIXME - pickling
+# FIXME - some methods don't have docs
 
 __all__ = ['Superoperator', 'CP_Map']
 
@@ -245,11 +246,44 @@ class CP_Map(Superoperator):
         # hopefully `other` is a scalar
         return self * other
 
+    def __add__(self, other):
+        ret = super(CP_Map, self).__add__(other)
+        if isinstance(other, CP_Map):
+            return ret.upgrade_to_cp_map(check_tp=False)
+        else:
+            return ret
+
+    def add2(self, other):
+        """
+        >>> import numpy.linalg as linalg
+        >>> from qitensor import qudit
+        >>> from qitensor.experimental.superop import CP_Map
+        >>> ha = qudit('a', 2)
+        >>> hb = qudit('b', 3)
+        >>> E1 = CP_Map.random(ha, hb, 'hc1')
+        >>> E2 = CP_Map.random(ha, hb, 'hc2')
+        >>> X = E1 + E2
+        >>> Y = E1.add2(E2)
+        >>> linalg.norm(X.as_matrix() - Y.as_matrix()) < 1e-14
+        True
+        >>> (E1.hc, E2.hc, Y.hc)
+        (|hc1>, |hc2>, |hc1+hc2>)
+        """
+
+        if not isinstance(other, CP_Map):
+            raise ValueError('other was not a CP_Map')
+
+        assert self.ha == other.ha
+        assert self.hb == other.hb
+        ret_hc = direct_sum((self.hc, other.hc))
+        ret_J = ret_hc.P[0]*self.J + ret_hc.P[1]*other.J
+        return CP_Map(self.ha, self.hb, ret_hc, ret_J, check_tp=False)
+
     @classmethod
     def from_matrix(cls, m, spc_in, spc_out, espc_def=None, check_tp=True):
         """
         >>> from qitensor import qudit
-        >>> from qitensor.experimental.superop import Superoperator
+        >>> from qitensor.experimental.superop import CP_Map
         >>> ha = qudit('a', 2)
         >>> hb = qudit('b', 3)
         >>> hx = qudit('x', 5)
@@ -290,9 +324,9 @@ class CP_Map(Superoperator):
         J = (hb * hc * ha.H).array()
 
         for i in range(da*db):
-            J[{ hc: i }] = (hb * ha.H).array(ev[:,i] * np.sqrt(ew[i]), reshape=True)
+            J[{ hc: i }] = (hb * ha.H).array(ev[:,i] * field.sqrt(ew[i]), reshape=True)
 
-        return cls(ha, hb, hc, J, check_tp=check_tp)
+        return CP_Map(ha, hb, hc, J, check_tp=check_tp)
 
     @classmethod
     def from_kraus(cls, ops, espc_def=None):
@@ -304,14 +338,7 @@ class CP_Map(Superoperator):
         for (i, op) in enumerate(ops):
             J[{ hc: i }] = op
 
-        return cls(op_spc.bra_space(), op_spc.ket_space(), hc, J)
-
-    def __add__(self, other):
-        ret = super(CP_Map, self).__add__(other)
-        if isinstance(other, CP_Map):
-            return CP_Map.from_matrix(ret._m, ret.ha, ret.hb, check_tp=False)
-        else:
-            return ret
+        return CP_Map(op_spc.bra_space(), op_spc.ket_space(), hc, J)
 
     @classmethod
     def random(cls, spc_in, spc_out, espc_def=None):
@@ -320,7 +347,7 @@ class CP_Map(Superoperator):
         dc = ha.dim() * hb.dim()
         hc = cls._make_environ_spc(espc_def, ha.base_field, dc)
         J = (hb*hc*ha.H).random_isometry()
-        return cls(ha, hb, hc, J)
+        return CP_Map(ha, hb, hc, J)
 
     @classmethod
     def unitary(cls, U, espc_def=None):
@@ -340,7 +367,7 @@ class CP_Map(Superoperator):
         hb = U.space.ket_space()
         hc = cls._make_environ_spc(espc_def, ha.base_field, 1)
         J = U * hc.ket(0)
-        return cls(ha, hb, hc, J)
+        return CP_Map(ha, hb, hc, J)
 
     @classmethod
     def identity(cls, spc, espc_def=None):
@@ -377,7 +404,7 @@ class CP_Map(Superoperator):
         for (i, (j, k)) in enumerate(itertools.product(ha.index_iter(), repeat=2)):
             J[{ ha.H: j, ha: k, hc: i }] = 1
         J /= ha.base_field.sqrt(d)
-        return cls(ha, ha, hc, J)
+        return CP_Map(ha, ha, hc, J)
 
     @classmethod
     def noisy(cls, spc, p, espc_def=None):
@@ -395,6 +422,26 @@ class CP_Map(Superoperator):
         E0 = cls.totally_noisy(spc)
         E1 = cls.identity(spc)
         return p*E0 + (1-p)*E1
+
+    @classmethod
+    def decohere(cls, spc, espc_def=None):
+        """
+        >>> from qitensor import qudit
+        >>> from qitensor.experimental.superop import CP_Map
+        >>> ha = qudit('a', 5)
+        >>> rho = ha.random_density()
+        >>> E = CP_Map.decohere(ha)
+        >>> (E(rho) - ha.diag(rho.diag(as_np=True))).norm() < 1e-14
+        True
+        """
+
+        ha = cls._to_ket_space(spc)
+        d = ha.dim()
+        hc = cls._make_environ_spc(espc_def, ha.base_field, d)
+        J = (ha.O*hc).array()
+        for (i, a) in enumerate(ha.index_iter()):
+            J[{ ha.H: a, ha: a, hc: i }] = 1
+        return CP_Map(ha, ha, hc, J)
 
 #ha = qudit('a', 2)
 #hb = qudit('b', 2)

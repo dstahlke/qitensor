@@ -105,20 +105,30 @@ class Superoperator(object):
         >>> from qitensor.experimental.superop import Superoperator, CP_Map
         >>> ha = qudit('a', 3)
         >>> hb = qubit('b')
-        >>> E = Superoperator.from_function(ha, lambda rho: rho.T)
         >>> rho = (ha*hb).random_density()
-        >>> (E(rho) - rho.transpose(ha)).norm() < 1e-14
+
+        >>> ET = Superoperator.from_function(ha, lambda x: x.T)
+        >>> ET
+        Superoperator( |a><a| to |a><a| )
+        >>> (ET(rho) - rho.transpose(ha)).norm() < 1e-14
         True
 
-        >>> Superoperator.from_function(ha, lambda rho: rho.H)
+        >>> Superoperator.from_function(ha, lambda x: x.H)
         Traceback (most recent call last):
             ...
         ValueError: function was not linear
 
-        >>> CP_Map.from_function(ha, lambda rho: rho.T)
+        >>> CP_Map.from_function(ha, lambda x: x.T)
         Traceback (most recent call last):
             ...
-        ValueError: matrix didn't correspond to a totally positive superoperator (min eig=-1.0)
+        ValueError: matrix didn't correspond to a completely positive superoperator (min eig=-1.0)
+
+        >>> U = ha.random_unitary()
+        >>> EU = CP_Map.from_function(ha, lambda x: U*x*U.H)
+        >>> EU
+        CP_Map( |a><a| to |a><a| )
+        >>> (EU(rho) - U*rho*U.H).norm() < 1e-14
+        True
         """
 
         ha = cls._to_ket_space(ha)
@@ -265,13 +275,13 @@ class CP_Map(Superoperator):
         field = ha.base_field
 
         if field.mat_norm(np.transpose(np.conj(t)) - t) > toler:
-            raise ValueError("matrix didn't correspond to a totally positive "+
+            raise ValueError("matrix didn't correspond to a completely positive "+
                 "superoperator (cross operator not self-adjoint)")
 
         (ew, ev) = field.mat_eig(t, True)
 
         if np.min(ew) < -toler:
-            raise ValueError("matrix didn't correspond to a totally positive "+
+            raise ValueError("matrix didn't correspond to a completely positive "+
                 "superoperator (min eig="+str(np.min(ew))+")")
         ew = np.where(ew < 0, 0, ew)
 

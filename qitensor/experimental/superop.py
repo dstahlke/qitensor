@@ -148,6 +148,7 @@ class Superoperator(object):
             raise ValueError('function was not linear')
 
         if cls == CP_Map:
+            # FIXME - option to not require trace preserving
             E = E.upgrade_to_cp_map()
 
         return E

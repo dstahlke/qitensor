@@ -9,6 +9,7 @@ toler = 1e-12
 # FIXME - use exceptions rather than assert
 # FIXME - pickling
 # FIXME - some methods don't have docs
+# FIXME - rename ha,hb,hc to _inspc, _outspc, _envspc (with accessors)
 
 __all__ = ['Superoperator', 'CP_Map']
 
@@ -184,6 +185,7 @@ class Superoperator(object):
 #
 #        return Superoperator(E0.ha, E0.hb, m)
 
+# FIXME - remove check_tp option, add is_tp and assert_tp options (as well as assert_cptp).
 class CP_Map(Superoperator):
     def __init__(self, ha, hb, hc, J, check_tp=True, _complimentary_channel=None):
         """
@@ -270,6 +272,7 @@ class CP_Map(Superoperator):
         >>> (E1.hc, E2.hc, Y.hc)
         (|hc1>, |hc2>, |hc1+hc2>)
         """
+        # FIXME - docs
 
         if not isinstance(other, CP_Map):
             raise ValueError('other was not a CP_Map')

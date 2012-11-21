@@ -77,6 +77,8 @@ class Superoperator(object):
         # hopefully `other` is a scalar
         return self * other
 
+    # FIXME - implement neg, sub
+
     def __add__(self, other):
         """
         >>> from qitensor import qudit
@@ -219,10 +221,12 @@ class CP_Map(Superoperator):
 
         super(CP_Map, self).__init__(ha, hb, t)
 
+        # FIXME - use accessors
         self.J = J
         self.hc = hc
 
         if _complimentary_channel is None:
+            # FIXME - use accessor, maybe make it lowercase 'c'
             self.C = CP_Map(self.ha, self.hc, self.hb, self.J, check_tp=False, \
                 _complimentary_channel=self)
         else:
@@ -236,10 +240,13 @@ class CP_Map(Superoperator):
 
     def __mul__(self, other):
         if isinstance(other, Superoperator):
+            # FIXME - or return NotImplemented?
             raise NotImplementedError() # FIXME
 
         if isinstance(other, HilbertArray):
             raise ValueError()
+
+        # FIXME - if scalar is negative, call Superoperator.__mul__
 
         # hopefully `other` is a scalar
         s = self.ha.base_field.sqrt(other)

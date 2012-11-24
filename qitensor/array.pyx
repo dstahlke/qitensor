@@ -729,7 +729,7 @@ cdef class HilbertArray:
         True
         """
 
-        # FIXME - Cython seems to send self=float sometimes
+        # Cython calls arithmetic methods with arguments reversed instead of __r*__ methods
         if not isinstance(self, HilbertArray):
             return other * self
 
@@ -769,19 +769,6 @@ cdef class HilbertArray:
             self.nparray *= other
         return self
 
-    def __rmul__(self, other):
-        """
-        Reflected multiplication.
-
-        >>> from qitensor import qubit
-        >>> ha = qubit('a')
-        >>> x = ha.random_array()
-        >>> (x*2).closeto(2*x)
-        True
-        """
-
-        return self * other
-
     def __add__(self, other):
         """
         Adds two arrays.
@@ -799,7 +786,8 @@ cdef class HilbertArray:
         MismatchedSpaceError: 'Mismatched HilbertSpaces: |a> vs. |b>'
         """
 
-        if not isinstance(other, HilbertArray):
+        # Cython calls arithmetic methods with arguments reversed instead of __r*__ methods
+        if not isinstance(self, HilbertArray) or not isinstance(other, HilbertArray):
             raise TypeError('HilbertArray can only add another HilbertArray')
         ret = self.copy()
         ret += other

@@ -163,12 +163,16 @@ class Superoperator(object):
 
         return E
 
-    def upgrade_to_cp_map(self, espc_def=None, check_tp=True):
-        return CP_Map.from_matrix(self._m, self.in_space, self.out_space, espc_def=espc_def, check_tp=check_tp)
+    def upgrade_to_cp_map(self, espc_def=None):
+        return CP_Map.from_matrix(self._m, self.in_space, self.out_space, espc_def=espc_def)
 
-# FIXME - remove check_tp option, add is_tp and assert_tp options (as well as assert_cptp).
+    def upgrade_to_cptp_map(self, espc_def=None):
+        ret = self.upgrade_to_cp_map()
+        ret.assert_cptp()
+        return ret
+
 class CP_Map(Superoperator):
-    def __init__(self, in_space, out_space, env_space, J, check_tp=True, _complimentary_channel=None):
+    def __init__(self, in_space, out_space, env_space, J, _complimentary_channel=None):
         """
         >>> ha = qudit('a', 2)
         >>> hb = qudit('b', 2)
@@ -184,9 +188,6 @@ class CP_Map(Superoperator):
         env_space = self._to_ket_space(env_space)
 
         assert J.space == out_space * env_space * in_space.H
-
-        if check_tp and (J.H*J - in_space.eye()).norm() > toler:
-            raise ValueError('channel is not trace preserving')
 
         da = in_space.dim()
         db = out_space.dim()
@@ -204,7 +205,7 @@ class CP_Map(Superoperator):
         self._env_space = env_space
 
         if _complimentary_channel is None:
-            self._C = CP_Map(self.in_space, self.env_space, self.out_space, self.J, check_tp=False, \
+            self._C = CP_Map(self.in_space, self.env_space, self.out_space, self.J, \
                 _complimentary_channel=self)
         else:
             self._C = _complimentary_channel
@@ -222,6 +223,13 @@ class CP_Map(Superoperator):
     def C(self):
         """The complimentary channel."""
         return self._C
+
+    def is_cptp(self):
+        return (self.J.H*self.J - self.in_space.eye()).norm() < toler
+
+    def assert_cptp(self):
+        if not self.is_cptp():
+            raise ValueError('channel is not trace preserving')
 
     def __str__(self):
         return 'CP_Map( '+str(self.in_space.O)+' to '+str(self.out_space.O)+' )'
@@ -241,7 +249,7 @@ class CP_Map(Superoperator):
 
         # hopefully `other` is a scalar
         s = self.in_space.base_field.sqrt(other)
-        return CP_Map(self.in_space, self.out_space, self.env_space, self.J*s, check_tp=False)
+        return CP_Map(self.in_space, self.out_space, self.env_space, self.J*s)
 
     def __rmul__(self, other):
         # hopefully `other` is a scalar
@@ -250,7 +258,7 @@ class CP_Map(Superoperator):
     def __add__(self, other):
         ret = super(CP_Map, self).__add__(other)
         if isinstance(other, CP_Map):
-            return ret.upgrade_to_cp_map(check_tp=False)
+            return ret.upgrade_to_cp_map()
         else:
             return ret
 
@@ -279,10 +287,10 @@ class CP_Map(Superoperator):
         assert self.out_space == other.out_space
         ret_hc = direct_sum((self.env_space, other.env_space))
         ret_J = ret_hc.P[0]*self.J + ret_hc.P[1]*other.J
-        return CP_Map(self.in_space, self.out_space, ret_hc, ret_J, check_tp=False)
+        return CP_Map(self.in_space, self.out_space, ret_hc, ret_J)
 
     @classmethod
-    def from_matrix(cls, m, spc_in, spc_out, espc_def=None, check_tp=True):
+    def from_matrix(cls, m, spc_in, spc_out, espc_def=None):
         """
         >>> from qitensor import qudit
         >>> from qitensor.experimental.superop import CP_Map
@@ -328,7 +336,7 @@ class CP_Map(Superoperator):
         for i in range(da*db):
             J[{ env_space: i }] = (out_space * in_space.H).array(ev[:,i] * field.sqrt(ew[i]), reshape=True)
 
-        return CP_Map(in_space, out_space, env_space, J, check_tp=check_tp)
+        return CP_Map(in_space, out_space, env_space, J)
 
     @classmethod
     def from_kraus(cls, ops, espc_def=None):

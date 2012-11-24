@@ -9,17 +9,24 @@ toler = 1e-12
 # FIXME - use exceptions rather than assert
 # FIXME - pickling
 # FIXME - some methods don't have docs
-# FIXME - rename ha,hb,hc to _inspc, _outspc, _envspc (with accessors)
 
 __all__ = ['Superoperator', 'CP_Map']
 
 class Superoperator(object):
-    def __init__(self, ha, hb, m):
-        self.ha = self._to_ket_space(ha)
-        self.hb = self._to_ket_space(hb)
+    def __init__(self, in_space, out_space, m):
+        self._in_space = self._to_ket_space(in_space)
+        self._out_space = self._to_ket_space(out_space)
         self._m = np.matrix(m)
 
-        assert m.shape == (self.hb.O.dim(), self.ha.O.dim())
+        assert m.shape == (self.out_space.O.dim(), self.in_space.O.dim())
+
+    @property
+    def in_space(self):
+        return self._in_space
+
+    @property
+    def out_space(self):
+        return self._out_space
 
     @classmethod
     def _make_environ_spc(cls, espc_def, field, dim):
@@ -45,7 +52,7 @@ class Superoperator(object):
         raise NotKetSpaceError('need a bra, ket, or self-adjoint space, not '+str(spc))
 
     def __str__(self):
-        return 'Superoperator( '+str(self.ha.O)+' to '+str(self.hb.O)+' )'
+        return 'Superoperator( '+str(self.in_space.O)+' to '+str(self.out_space.O)+' )'
 
     def __repr__(self):
         return str(self)
@@ -54,14 +61,14 @@ class Superoperator(object):
         return self._m
 
     def __call__(self, rho):
-        assert rho.space.bra_ket_set >= self.ha.O.bra_ket_set
-        (row_space, col_space) = rho._get_row_col_spaces(col_space=self.ha.O)
-        ret_vec = self._m * rho.as_np_matrix(col_space=self.ha.O)
+        assert rho.space.bra_ket_set >= self.in_space.O.bra_ket_set
+        (row_space, col_space) = rho._get_row_col_spaces(col_space=self.in_space.O)
+        ret_vec = self._m * rho.as_np_matrix(col_space=self.in_space.O)
         if len(row_space):
-            out_space = self.hb.O * np.prod(row_space)
+            out_space = self.out_space.O * np.prod(row_space)
         else:
-            out_space = self.hb.O
-        return out_space.array(ret_vec, reshape=True, input_axes=self.hb.O.axes+row_space)
+            out_space = self.out_space.O
+        return out_space.array(ret_vec, reshape=True, input_axes=self.out_space.O.axes+row_space)
 
     def __mul__(self, other):
         if isinstance(other, Superoperator):
@@ -71,7 +78,7 @@ class Superoperator(object):
             raise ValueError()
 
         # hopefully `other` is a scalar
-        return Superoperator(self.ha, self.hb, self._m*other)
+        return Superoperator(self.in_space, self.out_space, self._m*other)
 
     def __rmul__(self, other):
         # hopefully `other` is a scalar
@@ -97,13 +104,13 @@ class Superoperator(object):
         if not isinstance(other, Superoperator):
             raise ValueError()
 
-        assert self.ha == other.ha
-        assert self.hb == other.hb
+        assert self.in_space == other.in_space
+        assert self.out_space == other.out_space
 
-        return Superoperator(self.ha, self.hb, self._m + other._m)
+        return Superoperator(self.in_space, self.out_space, self._m + other._m)
 
     @classmethod
-    def from_function(cls, ha, f):
+    def from_function(cls, in_space, f):
         """
         >>> from qitensor import qubit, qudit
         >>> from qitensor.experimental.superop import Superoperator, CP_Map
@@ -135,18 +142,18 @@ class Superoperator(object):
         True
         """
 
-        ha = cls._to_ket_space(ha)
-        hb = f(ha.eye()).space
-        assert hb == hb.H
-        hb = hb.ket_space()
+        in_space = cls._to_ket_space(in_space)
+        out_space = f(in_space.eye()).space
+        assert out_space == out_space.H
+        out_space = out_space.ket_space()
 
-        m = np.zeros((hb.dim()**2, ha.dim()**2), ha.base_field.dtype)
-        for (i, x) in enumerate(ha.O.index_iter()):
-            m[:, i] = f(ha.O.basis_vec(x)).nparray.flatten()
+        m = np.zeros((out_space.dim()**2, in_space.dim()**2), in_space.base_field.dtype)
+        for (i, x) in enumerate(in_space.O.index_iter()):
+            m[:, i] = f(in_space.O.basis_vec(x)).nparray.flatten()
 
-        E = Superoperator(ha, hb, m)
+        E = Superoperator(in_space, out_space, m)
 
-        rho = ha.random_density()
+        rho = in_space.random_density()
         if (E(rho) - f(rho)).norm() > toler:
             raise ValueError('function was not linear')
 
@@ -157,7 +164,7 @@ class Superoperator(object):
         return E
 
     def upgrade_to_cp_map(self, espc_def=None, check_tp=True):
-        return CP_Map.from_matrix(self._m, self.ha, self.hb, espc_def=espc_def, check_tp=check_tp)
+        return CP_Map.from_matrix(self._m, self.in_space, self.out_space, espc_def=espc_def, check_tp=check_tp)
 
 #    @classmethod
 #    def convex_combination(cls, Elist, Plist, espc_def=None):
@@ -189,51 +196,63 @@ class Superoperator(object):
 
 # FIXME - remove check_tp option, add is_tp and assert_tp options (as well as assert_cptp).
 class CP_Map(Superoperator):
-    def __init__(self, ha, hb, hc, J, check_tp=True, _complimentary_channel=None):
+    def __init__(self, in_space, out_space, env_space, J, check_tp=True, _complimentary_channel=None):
         """
         >>> ha = qudit('a', 2)
         >>> hb = qudit('b', 2)
         >>> hd = qudit('d', 3)
         >>> rho = (ha*hd).random_density()
         >>> E = CP_Map.random(ha, hb)
-        >>> ((E.J * rho * E.J.H).trace(E.hc) - E(rho)).norm() < 1e-14
+        >>> ((E.J * rho * E.J.H).trace(E.env_space) - E(rho)).norm() < 1e-14
         True
         """
 
-        ha = self._to_ket_space(ha)
-        hb = self._to_ket_space(hb)
-        hc = self._to_ket_space(hc)
+        in_space = self._to_ket_space(in_space)
+        out_space = self._to_ket_space(out_space)
+        env_space = self._to_ket_space(env_space)
 
-        assert J.space == hb * hc * ha.H
+        assert J.space == out_space * env_space * in_space.H
 
-        if check_tp and (J.H*J - ha.eye()).norm() > toler:
+        if check_tp and (J.H*J - in_space.eye()).norm() > toler:
             raise ValueError('channel is not trace preserving')
 
-        da = ha.dim()
-        db = hb.dim()
-        t = np.zeros((db, da, db, da), dtype=ha.base_field.dtype)
-        for j in hc.index_iter():
-            op = J[{ hc: j }].as_np_matrix(row_space=ha.H)
+        da = in_space.dim()
+        db = out_space.dim()
+        t = np.zeros((db, da, db, da), dtype=in_space.base_field.dtype)
+        for j in env_space.index_iter():
+            op = J[{ env_space: j }].as_np_matrix(row_space=in_space.H)
             t += np.tensordot(op, op.conj(), axes=([],[]))
         t = t.transpose([0,2,1,3])
         t = t.reshape(db**2, da**2)
         t = np.matrix(t)
 
-        super(CP_Map, self).__init__(ha, hb, t)
+        super(CP_Map, self).__init__(in_space, out_space, t)
 
-        # FIXME - use accessors
-        self.J = J
-        self.hc = hc
+        self._J = J
+        self._env_space = env_space
 
         if _complimentary_channel is None:
-            # FIXME - use accessor, maybe make it lowercase 'c'
-            self.C = CP_Map(self.ha, self.hc, self.hb, self.J, check_tp=False, \
+            self._C = CP_Map(self.in_space, self.env_space, self.out_space, self.J, check_tp=False, \
                 _complimentary_channel=self)
         else:
-            self.C = _complimentary_channel
+            self._C = _complimentary_channel
+
+    @property
+    def env_space(self):
+        return self._env_space
+
+    @property
+    def J(self):
+        """The channel isometry."""
+        return self._J
+
+    @property
+    def C(self):
+        """The complimentary channel."""
+        return self._C
 
     def __str__(self):
-        return 'CP_Map( '+str(self.ha.O)+' to '+str(self.hb.O)+' )'
+        return 'CP_Map( '+str(self.in_space.O)+' to '+str(self.out_space.O)+' )'
 
     def __repr__(self):
         return str(self)
@@ -249,8 +268,8 @@ class CP_Map(Superoperator):
         # FIXME - if scalar is negative, call Superoperator.__mul__
 
         # hopefully `other` is a scalar
-        s = self.ha.base_field.sqrt(other)
-        return CP_Map(self.ha, self.hb, self.hc, self.J*s, check_tp=False)
+        s = self.in_space.base_field.sqrt(other)
+        return CP_Map(self.in_space, self.out_space, self.env_space, self.J*s, check_tp=False)
 
     def __rmul__(self, other):
         # hopefully `other` is a scalar
@@ -276,7 +295,7 @@ class CP_Map(Superoperator):
         >>> Y = E1.add2(E2)
         >>> linalg.norm(X.as_matrix() - Y.as_matrix()) < 1e-14
         True
-        >>> (E1.hc, E2.hc, Y.hc)
+        >>> (E1.env_space, E2.env_space, Y.env_space)
         (|hc1>, |hc2>, |hc1+hc2>)
         """
         # FIXME - docs
@@ -284,11 +303,11 @@ class CP_Map(Superoperator):
         if not isinstance(other, CP_Map):
             raise ValueError('other was not a CP_Map')
 
-        assert self.ha == other.ha
-        assert self.hb == other.hb
-        ret_hc = direct_sum((self.hc, other.hc))
+        assert self.in_space == other.in_space
+        assert self.out_space == other.out_space
+        ret_hc = direct_sum((self.env_space, other.env_space))
         ret_J = ret_hc.P[0]*self.J + ret_hc.P[1]*other.J
-        return CP_Map(self.ha, self.hb, ret_hc, ret_J, check_tp=False)
+        return CP_Map(self.in_space, self.out_space, ret_hc, ret_J, check_tp=False)
 
     @classmethod
     def from_matrix(cls, m, spc_in, spc_out, espc_def=None, check_tp=True):
@@ -307,17 +326,17 @@ class CP_Map(Superoperator):
         True
         """
 
-        ha = cls._to_ket_space(spc_in)
-        hb = cls._to_ket_space(spc_out)
-        da = ha.dim()
-        db = hb.dim()
+        in_space = cls._to_ket_space(spc_in)
+        out_space = cls._to_ket_space(spc_out)
+        da = in_space.dim()
+        db = out_space.dim()
         t = np.array(m)
         assert t.shape == (db*db, da*da)
         t = t.reshape(db, db, da, da)
         t = t.transpose([0, 2, 1, 3])
         t = t.reshape(db*da, db*da)
 
-        field = ha.base_field
+        field = in_space.base_field
 
         if field.mat_norm(np.transpose(np.conj(t)) - t) > toler:
             raise ValueError("matrix didn't correspond to a completely positive "+
@@ -330,35 +349,35 @@ class CP_Map(Superoperator):
                 "superoperator (min eig="+str(np.min(ew))+")")
         ew = np.where(ew < 0, 0, ew)
 
-        hc = cls._make_environ_spc(espc_def, ha.base_field, da*db)
+        env_space = cls._make_environ_spc(espc_def, in_space.base_field, da*db)
 
-        J = (hb * hc * ha.H).array()
+        J = (out_space * env_space * in_space.H).array()
 
         for i in range(da*db):
-            J[{ hc: i }] = (hb * ha.H).array(ev[:,i] * field.sqrt(ew[i]), reshape=True)
+            J[{ env_space: i }] = (out_space * in_space.H).array(ev[:,i] * field.sqrt(ew[i]), reshape=True)
 
-        return CP_Map(ha, hb, hc, J, check_tp=check_tp)
+        return CP_Map(in_space, out_space, env_space, J, check_tp=check_tp)
 
     @classmethod
     def from_kraus(cls, ops, espc_def=None):
         ops = list(ops)
         op_spc = ops[0].space
         dc = len(ops)
-        hc = cls._make_environ_spc(espc_def, op_spc.base_field, dc)
-        J = (op_spc * hc).array()
+        env_space = cls._make_environ_spc(espc_def, op_spc.base_field, dc)
+        J = (op_spc * env_space).array()
         for (i, op) in enumerate(ops):
-            J[{ hc: i }] = op
+            J[{ env_space: i }] = op
 
-        return CP_Map(op_spc.bra_space(), op_spc.ket_space(), hc, J)
+        return CP_Map(op_spc.bra_space(), op_spc.ket_space(), env_space, J)
 
     @classmethod
     def random(cls, spc_in, spc_out, espc_def=None):
-        ha = cls._to_ket_space(spc_in)
-        hb = cls._to_ket_space(spc_out)
-        dc = ha.dim() * hb.dim()
-        hc = cls._make_environ_spc(espc_def, ha.base_field, dc)
-        J = (hb*hc*ha.H).random_isometry()
-        return CP_Map(ha, hb, hc, J)
+        in_space = cls._to_ket_space(spc_in)
+        out_space = cls._to_ket_space(spc_out)
+        dc = in_space.dim() * out_space.dim()
+        env_space = cls._make_environ_spc(espc_def, in_space.base_field, dc)
+        J = (out_space*env_space*in_space.H).random_isometry()
+        return CP_Map(in_space, out_space, env_space, J)
 
     @classmethod
     def unitary(cls, U, espc_def=None):
@@ -374,11 +393,11 @@ class CP_Map(Superoperator):
         True
         """
 
-        ha = U.space.bra_space().H
-        hb = U.space.ket_space()
-        hc = cls._make_environ_spc(espc_def, ha.base_field, 1)
-        J = U * hc.ket(0)
-        return CP_Map(ha, hb, hc, J)
+        in_space = U.space.bra_space().H
+        out_space = U.space.ket_space()
+        env_space = cls._make_environ_spc(espc_def, in_space.base_field, 1)
+        J = U * env_space.ket(0)
+        return CP_Map(in_space, out_space, env_space, J)
 
     @classmethod
     def identity(cls, spc, espc_def=None):
@@ -407,15 +426,15 @@ class CP_Map(Superoperator):
         True
         """
 
-        ha = cls._to_ket_space(spc)
-        d = ha.dim()
+        in_space = cls._to_ket_space(spc)
+        d = in_space.dim()
         d2 = d*d
-        hc = cls._make_environ_spc(espc_def, ha.base_field, d2)
-        J = (ha.O*hc).array()
-        for (i, (j, k)) in enumerate(itertools.product(ha.index_iter(), repeat=2)):
-            J[{ ha.H: j, ha: k, hc: i }] = 1
-        J /= ha.base_field.sqrt(d)
-        return CP_Map(ha, ha, hc, J)
+        env_space = cls._make_environ_spc(espc_def, in_space.base_field, d2)
+        J = (in_space.O*env_space).array()
+        for (i, (j, k)) in enumerate(itertools.product(in_space.index_iter(), repeat=2)):
+            J[{ in_space.H: j, in_space: k, env_space: i }] = 1
+        J /= in_space.base_field.sqrt(d)
+        return CP_Map(in_space, in_space, env_space, J)
 
     @classmethod
     def noisy(cls, spc, p, espc_def=None):
@@ -446,13 +465,13 @@ class CP_Map(Superoperator):
         True
         """
 
-        ha = cls._to_ket_space(spc)
-        d = ha.dim()
-        hc = cls._make_environ_spc(espc_def, ha.base_field, d)
-        J = (ha.O*hc).array()
-        for (i, a) in enumerate(ha.index_iter()):
-            J[{ ha.H: a, ha: a, hc: i }] = 1
-        return CP_Map(ha, ha, hc, J)
+        in_space = cls._to_ket_space(spc)
+        d = in_space.dim()
+        env_space = cls._make_environ_spc(espc_def, in_space.base_field, d)
+        J = (in_space.O*env_space).array()
+        for (i, a) in enumerate(in_space.index_iter()):
+            J[{ in_space.H: a, in_space: a, env_space: i }] = 1
+        return CP_Map(in_space, in_space, env_space, J)
 
 #ha = qudit('a', 2)
 #hb = qudit('b', 2)

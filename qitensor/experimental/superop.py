@@ -75,7 +75,7 @@ class Superoperator(object):
             raise NotImplementedError() # FIXME
 
         if isinstance(other, HilbertArray):
-            raise ValueError()
+            return NotImplemented
 
         # hopefully `other` is a scalar
         return Superoperator(self.in_space, self.out_space, self._m*other)
@@ -102,7 +102,7 @@ class Superoperator(object):
         """
 
         if not isinstance(other, Superoperator):
-            raise ValueError()
+            return NotImplemented
 
         assert self.in_space == other.in_space
         assert self.out_space == other.out_space
@@ -158,7 +158,6 @@ class Superoperator(object):
             raise ValueError('function was not linear')
 
         if cls == CP_Map:
-            # FIXME - option to not require trace preserving
             E = E.upgrade_to_cp_map()
 
         return E
@@ -238,18 +237,39 @@ class CP_Map(Superoperator):
         return str(self)
 
     def __mul__(self, other):
+        """
+        >>> from qitensor import qudit
+        >>> from qitensor.experimental.superop import CP_Map
+        >>> ha = qudit('a', 2)
+        >>> psi = ha.O.random_array()
+        >>> E = CP_Map.random(ha, ha)
+        >>> E
+        CP_Map( |a><a| to |a><a| )
+
+        >>> 2*E
+        CP_Map( |a><a| to |a><a| )
+        >>> ((2*E)(psi) - 2*E(psi)).norm() < 1e-14
+        True
+
+        >>> (-2)*E
+        Superoperator( |a><a| to |a><a| )
+        >>> (((-2)*E)(psi) - (-2)*E(psi)).norm() < 1e-14
+        True
+        """
+
         if isinstance(other, Superoperator):
             # FIXME - or return NotImplemented?
             raise NotImplementedError() # FIXME
 
         if isinstance(other, HilbertArray):
-            raise ValueError()
-
-        # FIXME - if scalar is negative, call Superoperator.__mul__
+            return NotImplemented
 
         # hopefully `other` is a scalar
-        s = self.in_space.base_field.sqrt(other)
-        return CP_Map(self.in_space, self.out_space, self.env_space, self.J*s)
+        if other < 0:
+            return Superoperator.__mul__(self, other)
+        else:
+            s = self.in_space.base_field.sqrt(other)
+            return CP_Map(self.in_space, self.out_space, self.env_space, self.J*s)
 
     def __rmul__(self, other):
         # hopefully `other` is a scalar

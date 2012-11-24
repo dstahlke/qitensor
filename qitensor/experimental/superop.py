@@ -3,6 +3,7 @@ import itertools
 
 from qitensor import qudit, direct_sum, NotKetSpaceError, \
     HilbertSpace, HilbertArray, HilbertError
+from qitensor.space import create_space2
 
 toler = 1e-12
 
@@ -99,8 +100,48 @@ class Superoperator(object):
         return out_space.array(ret_vec, reshape=True, input_axes=self.out_space.O.axes+row_space)
 
     def __mul__(self, other):
+        """
+        >>> from qitensor import qudit
+        >>> from qitensor.experimental.superop import Superoperator
+        >>> ha = qudit('a', 2)
+        >>> hb = qudit('b', 3)
+        >>> hc = qudit('c', 4)
+        >>> hd = qudit('d', 2)
+        >>> he = qudit('e', 3)
+
+        >>> rho = (ha*hd).O.random_array()
+        >>> E = Superoperator.random(ha, ha)
+        >>> E
+        Superoperator( |a><a| to |a><a| )
+
+        >>> 2*E
+        Superoperator( |a><a| to |a><a| )
+        >>> ((2*E)(rho) - 2*E(rho)).norm() < 1e-14
+        True
+
+        >>> (-2)*E
+        Superoperator( |a><a| to |a><a| )
+        >>> (((-2)*E)(rho) - (-2)*E(rho)).norm() < 1e-14
+        True
+
+        >>> E1 = Superoperator.random(ha, hb*hc, 'env1')
+        >>> E1
+        Superoperator( |a><a| to |b,c><b,c| )
+        >>> E2 = Superoperator.random(hc*hd, he, 'env2')
+        >>> E2
+        Superoperator( |c,d><c,d| to |e><e| )
+        >>> E3 = E2*E1
+        >>> E3
+        Superoperator( |a,d><a,d| to |b,e><b,e| )
+        >>> (E2(E1(rho)) - E3(rho)).norm() < 1e-12 # FIXME - why not 1e-14 precision?
+        True
+        """
+
         if isinstance(other, Superoperator):
-            raise NotImplementedError() # FIXME
+            common_spc = self.in_space.ket_set & other.out_space.ket_set
+            in_spc = (self.in_space.ket_set - common_spc) | other.in_space.ket_set
+            in_spc = create_space2(in_spc , frozenset())
+            return Superoperator.from_function(in_spc, lambda x: self(other(x)))
 
         if isinstance(other, HilbertArray):
             return NotImplemented
@@ -219,6 +260,13 @@ class Superoperator(object):
 
         return E
 
+    @classmethod
+    def random(cls, spc_in, spc_out, espc_def=None):
+        in_space = cls._to_ket_space(spc_in)
+        out_space = cls._to_ket_space(spc_out)
+        m = spc_in.base_field.random_array((out_space.O.dim(), in_space.O.dim()))
+        return Superoperator(in_space, out_space, m)
+
     def upgrade_to_cp_map(self, espc_def=None):
         return CP_Map.from_matrix(self._m, self.in_space, self.out_space, espc_def=espc_def)
 
@@ -323,24 +371,49 @@ class CP_Map(Superoperator):
         >>> from qitensor import qudit
         >>> from qitensor.experimental.superop import CP_Map
         >>> ha = qudit('a', 2)
-        >>> psi = ha.O.random_array()
+        >>> hb = qudit('b', 3)
+        >>> hc = qudit('c', 4)
+        >>> hd = qudit('d', 2)
+        >>> he = qudit('e', 3)
+
+        >>> rho = (ha*hd).O.random_array()
         >>> E = CP_Map.random(ha, ha)
         >>> E
         CP_Map( |a><a| to |a><a| )
 
         >>> 2*E
         CP_Map( |a><a| to |a><a| )
-        >>> ((2*E)(psi) - 2*E(psi)).norm() < 1e-14
+        >>> ((2*E)(rho) - 2*E(rho)).norm() < 1e-14
         True
 
         >>> (-2)*E
         Superoperator( |a><a| to |a><a| )
-        >>> (((-2)*E)(psi) - (-2)*E(psi)).norm() < 1e-14
+        >>> (((-2)*E)(rho) - (-2)*E(rho)).norm() < 1e-14
+        True
+
+        >>> E1 = CP_Map.random(ha, hb*hc, 'env1')
+        >>> E1
+        CP_Map( |a><a| to |b,c><b,c| )
+        >>> E2 = CP_Map.random(hc*hd, he, 'env2')
+        >>> E2
+        CP_Map( |c,d><c,d| to |e><e| )
+        >>> E3 = E2*E1
+        >>> E3
+        CP_Map( |a,d><a,d| to |b,e><b,e| )
+        >>> E3.env_space
+        |env1,env2>
+        >>> (E2(E1(rho)) - E3(rho)).norm() < 1e-14
         True
         """
 
         if isinstance(other, Superoperator):
-            raise NotImplementedError() # FIXME
+            common_spc = self.in_space.ket_set & other.out_space.ket_set
+            in_spc  = (self.in_space.ket_set - common_spc) | other.in_space.ket_set
+            out_spc = self.out_space.ket_set | (other.out_space.ket_set - common_spc)
+            env     = self.env_space * other.env_space
+            in_spc  = create_space2(in_spc , frozenset())
+            out_spc = create_space2(out_spc, frozenset())
+            return CP_Map(in_spc, out_spc, env, self.J*other.J)
 
         if isinstance(other, HilbertArray):
             return NotImplemented
@@ -553,9 +626,3 @@ class CP_Map(Superoperator):
         for (i, a) in enumerate(in_space.index_iter()):
             J[{ in_space.H: a, in_space: a, env_space: i }] = 1
         return CP_Map(in_space, in_space, env_space, J)
-
-#ha = qudit('a', 2)
-#hb = qudit('b', 2)
-#hd = qudit('d', 3)
-#rho = (ha*hd).random_density()
-#E = CP_Map.random(ha, hb)

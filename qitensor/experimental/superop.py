@@ -374,7 +374,7 @@ class CP_Map(Superoperator):
         >>> from qitensor.experimental.superop import CP_Map
         >>> ha = qudit('a', 2)
         >>> hb = qudit('b', 3)
-        >>> hc = qudit('c', 4)
+        >>> hc = qudit('c', 2)
         >>> hd = qudit('d', 2)
         >>> he = qudit('e', 3)
 

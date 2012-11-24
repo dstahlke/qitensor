@@ -9,6 +9,7 @@ toler = 1e-12
 
 # FIXME - use exceptions rather than assert
 # FIXME - some methods don't have docs
+# FIXME - use CP_Map in the map-state duality example
 
 __all__ = ['Superoperator', 'CP_Map']
 
@@ -282,6 +283,7 @@ def _unreduce_cpmap_v1(in_space, out_space, env_space, J):
     return CP_Map(in_space, out_space, env_space, J)
 
 class CP_Map(Superoperator):
+    # FIXME - only env_space is really needed
     def __init__(self, in_space, out_space, env_space, J, _complimentary_channel=None):
         """
         >>> ha = qudit('a', 2)
@@ -410,6 +412,7 @@ class CP_Map(Superoperator):
             common_spc = self.in_space.ket_set & other.out_space.ket_set
             in_spc  = (self.in_space.ket_set - common_spc) | other.in_space.ket_set
             out_spc = self.out_space.ket_set | (other.out_space.ket_set - common_spc)
+            # FIXME - will break in the case of E*E
             env     = self.env_space * other.env_space
             in_spc  = create_space2(in_spc , frozenset())
             out_spc = create_space2(out_spc, frozenset())

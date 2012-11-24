@@ -1,5 +1,4 @@
 === qitensor-0.11dev (Dan Stahlke, ongoing) ===
-	* no changes yet
 	* sympy support
 	* added PNG renderers, for qtconsole (still need to find a way to
 	  detect qtconsole)

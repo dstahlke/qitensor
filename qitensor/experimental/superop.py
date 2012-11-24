@@ -7,10 +7,15 @@ from qitensor import qudit, direct_sum, NotKetSpaceError, \
 toler = 1e-12
 
 # FIXME - use exceptions rather than assert
-# FIXME - pickling
 # FIXME - some methods don't have docs
 
 __all__ = ['Superoperator', 'CP_Map']
+
+def _unreduce_supop_v1(in_space, out_space, m):
+    """
+    This is the function that handles restoring a pickle.
+    """
+    return Superoperator(in_space, out_space, m)
 
 class Superoperator(object):
     def __init__(self, in_space, out_space, m):
@@ -19,6 +24,29 @@ class Superoperator(object):
         self._m = np.matrix(m)
 
         assert m.shape == (self.out_space.O.dim(), self.in_space.O.dim())
+
+    def __reduce__(self):
+        """
+        Tells pickle how to store this object.
+
+        >>> import pickle
+        >>> from qitensor import qubit, qudit
+        >>> from qitensor.experimental.superop import Superoperator, CP_Map
+        >>> ha = qudit('a', 3)
+        >>> hb = qubit('b')
+        >>> rho = (ha*hb).random_density()
+
+        >>> E = Superoperator.from_function(ha, lambda x: x.T)
+        >>> E
+        Superoperator( |a><a| to |a><a| )
+        >>> F = pickle.loads(pickle.dumps(E))
+        >>> F
+        Superoperator( |a><a| to |a><a| )
+        >>> (E(rho) - F(rho)).norm > 1e-14
+        True
+        """
+
+        return _unreduce_supop_v1, (self.in_space, self.out_space, self._m)
 
     @property
     def in_space(self):
@@ -170,6 +198,12 @@ class Superoperator(object):
         ret.assert_cptp()
         return ret
 
+def _unreduce_cpmap_v1(in_space, out_space, env_space, J):
+    """
+    This is the function that handles restoring a pickle.
+    """
+    return CP_Map(in_space, out_space, env_space, J)
+
 class CP_Map(Superoperator):
     def __init__(self, in_space, out_space, env_space, J, _complimentary_channel=None):
         """
@@ -208,6 +242,25 @@ class CP_Map(Superoperator):
                 _complimentary_channel=self)
         else:
             self._C = _complimentary_channel
+
+    def __reduce__(self):
+        """
+        Tells pickle how to store this object.
+
+        >>> import pickle
+        >>> from qitensor import qudit
+        >>> from qitensor.experimental.superop import CP_Map
+        >>> ha = qudit('a', 2)
+        >>> rho = ha.O.random_array()
+        >>> E = CP_Map.random(ha, ha)
+        >>> F = pickle.loads(pickle.dumps(E))
+        >>> F
+        CP_Map( |a><a| to |a><a| )
+        >>> (E(rho) - F(rho)).norm > 1e-14
+        True
+        """
+
+        return _unreduce_cpmap_v1, (self.in_space, self.out_space, self.env_space, self.J)
 
     @property
     def env_space(self):

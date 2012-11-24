@@ -280,11 +280,10 @@ def _unreduce_cpmap_v1(in_space, out_space, env_space, J):
     """
     This is the function that handles restoring a pickle.
     """
-    return CP_Map(in_space, out_space, env_space, J)
+    return CP_Map(J, env_space)
 
 class CP_Map(Superoperator):
-    # FIXME - only env_space is really needed
-    def __init__(self, in_space, out_space, env_space, J, _complimentary_channel=None):
+    def __init__(self, J, env_space, _complimentary_channel=None):
         """
         >>> ha = qudit('a', 2)
         >>> hb = qudit('b', 2)
@@ -295,9 +294,11 @@ class CP_Map(Superoperator):
         True
         """
 
-        in_space = self._to_ket_space(in_space)
-        out_space = self._to_ket_space(out_space)
         env_space = self._to_ket_space(env_space)
+        in_space = J.space.bra_space().H
+        assert J.space.ket_set >= env_space.ket_set
+        out_space = J.space.ket_set - env_space.ket_set
+        out_space = create_space2(out_space, frozenset())
 
         assert J.space == out_space * env_space * in_space.H
 
@@ -317,8 +318,7 @@ class CP_Map(Superoperator):
         self._env_space = env_space
 
         if _complimentary_channel is None:
-            self._C = CP_Map(self.in_space, self.env_space, self.out_space, self.J, \
-                _complimentary_channel=self)
+            self._C = CP_Map(self.J, self.out_space, _complimentary_channel=self)
         else:
             self._C = _complimentary_channel
 
@@ -416,7 +416,7 @@ class CP_Map(Superoperator):
             env     = self.env_space * other.env_space
             in_spc  = create_space2(in_spc , frozenset())
             out_spc = create_space2(out_spc, frozenset())
-            return CP_Map(in_spc, out_spc, env, self.J*other.J)
+            return CP_Map(self.J*other.J, env)
 
         if isinstance(other, HilbertArray):
             return NotImplemented
@@ -426,7 +426,7 @@ class CP_Map(Superoperator):
             return Superoperator.__mul__(self, other)
         else:
             s = self.in_space.base_field.sqrt(other)
-            return CP_Map(self.in_space, self.out_space, self.env_space, self.J*s)
+            return CP_Map(self.J*s, self.env_space)
 
     def __rmul__(self, other):
         # hopefully `other` is a scalar
@@ -464,7 +464,7 @@ class CP_Map(Superoperator):
         assert self.out_space == other.out_space
         ret_hc = direct_sum((self.env_space, other.env_space))
         ret_J = ret_hc.P[0]*self.J + ret_hc.P[1]*other.J
-        return CP_Map(self.in_space, self.out_space, ret_hc, ret_J)
+        return CP_Map(ret_J, ret_hc)
 
     @classmethod
     def from_matrix(cls, m, spc_in, spc_out, espc_def=None):
@@ -513,7 +513,7 @@ class CP_Map(Superoperator):
         for i in range(da*db):
             J[{ env_space: i }] = (out_space * in_space.H).array(ev[:,i] * field.sqrt(ew[i]), reshape=True)
 
-        return CP_Map(in_space, out_space, env_space, J)
+        return CP_Map(J, env_space)
 
     @classmethod
     def from_kraus(cls, ops, espc_def=None):
@@ -525,7 +525,7 @@ class CP_Map(Superoperator):
         for (i, op) in enumerate(ops):
             J[{ env_space: i }] = op
 
-        return CP_Map(op_spc.bra_space(), op_spc.ket_space(), env_space, J)
+        return CP_Map(J, env_space)
 
     @classmethod
     def random(cls, spc_in, spc_out, espc_def=None):
@@ -534,7 +534,7 @@ class CP_Map(Superoperator):
         dc = in_space.dim() * out_space.dim()
         env_space = cls._make_environ_spc(espc_def, in_space.base_field, dc)
         J = (out_space*env_space*in_space.H).random_isometry()
-        return CP_Map(in_space, out_space, env_space, J)
+        return CP_Map(J, env_space)
 
     @classmethod
     def unitary(cls, U, espc_def=None):
@@ -550,11 +550,9 @@ class CP_Map(Superoperator):
         True
         """
 
-        in_space = U.space.bra_space().H
-        out_space = U.space.ket_space()
-        env_space = cls._make_environ_spc(espc_def, in_space.base_field, 1)
+        env_space = cls._make_environ_spc(espc_def, U.space.base_field, 1)
         J = U * env_space.ket(0)
-        return CP_Map(in_space, out_space, env_space, J)
+        return CP_Map(J, env_space)
 
     @classmethod
     def identity(cls, spc, espc_def=None):
@@ -591,7 +589,7 @@ class CP_Map(Superoperator):
         for (i, (j, k)) in enumerate(itertools.product(in_space.index_iter(), repeat=2)):
             J[{ in_space.H: j, in_space: k, env_space: i }] = 1
         J /= in_space.base_field.sqrt(d)
-        return CP_Map(in_space, in_space, env_space, J)
+        return CP_Map(J, env_space)
 
     @classmethod
     def noisy(cls, spc, p, espc_def=None):
@@ -628,4 +626,4 @@ class CP_Map(Superoperator):
         J = (in_space.O*env_space).array()
         for (i, a) in enumerate(in_space.index_iter()):
             J[{ in_space.H: a, in_space: a, env_space: i }] = 1
-        return CP_Map(in_space, in_space, env_space, J)
+        return CP_Map(J, env_space)

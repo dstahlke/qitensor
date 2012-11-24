@@ -166,34 +166,6 @@ class Superoperator(object):
     def upgrade_to_cp_map(self, espc_def=None, check_tp=True):
         return CP_Map.from_matrix(self._m, self.in_space, self.out_space, espc_def=espc_def, check_tp=check_tp)
 
-#    @classmethod
-#    def convex_combination(cls, Elist, Plist, espc_def=None):
-#        """
-#        >>> from qitensor import qudit
-#        >>> from qitensor.experimental.superop import Superoperator
-#        >>> ha = qudit('a', 4)
-#        >>> hb = qudit('b', 3)
-#        >>> E1 = CP_Map.random(ha, hb)
-#        >>> E2 = CP_Map.random(ha, hb)
-#        >>> E = Superoperator.convex_combination((E1, E2), (0.2, 0.8))
-#        >>> rho = ha.random_density()
-#        >>> (E(rho) - (E1(rho)*0.2 + E2(rho)*0.8)).norm() < 1e-14
-#        True
-#        """
-#
-#        assert len(Elist) == len(Plist)
-#        assert np.abs(np.sum(Plist) - 1) < toler
-#
-#        E0 = Elist[0]
-#
-#        for E in Elist:
-#            assert E.ha == E0.ha
-#            assert E.hb == E0.hb
-#
-#        m = np.sum([ E._m*p for (E, p) in zip(Elist, Plist) ], axis=0)
-#
-#        return Superoperator(E0.ha, E0.hb, m)
-
 # FIXME - remove check_tp option, add is_tp and assert_tp options (as well as assert_cptp).
 class CP_Map(Superoperator):
     def __init__(self, in_space, out_space, env_space, J, check_tp=True, _complimentary_channel=None):

@@ -112,8 +112,6 @@ class Superoperator(object):
         # hopefully `other` is a scalar
         return self * other
 
-    # FIXME - implement neg, sub
-
     def __add__(self, other):
         """
         >>> from qitensor import qudit
@@ -136,6 +134,37 @@ class Superoperator(object):
         assert self.out_space == other.out_space
 
         return Superoperator(self.in_space, self.out_space, self._m + other._m)
+
+    def __neg__(self):
+        """
+        >>> from qitensor import qudit
+        >>> from qitensor.experimental.superop import Superoperator
+        >>> ha = qudit('a', 4)
+        >>> hb = qudit('b', 3)
+        >>> E = CP_Map.random(ha, hb)
+        >>> rho = ha.random_density()
+        >>> ((-E)(rho) + E(rho)).norm() < 1e-14
+        True
+        """
+
+        return (-1)*self
+
+    def __sub__(self, other):
+        """
+        >>> from qitensor import qudit
+        >>> from qitensor.experimental.superop import Superoperator
+        >>> ha = qudit('a', 4)
+        >>> hb = qudit('b', 3)
+        >>> E1 = CP_Map.random(ha, hb)
+        >>> E2 = CP_Map.random(ha, hb)
+        >>> rho = ha.random_density()
+        >>> chi = (E1 - E2)(rho)
+        >>> xi  = E1(rho) - E2(rho)
+        >>> (chi - xi).norm() < 1e-14
+        True
+        """
+
+        return self + (-other)
 
     @classmethod
     def from_function(cls, in_space, f):
@@ -311,7 +340,6 @@ class CP_Map(Superoperator):
         """
 
         if isinstance(other, Superoperator):
-            # FIXME - or return NotImplemented?
             raise NotImplementedError() # FIXME
 
         if isinstance(other, HilbertArray):

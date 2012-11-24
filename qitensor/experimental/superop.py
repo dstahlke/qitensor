@@ -393,6 +393,11 @@ class CP_Map(Superoperator):
         >>> (((-2)*E)(rho) - (-2)*E(rho)).norm() < 1e-14
         True
 
+        >>> E*E
+        CP_Map( |a><a| to |a><a| )
+        >>> ((E*E)(rho) - E(E(rho))).norm() < 1e-14
+        True
+
         >>> E1 = CP_Map.random(ha, hb*hc, 'env1')
         >>> E1
         CP_Map( |a><a| to |b,c><b,c| )
@@ -412,11 +417,16 @@ class CP_Map(Superoperator):
             common_spc = self.in_space.ket_set & other.out_space.ket_set
             in_spc  = (self.in_space.ket_set - common_spc) | other.in_space.ket_set
             out_spc = self.out_space.ket_set | (other.out_space.ket_set - common_spc)
-            # FIXME - will break in the case of E*E
-            env     = self.env_space * other.env_space
             in_spc  = create_space2(in_spc , frozenset())
             out_spc = create_space2(out_spc, frozenset())
-            return CP_Map(self.J*other.J, env)
+
+            # If the multiplicands have disjoint environments, then the product will use the
+            # product environment.  Otherwise, a new environment is created.
+            if self.env_space.ket_set.isdisjoint(other.env_space.ket_set):
+                env = self.env_space * other.env_space
+                return CP_Map(self.J*other.J, env)
+            else:
+                return Superoperator.__mul__(self, other).upgrade_to_cp_map()
 
         if isinstance(other, HilbertArray):
             return NotImplemented
@@ -441,6 +451,9 @@ class CP_Map(Superoperator):
 
     def add2(self, other):
         """
+        Adds two CP maps.  The returned map has the same action as E1+E2, but the environment
+        is the direct sum of the component environments.
+
         >>> import numpy.linalg as linalg
         >>> from qitensor import qudit
         >>> from qitensor.experimental.superop import CP_Map
@@ -455,7 +468,6 @@ class CP_Map(Superoperator):
         >>> (E1.env_space, E2.env_space, Y.env_space)
         (|hc1>, |hc2>, |hc1+hc2>)
         """
-        # FIXME - docs
 
         if not isinstance(other, CP_Map):
             raise ValueError('other was not a CP_Map')

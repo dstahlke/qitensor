@@ -788,7 +788,8 @@ cdef class HilbertArray:
 
         # Cython calls arithmetic methods with arguments reversed instead of __r*__ methods
         if not isinstance(self, HilbertArray) or not isinstance(other, HilbertArray):
-            raise TypeError('HilbertArray can only add another HilbertArray')
+            return NotImplemented
+
         ret = self.copy()
         ret += other
         return ret
@@ -813,7 +814,8 @@ cdef class HilbertArray:
         """
 
         if not isinstance(other, HilbertArray):
-            raise TypeError('HilbertArray can only add another HilbertArray')
+            return NotImplemented
+
         self._assert_same_axes(other)
         self.nparray += other.nparray
         return self
@@ -836,8 +838,8 @@ cdef class HilbertArray:
         """
 
         if not isinstance(other, HilbertArray):
-            raise TypeError('HilbertArray can only subtract '+
-                'another HilbertArray')
+            return NotImplemented
+
         ret = self.copy()
         ret -= other
         return ret
@@ -876,8 +878,8 @@ cdef class HilbertArray:
         """
 
         if not isinstance(other, HilbertArray):
-            raise TypeError('HilbertArray can only subtract '+
-                'another HilbertArray')
+            return NotImplemented
+
         self._assert_same_axes(other)
         self.nparray -= other.nparray
         return self
@@ -895,12 +897,12 @@ cdef class HilbertArray:
         >>> x / x
         Traceback (most recent call last):
             ...
-        TypeError
+        TypeError: unsupported operand type(s) for /: 'complex' and 'qitensor.array.HilbertArray'
         """
 
-        # FIXME - Cython seems to send self=float sometimes
+        # Cython calls arithmetic methods with arguments reversed instead of __r*__ methods
         if not isinstance(self, HilbertArray):
-            raise TypeError()
+            return NotImplemented
 
         ret = self.copy()
         ret /= other
@@ -940,7 +942,7 @@ cdef class HilbertArray:
         >>> x / x
         Traceback (most recent call last):
             ...
-        TypeError
+        TypeError: unsupported operand type(s) for /: 'complex' and 'qitensor.array.HilbertArray'
         """
 
         ret = self.copy()

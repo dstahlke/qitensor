@@ -546,8 +546,9 @@ cdef class HilbertSpace:
             return '\\left|\\right\\rangle'
 
     def __mul__(self, other):
-        if not isinstance(other, HilbertSpace):
-            raise TypeError('HilbertSpace can only multiply HilbertSpace')
+        if not isinstance(self, HilbertSpace) or not isinstance(other, HilbertSpace):
+            return NotImplemented
+
         self.base_field.assert_same(other.base_field)
 
         common_kets = self.ket_set & other.ket_set
@@ -558,17 +559,15 @@ cdef class HilbertSpace:
         return create_space1(
             self.bra_ket_set | other.bra_ket_set)
 
-    def __rmul__(self, other):
-        return self.__mul__(other)
-
     def __div__(self, other):
         """
         Returns a HilbertSpace ``ret`` with the property that ``other*ret==self``.
         An error is thrown if such a relation is not possible.
         """
 
-        if not isinstance(other, HilbertSpace):
-            raise TypeError('HilbertSpace can only be divided by HilbertSpace')
+        if not isinstance(self, HilbertSpace) or not isinstance(other, HilbertSpace):
+            return NotImplemented
+
         if other.bra_ket_set == self.bra_ket_set:
             raise MismatchedSpaceError("dividing "+repr(self)+" by itself would result in 1-dimensional space")
         if not other.bra_ket_set < self.bra_ket_set:

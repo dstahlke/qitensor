@@ -61,7 +61,9 @@ class Superoperator(object):
     @classmethod
     def _make_environ_spc(cls, espc_def, field, dim):
         if espc_def is None:
-            espc_def = 'environ_'+str(np.random.randint(1e12))
+            chartab = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+            rndstr = ''.join([chartab[np.random.randint(len(chartab))] for i in range(6)])
+            espc_def = 'env_'+rndstr
 
         if isinstance(espc_def, HilbertSpace):
             if espc_def.dim() < dim:
@@ -257,6 +259,7 @@ class Superoperator(object):
             raise ValueError('function was not linear')
 
         if cls == CP_Map:
+            # FIXME - espc_def argument
             E = E.upgrade_to_cp_map()
 
         return E

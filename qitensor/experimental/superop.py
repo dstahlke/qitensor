@@ -229,18 +229,6 @@ class Superoperator(object):
         Traceback (most recent call last):
             ...
         ValueError: function was not linear
-
-        >>> CP_Map.from_function(ha, lambda x: x.T)
-        Traceback (most recent call last):
-            ...
-        ValueError: matrix didn't correspond to a completely positive superoperator (min eig=-1.0)
-
-        >>> U = ha.random_unitary()
-        >>> EU = CP_Map.from_function(ha, lambda x: U*x*U.H)
-        >>> EU
-        CP_Map( |a><a| to |a><a| )
-        >>> (EU(rho) - U*rho*U.H).norm() < 1e-14
-        True
         """
 
         in_space = cls._to_ket_space(in_space)
@@ -257,10 +245,6 @@ class Superoperator(object):
         rho = in_space.random_density()
         if (E(rho) - f(rho)).norm() > toler:
             raise ValueError('function was not linear')
-
-        if cls == CP_Map:
-            # FIXME - espc_def argument
-            E = E.upgrade_to_cp_map()
 
         return E
 
@@ -429,14 +413,14 @@ class CP_Map(Superoperator):
                 env = self.env_space * other.env_space
                 return CP_Map(self.J*other.J, env)
             else:
-                return Superoperator.__mul__(self, other).upgrade_to_cp_map()
+                return super(CP_Map, self).__mul__(other).upgrade_to_cp_map()
 
         if isinstance(other, HilbertArray):
             return NotImplemented
 
         # hopefully `other` is a scalar
         if other < 0:
-            return Superoperator.__mul__(self, other)
+            return super(CP_Map, self).__mul__(other)
         else:
             s = self.in_space.base_field.sqrt(other)
             return CP_Map(self.J*s, self.env_space)
@@ -482,7 +466,33 @@ class CP_Map(Superoperator):
         return CP_Map(ret_J, ret_hc)
 
     @classmethod
-    def from_matrix(cls, m, spc_in, spc_out, espc_def=None):
+    def from_function(cls, in_space, f, espc_def=None):
+        """
+        >>> from qitensor import qubit, qudit
+        >>> from qitensor.experimental.superop import CP_Map
+        >>> ha = qudit('a', 3)
+        >>> hb = qubit('b')
+        >>> rho = (ha*hb).random_density()
+
+        >>> CP_Map.from_function(ha, lambda x: x.T)
+        Traceback (most recent call last):
+            ...
+        ValueError: matrix didn't correspond to a completely positive superoperator (min eig=-1.0)
+
+        >>> U = ha.random_unitary()
+        >>> EU = CP_Map.from_function(ha, lambda x: U*x*U.H)
+        >>> EU
+        CP_Map( |a><a| to |a><a| )
+        >>> (EU(rho) - U*rho*U.H).norm() < 1e-14
+        True
+        """
+
+        E = Superoperator.from_function(in_space, f)
+        E = E.upgrade_to_cp_map(espc_def)
+        return E
+
+    @classmethod
+    def from_matrix(cls, m, spc_in, spc_out, espc_def=None, compact_environ_tol=1e-12):
         """
         >>> from qitensor import qudit
         >>> from qitensor.experimental.superop import CP_Map
@@ -514,19 +524,26 @@ class CP_Map(Superoperator):
             raise ValueError("matrix didn't correspond to a completely positive "+
                 "superoperator (cross operator not self-adjoint)")
 
-        (ew, ev) = field.mat_eig(t, True)
+        (ew, ev) = field.mat_eig(t, hermit=True)
 
         if np.min(ew) < -toler:
             raise ValueError("matrix didn't correspond to a completely positive "+
                 "superoperator (min eig="+str(np.min(ew))+")")
         ew = np.where(ew < 0, 0, ew)
 
-        env_space = cls._make_environ_spc(espc_def, in_space.base_field, da*db)
+        if compact_environ_tol:
+            nonzero = np.nonzero(ew > compact_environ_tol)[0]
+            dc = len(nonzero)
+        else:
+            dc = da*db
+            nonzero = range(dc)
+
+        env_space = cls._make_environ_spc(espc_def, in_space.base_field, dc)
 
         J = (out_space * env_space * in_space.H).array()
 
-        for i in range(da*db):
-            J[{ env_space: i }] = (out_space * in_space.H).array(ev[:,i] * field.sqrt(ew[i]), reshape=True)
+        for (i, j) in enumerate(nonzero):
+            J[{ env_space: i }] = (out_space * in_space.H).array(ev[:,j] * field.sqrt(ew[j]), reshape=True)
 
         return CP_Map(J, env_space)
 

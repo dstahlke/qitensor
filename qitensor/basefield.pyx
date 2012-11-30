@@ -136,8 +136,13 @@ cdef class HilbertBaseField:
     cpdef mat_det(self, np.ndarray mat):
         return np.linalg.det(mat)
 
-    cpdef mat_norm(self, np.ndarray arr):
-        return np.linalg.norm(arr)
+    cpdef mat_norm(self, np.ndarray arr, p):
+        if p == 2:
+            return np.linalg.norm(arr)
+        elif np.isposinf(p):
+            return np.max(np.abs(arr))
+        else:
+            return np.sum(np.abs(arr)**p)**(1.0/p)
 
     cpdef np.ndarray mat_pinv(self, np.ndarray mat, rcond):
         return np.linalg.pinv(mat, rcond)

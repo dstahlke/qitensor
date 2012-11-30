@@ -30,7 +30,7 @@ cdef class HilbertArray:
     cpdef np_matrix_transform(self, f, transpose_dims=*, row_space=*, col_space=*)
     cpdef det(self)
     cpdef fill(self, val)
-    cpdef norm(self)
+    cpdef norm(self, p=*)
     cpdef trace_norm(self, row_space=*, col_space=*)
     cpdef schatten_norm(self, p, row_space=*, col_space=*)
     cpdef normalize(self)

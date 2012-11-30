@@ -96,8 +96,14 @@ cdef class SageHilbertBaseField(HilbertBaseField):
     cpdef mat_det(self, np.ndarray m):
         return self.matrix_np_to_sage(m).det()
 
-    cpdef mat_norm(self, np.ndarray arr):
-        return self.sqrt(np.sum(arr * np.conj(arr)))
+    cpdef mat_norm(self, np.ndarray arr, p):
+        if p == 2:
+            return self.sqrt(np.sum(arr * np.conj(arr)))
+        elif np.isposinf(p):
+            return np.max(np.abs(arr))
+        else:
+            # FIXME - untested
+            return np.sum(np.abs(arr)**p)**self.frac(1, p)
 
     cpdef np.ndarray mat_conj(self, np.ndarray m):
         return self.matrix_sage_to_np(self.matrix_np_to_sage(m).conjugate())

@@ -1487,11 +1487,14 @@ cdef class HilbertArray:
         # fill should be the same for all base_field's
         self.nparray.fill(val)
 
-    cpdef norm(self):
+    cpdef norm(self, p=2):
         """
-        Returns the norm of this array.
+        Returns the vector norm of this array.
+        If p is given, then the :math:`\ell_p` norm is computed.
 
-        >>> from qitensor import qubit
+        See also: :func:`schatten_norm`, :func:`trace_norm`
+
+        >>> from qitensor import qubit, qudit
         >>> ha = qubit('a')
         >>> x = ha.array([3, 4])
         >>> x.norm()
@@ -1499,9 +1502,17 @@ cdef class HilbertArray:
         >>> y = ha.O.array([[1, 2], [3, 4]])
         >>> y.norm() ** 2
         30.0
+        >>> y.norm(p=1)
+        10.0
+        >>> y.norm(p=np.inf)
+        4.0
+        >>> hb = qudit('b', 6)
+        >>> x = hb.array([1, 1, 1, 2, 2, 2])
+        >>> x.norm(3)
+        3.0
         """
 
-        return self.space.base_field.mat_norm(self.nparray)
+        return self.space.base_field.mat_norm(self.nparray, p)
 
     cpdef trace_norm(self, row_space=None, col_space=None):
         """
@@ -1513,6 +1524,8 @@ cdef class HilbertArray:
         :param col_space: the HilbertSpace to use for the column space of the matrix,
             default is the ket space of the input array.
         :type col_space: HilbertSpace, list, or tuple
+
+        See also: :func:`schatten_norm`
 
         >>> from qitensor import qudit
         >>> ha = qudit('a', 3)
@@ -1534,6 +1547,8 @@ cdef class HilbertArray:
         :param col_space: the HilbertSpace to use for the column space of the matrix,
             default is the ket space of the input array.
         :type col_space: HilbertSpace, list, or tuple
+
+        See also: :func:`trace_norm`
 
         >>> from qitensor import qubit, qudit
         >>> ha = qudit('a', 3)

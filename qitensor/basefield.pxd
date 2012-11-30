@@ -25,7 +25,7 @@ cdef class HilbertBaseField:
     cpdef np.ndarray mat_adjoint(self, np.ndarray mat)
     cpdef np.ndarray mat_inverse(self, np.ndarray mat)
     cpdef mat_det(self, np.ndarray mat)
-    cpdef mat_norm(self, np.ndarray arr)
+    cpdef mat_norm(self, np.ndarray arr, p)
     cpdef np.ndarray mat_pinv(self, np.ndarray mat, rcond)
     cpdef np.ndarray mat_conj(self, np.ndarray mat)
     cpdef np.ndarray mat_n(self, np.ndarray mat, prec=*, digits=*)

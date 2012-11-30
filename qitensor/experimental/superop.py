@@ -520,7 +520,7 @@ class CP_Map(Superoperator):
 
         field = in_space.base_field
 
-        if field.mat_norm(np.transpose(np.conj(t)) - t) > toler:
+        if field.mat_norm(np.transpose(np.conj(t)) - t, 2) > toler:
             raise ValueError("matrix didn't correspond to a completely positive "+
                 "superoperator (cross operator not self-adjoint)")
 

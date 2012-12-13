@@ -1,5 +1,6 @@
 import numpy as np
 import itertools
+import random
 
 from qitensor import qudit, direct_sum, NotKetSpaceError, \
     HilbertSpace, HilbertArray, HilbertError
@@ -62,7 +63,7 @@ class Superoperator(object):
     def _make_environ_spc(cls, espc_def, field, dim):
         if espc_def is None:
             chartab = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
-            rndstr = ''.join([chartab[np.random.randint(len(chartab))] for i in range(6)])
+            rndstr = ''.join(random.sample(chartab, 6))
             espc_def = 'env_'+rndstr
 
         if isinstance(espc_def, HilbertSpace):
@@ -409,6 +410,7 @@ class CP_Map(Superoperator):
 
             # If the multiplicands have disjoint environments, then the product will use the
             # product environment.  Otherwise, a new environment is created.
+            # FIXME - I think I need to check isinstance(other, CP_Map)
             if self.env_space.ket_set.isdisjoint(other.env_space.ket_set):
                 env = self.env_space * other.env_space
                 return CP_Map(self.J*other.J, env)
@@ -432,6 +434,7 @@ class CP_Map(Superoperator):
     def __add__(self, other):
         ret = super(CP_Map, self).__add__(other)
         if isinstance(other, CP_Map):
+            # FIXME - reuse env_space if possible
             return ret.upgrade_to_cp_map()
         else:
             return ret

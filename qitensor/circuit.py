@@ -145,6 +145,8 @@ def controlled_U(cspc, U):
     True
 
     >>> U = controlled_U(hd, [ha.X, ha.Y, ha.Z])
+    >>> U == controlled_U(hd, {0: ha.X, 1: ha.Y, 2: ha.Z})
+    True
     >>> U * hd.ket(0) == ha.X * hd.ket(0)
     True
     >>> U * hd.ket(1) == ha.Y * hd.ket(1)
@@ -153,34 +155,51 @@ def controlled_U(cspc, U):
     True
 
     >>> V = controlled_U(ha, cnot(hb, hc))
+    >>> V == controlled_U(ha*hb, {(1,1): hc.X})
+    True
     >>> V * ha.ket(0) == (hb*hc).eye() * ha.ket(0)
     True
     >>> V * ha.ket(1) == cnot(hb, hc) * ha.ket(1)
     True
     """
 
-    if isinstance(U, HilbertArray):
-        if cspc.dim() != 2:
-            raise HilbertShapeError(cspc.dim(), 2)
-        U = [U.space.eye(), U]
-
-    Ulist = list(U)
-    U = None
-
-    for U in Ulist:
-        if U.space != U.H.space:
-            raise HilbertError('not an operator: '+str(U.space))
-        if U.space != Ulist[0].space:
-            raise MismatchedSpaceError('operators act on different spaces: '+
-                str(U.space)+' vs. '+str(Ulist[0].space))
-
-    if len(Ulist) != cspc.dim():
-        raise HilbertShapeError(cspc.dim(), len(Ulist))
-
     cspc.assert_ket_space()
 
-    ret = (cspc.O * Ulist[0].space).array()
-    for (v, U) in zip(cspc.index_iter(), Ulist):
+    if isinstance(U, HilbertArray):
+        if cspc.dim() != 2:
+            raise HilbertError('ambiguous usage of controlled_U when cspc.dim() != 2')
+        U = [U.space.eye(), U]
+
+    Udict = dict()
+
+    # convert list or iter to dict
+    if isinstance(U, dict):
+        Udict = U
+    else:
+        Ulist = list(U)
+
+        if len(Ulist) != cspc.dim():
+            raise HilbertShapeError(cspc.dim(), len(Ulist))
+
+        for (v, U) in zip(cspc.index_iter(), Ulist):
+            Udict[v] = U
+
+    if not Udict:
+        raise ValueError('unitaries list/dict was empty')
+
+    U = None
+    U0 = Udict.itervalues().next()
+
+    for U in Udict.itervalues():
+        if U.space != U.H.space:
+            raise HilbertError('not an operator: '+str(U.space))
+        if U.space != U0.space:
+            raise MismatchedSpaceError('operators act on different spaces: '+
+                str(U.space)+' vs. '+str(U0.space))
+
+
+    ret = (cspc.O * U0.space).eye()
+    for (v, U) in Udict.iteritems():
         ret[{ cspc: v, cspc.H: v }] = U
 
     return ret
@@ -252,12 +271,8 @@ def swap(h1, h2):
     if h1.dim() != h2.dim():
         raise HilbertShapeError(h1.dim(), h2.dim())
 
-    arr = np.zeros((h1.dim(), h2.dim(), h1.dim(), h2.dim()))
-    for i in range(h1.dim()):
-        for j in range(h2.dim()):
-            arr[i, j, j, i] = 1
-
-    axes = sum([ x.axes for x in (h1, h2, h1.H, h2.H) ], [])
+    arr = np.eye(h1.dim()*h2.dim(), dtype=h1.base_field.dtype)
+    axes = sum([ x.axes for x in (h1, h2, h2.H, h1.H) ], [])
     return (h1*h2).O.array(arr, reshape=True, input_axes=axes)
 
 def max_entangled(h1, h2):

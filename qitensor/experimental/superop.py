@@ -498,8 +498,7 @@ class CP_Map(Superoperator):
         if np.abs(rho.trace() - 1) > toler:
             raise ValueError("rho didn't have trace=1")
 
-        sigma = self.J * rho * self.J.H
-        return sigma.tracekeep(self.out_space).entropy() - sigma.tracekeep(self.env_space).entropy()
+        return self(rho).tracekeep(self.out_space).entropy() - self.C(rho).tracekeep(self.env_space).entropy()
 
     def private_information(self, ensemble):
         """
@@ -511,12 +510,13 @@ class CP_Map(Superoperator):
         dx = len(ensemble)
         hx = self._make_environ_spc(None, self.in_space.base_field, dx)
         rho = np.sum([ hx.ket(i).O * rho_i for (i, rho_i) in enumerate(ensemble) ])
+
         if rho.space != rho.H.space:
             raise HilbertError("ensemble was not on a Hermitian space: "+rho.space)
         if np.abs(rho.trace() - 1) > toler:
             raise ValueError("your ensemble didn't have trace=1")
-        sigma = self.J * rho * self.J.H
-        return sigma.mutual_info(hx, self.out_space) - sigma.mutual_info(hx, self.env_space)
+
+        return self(rho).mutual_info(hx, self.out_space) - self.C(rho).mutual_info(hx, self.env_space)
 
     @classmethod
     def from_function(cls, in_space, f, espc_def=None):

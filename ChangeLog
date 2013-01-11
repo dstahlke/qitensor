@@ -14,6 +14,7 @@
 	* HilbertArray.mutual_info() [untested]
 	* HilbertArray.relative_entropy() [untested, broken?]
 	* HilbertArray.norm() takes p argument
+	* HilbertArray.tracekeep()
 
 === qitensor-0.10 (Dan Stahlke, 2012-10-27) ===
 	* can run doctests via 'setup.py test'

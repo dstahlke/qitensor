@@ -128,10 +128,10 @@ class Superoperator(object):
         >>> (((-2)*E)(rho) - (-2)*E(rho)).norm() < 1e-14
         True
 
-        >>> E1 = Superoperator.random(ha, hb*hc, 'env1')
+        >>> E1 = Superoperator.random(ha, hb*hc)
         >>> E1
         Superoperator( |a><a| to |b,c><b,c| )
-        >>> E2 = Superoperator.random(hc*hd, he, 'env2')
+        >>> E2 = Superoperator.random(hc*hd, he)
         >>> E2
         Superoperator( |c,d><c,d| to |e><e| )
         >>> E3 = E2*E1
@@ -250,11 +250,29 @@ class Superoperator(object):
         return E
 
     @classmethod
-    def random(cls, spc_in, spc_out, espc_def=None):
+    def random(cls, spc_in, spc_out):
         in_space = cls._to_ket_space(spc_in)
         out_space = cls._to_ket_space(spc_out)
         m = spc_in.base_field.random_array((out_space.O.dim(), in_space.O.dim()))
         return Superoperator(in_space, out_space, m)
+
+    @classmethod
+    def transposer(cls, spc):
+        """
+        >>> from qitensor import qubit, qudit
+        >>> from qitensor.experimental.superop import Superoperator
+        >>> ha = qudit('a', 3)
+        >>> hb = qubit('b')
+        >>> rho = (ha*hb).random_density()
+
+        >>> T = Superoperator.transposer(ha)
+        >>> T
+        Superoperator( |a><a| to |a><a| )
+        >>> (T(rho) - rho.transpose(ha)).norm() < 1e-14
+        True
+        """
+
+        return cls.from_function(spc, lambda x: x.T)
 
     def upgrade_to_cp_map(self, espc_def=None):
         return CP_Map.from_matrix(self._m, self.in_space, self.out_space, espc_def=espc_def)
@@ -401,7 +419,7 @@ class CP_Map(Superoperator):
         True
         """
 
-        if isinstance(other, Superoperator):
+        if isinstance(other, CP_Map):
             common_spc = self.in_space.ket_set & other.out_space.ket_set
             in_spc  = (self.in_space.ket_set - common_spc) | other.in_space.ket_set
             out_spc = self.out_space.ket_set | (other.out_space.ket_set - common_spc)
@@ -410,12 +428,14 @@ class CP_Map(Superoperator):
 
             # If the multiplicands have disjoint environments, then the product will use the
             # product environment.  Otherwise, a new environment is created.
-            # FIXME - I think I need to check isinstance(other, CP_Map)
             if self.env_space.ket_set.isdisjoint(other.env_space.ket_set):
                 env = self.env_space * other.env_space
                 return CP_Map(self.J*other.J, env)
             else:
                 return super(CP_Map, self).__mul__(other).upgrade_to_cp_map()
+
+        if isinstance(other, Superoperator):
+            return super(CP_Map, self).__mul__(other)
 
         if isinstance(other, HilbertArray):
             return NotImplemented
@@ -467,6 +487,36 @@ class CP_Map(Superoperator):
         ret_hc = direct_sum((self.env_space, other.env_space))
         ret_J = ret_hc.P[0]*self.J + ret_hc.P[1]*other.J
         return CP_Map(ret_J, ret_hc)
+
+    def coherent_information(self, rho):
+        """
+        Compute S(B)-S(C) after passing the given state through the channel.
+        """
+
+        if rho.space != rho.H.space:
+            raise HilbertError("rho did not have equal bra and ket spaces: "+str(rho.space))
+        if np.abs(rho.trace() - 1) > toler:
+            raise ValueError("rho didn't have trace=1")
+
+        sigma = self.J * rho * self.J.H
+        return sigma.tracekeep(self.out_space).entropy() - sigma.tracekeep(self.env_space).entropy()
+
+    def private_information(self, ensemble):
+        """
+        Compute I(X;B) - I(X;C) where X is a classical ancillary system that records which
+        state of the ensemble was passed through the channel.
+        """
+
+        ensemble = list(ensemble)
+        dx = len(ensemble)
+        hx = self._make_environ_spc(None, self.in_space.base_field, dx)
+        rho = np.sum([ hx.ket(i).O * rho_i for (i, rho_i) in enumerate(ensemble) ])
+        if rho.space != rho.H.space:
+            raise HilbertError("ensemble was not on a Hermitian space: "+rho.space)
+        if np.abs(rho.trace() - 1) > toler:
+            raise ValueError("your ensemble didn't have trace=1")
+        sigma = self.J * rho * self.J.H
+        return sigma.mutual_info(hx, self.out_space) - sigma.mutual_info(hx, self.env_space)
 
     @classmethod
     def from_function(cls, in_space, f, espc_def=None):
@@ -661,4 +711,25 @@ class CP_Map(Superoperator):
         J = (in_space.O*env_space).array()
         for (i, a) in enumerate(in_space.index_iter()):
             J[{ in_space.H: a, in_space: a, env_space: i }] = 1
+        return CP_Map(J, env_space)
+
+    @classmethod
+    def erasure(cls, spc, p, bspc_def=None, espc_def=None):
+        """
+        Create a channel that has probability p of erasing the input, and 1-p of perfectly
+        transmitting the input.  The output space has dimension one greater than the input
+        space, and the receiver is notified of erasure via the extra computational basis state.
+        If p=0.5 then the channel is symmetric.
+        """
+
+        if p < 0 or p > 1:
+            raise ValueError("p must be in [0, 1]")
+
+        in_space = cls._to_ket_space(spc)
+        d = in_space.dim()
+        out_space = cls._make_environ_spc(bspc_def, in_space.base_field, d+1)
+        env_space = cls._make_environ_spc(espc_def, in_space.base_field, d+1)
+        J = (out_space * env_space * in_space.H).array()
+        J += np.sqrt(  p) * out_space.ket(d) * (env_space * in_space.H).array(np.eye(d+1, d), reshape=True)
+        J += np.sqrt(1-p) * env_space.ket(d) * (out_space * in_space.H).array(np.eye(d+1, d), reshape=True)
         return CP_Map(J, env_space)

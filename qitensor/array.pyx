@@ -1803,6 +1803,31 @@ cdef class HilbertArray:
 
         return working
 
+    def tracekeep(self, keep_spc):
+        """
+        Trace out all but the given spaces of a density operator.
+        Actually, a density operator is not needed, but the bra and ket spaces must be the same.
+
+        FIXME - doctests
+        """
+
+        if self.space != self.space.H:
+            raise HilbertError("self did not have equal bra and ket spaces: "+str(self.space))
+
+        if keep_spc == keep_spc.H:
+            keep_spc = keep_spc.ket_space()
+        keep_spc.assert_ket_space()
+
+        self_spc = self.space.ket_space()
+
+        if self_spc == keep_spc:
+            return self
+
+        if not (keep_spc.ket_set <= self_spc.ket_set):
+            raise MismatchedSpaceError('space not part of array: '+str(keep_spc)+' vs. '+str(self_spc))
+
+        return self.trace(self_spc / keep_spc)
+
     def expm(self):
         """
         Return the matrix exponential of this array.
@@ -2365,32 +2390,22 @@ cdef class HilbertArray:
         FIXME - docs
         """
 
-        if ha == ha.O:
+        self.assert_density_matrix()
+
+        if ha == ha.H:
             ha = ha.ket_space()
-        if hb == hb.O:
+        if hb == hb.H:
             hb = hb.ket_space()
 
         ha.assert_ket_space()
         hb.assert_ket_space()
 
-        self.assert_density_matrix()
-
-        spc = self.space.ket_space()
-
         if ha.ket_set & hb.ket_set:
             raise MismatchedSpaceError('spaces are not disjoint: '+str(ha)+' vs. '+str(hb))
-        if not (ha.ket_set <= spc.ket_set):
-            raise MismatchedSpaceError('space not part of array: '+str(ha)+' vs. '+str(spc))
-        if not (hb.ket_set <= spc.ket_set):
-            raise MismatchedSpaceError('space not part of array: '+str(hb)+' vs. '+str(spc))
 
-        if ha*hb == spc:
-            Sab = self.entropy()
-        else:
-            Sab = self.trace(spc / (ha*hb)).entropy()
-
-        Sa = self.trace(spc / ha).entropy()
-        Sb = self.trace(spc / hb).entropy()
+        Sa = self.tracekeep(ha).entropy()
+        Sb = self.tracekeep(hb).entropy()
+        Sab = self.tracekeep(ha*hb).entropy()
 
         return Sa + Sb - Sab
 

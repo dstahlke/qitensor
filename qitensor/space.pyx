@@ -1013,20 +1013,25 @@ cdef class HilbertSpace:
 
         return [ self.basis_vec(idx) for idx in self.index_iter() ]
 
-    cpdef hermitian_basis(self, normalize=False):
+    cpdef hermitian_basis(self, normalize=False, tracefree=False):
         """
         Returns an orthogonal basis (optionally normalized) of Hermitian
         operators.  It is required that the dimension of the bra space be equal
         to that of the ket space.  Real linear combinations of these basis
-        operators will be Hermitian.
+        operators will be Hermitian.  If the ``tracefree`` option is specified
+        then the returned basis only covers the :math:`D^2-1` dimensional
+        subspace.
 
         >>> from qitensor import qubit, qudit, indexed_space
         >>> import numpy
         >>> import numpy.random
 
-        >>> ha = qudit('a', 3)
+        >>> ha = qudit('a', 7)
         >>> spc = ha.O
+
         >>> b = spc.hermitian_basis(normalize=True)
+        >>> len(b) == ha.dim() ** 2
+        True
         >>> numpy.allclose([[(x.H*y).trace() for y in b] for x in b], numpy.eye(spc.dim()))
         True
         >>> numpy.all((x-x.H).norm() < 1e-12 for x in b)
@@ -1035,8 +1040,20 @@ cdef class HilbertSpace:
         >>> (y - y.H).norm() < 1e-12
         True
 
+        >>> tf = spc.hermitian_basis(normalize=True, tracefree=True)
+        >>> len(tf) == ha.dim() ** 2 - 1
+        True
+        >>> numpy.allclose([[(x.H*y).trace() for y in tf] for x in tf], numpy.eye(spc.dim()-1))
+        True
+        >>> numpy.all((x-x.H).norm() < 1e-12 for x in tf)
+        True
+        >>> y = numpy.sum([x * numpy.random.rand() for x in tf])
+        >>> (y - y.H).norm() < 1e-12
+        True
+
         >>> hb = indexed_space('b', ['x', 'y', 'z'])
-        >>> spc = ha * hb.H
+        >>> hc = qudit('c', 3)
+        >>> spc = hb * hc.H
         >>> b = spc.hermitian_basis(normalize=True)
         >>> numpy.allclose([[(x.H*y).trace() for y in b] for x in b], numpy.eye(spc.dim()))
         True
@@ -1046,13 +1063,30 @@ cdef class HilbertSpace:
         bra_indices = list(self.bra_space().index_iter())
         ket_indices = list(self.ket_space().index_iter())
         assert dim == len(bra_indices) == len(ket_indices)
+
         basis = []
+
+        if tracefree:
+            c = self.base_field.frac(1, (self.base_field.sqrt(dim) + 1))
+            b = 1 + (dim-2)*c
+            for k in range(1, dim):
+                v = self.eye() * c
+                v[ ket_indices[0] + bra_indices[0] ] = 1
+                v[ ket_indices[k] + bra_indices[k] ] = -b
+                basis.append(v)
+            #diagspc = TensorSubspace.from_span(np.eye(dim)) - TensorSubspace.from_span([np.ones(dim)])
+            #for diag in diagspc:
+            #    basis.append(self.diag(diag))
+
         for i in range(dim):
             for j in range(i, dim):
+                if tracefree and i==j:
+                    continue
                 v = self.array()
                 v[ ket_indices[i] + bra_indices[j] ] = 1
                 v[ ket_indices[j] + bra_indices[i] ] = 1
                 basis.append(v)
+
         for i in range(dim):
             for j in range(i+1, dim):
                 v = self.array()

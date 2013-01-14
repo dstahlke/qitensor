@@ -43,7 +43,7 @@ cdef class HilbertSpace(object):
     cpdef HilbertArray fully_mixed(self)
     cpdef basis_vec(self, idx)
     cpdef basis(self)
-    cpdef hermitian_basis(self, normalize=*)
+    cpdef hermitian_basis(self, normalize=*, tracefree=*)
     cpdef HilbertArray fourier_basis_state(self, int k)
     cpdef HilbertArray fourier(self)
     cpdef HilbertArray hadamard(self)

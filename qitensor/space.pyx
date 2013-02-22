@@ -1034,7 +1034,7 @@ cdef class HilbertSpace:
         True
         >>> numpy.allclose([[(x.H*y).trace() for y in b] for x in b], numpy.eye(spc.dim()))
         True
-        >>> numpy.all((x-x.H).norm() < 1e-12 for x in b)
+        >>> numpy.all([(x-x.H).norm() < 1e-12 for x in b])
         True
         >>> y = numpy.sum([x * numpy.random.rand() for x in b])
         >>> (y - y.H).norm() < 1e-12
@@ -1045,7 +1045,7 @@ cdef class HilbertSpace:
         True
         >>> numpy.allclose([[(x.H*y).trace() for y in tf] for x in tf], numpy.eye(spc.dim()-1))
         True
-        >>> numpy.all((x-x.H).norm() < 1e-12 for x in tf)
+        >>> numpy.all([(x-x.H).norm() < 1e-12 for x in tf])
         True
         >>> y = numpy.sum([x * numpy.random.rand() for x in tf])
         >>> (y - y.H).norm() < 1e-12

@@ -11,6 +11,14 @@ toler = 1e-12
 # FIXME - use exceptions rather than assert
 # FIXME - some methods don't have docs
 # FIXME - use CP_Map in the map-state duality example
+# FIXME - method to relabel input/output/env space
+# Possible examples:
+#   Space not seen by environment:
+#       ha = qudit('a', 5); hb = qudit('b', 8); hc = qudit('c', 3)
+#       E = CP_Map((hb*hc*ha.H).random_isometry(), hc)
+#         ... or
+#       E = CP_Map.random(ha, hb, hc)
+#       E.ket().O.trace(hc).span(ha.O)
 
 __all__ = ['Superoperator', 'CP_Map']
 
@@ -361,6 +369,31 @@ class CP_Map(Superoperator):
         """The complimentary channel."""
         return self._C
 
+    def ket(self):
+        """
+        Returns the channel ket.
+
+        >>> from qitensor import qudit
+        >>> from qitensor.experimental.superop import CP_Map
+        >>> ha = qudit('a', 2)
+        >>> hb = qudit('b', 2)
+        >>> E = CP_Map.random(ha, hb, 'c')
+        >>> E.J.space
+        |b,c><a|
+        >>> E.ket().space
+        |a,b,c>
+        >>> F = CP_Map.random(ha, ha, 'c')
+        >>> F.ket()
+        Traceback (most recent call last):
+            ...
+        HilbertError: 'channel ket can only be made if input space is different from output and environment spaces'
+        """
+
+        if not self.in_space.ket_set.isdisjoint(self.J.space.ket_set):
+            raise HilbertError('channel ket can only be made if input space is different '+
+                'from output and environment spaces')
+        return self.J.transpose(self.in_space)
+
     def is_cptp(self):
         return (self.J.H*self.J - self.in_space.eye()).norm() < toler
 
@@ -616,6 +649,7 @@ class CP_Map(Superoperator):
     def random(cls, spc_in, spc_out, espc_def=None):
         in_space = cls._to_ket_space(spc_in)
         out_space = cls._to_ket_space(spc_out)
+        # FIXME - allow small environment if espc is given
         dc = in_space.dim() * out_space.dim()
         env_space = cls._make_environ_spc(espc_def, in_space.base_field, dc)
         J = (out_space*env_space*in_space.H).random_isometry()

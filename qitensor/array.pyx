@@ -1537,6 +1537,29 @@ cdef class HilbertArray:
 
         return self.schatten_norm(1, row_space=row_space, col_space=col_space)
 
+    cpdef op_norm(self, row_space=None, col_space=None):
+        """
+        Returns the maximum singular value of this operator.
+
+        :param row_space: the HilbertSpace to use for the row space of the matrix,
+            default is the bra space of the input array.
+        :type row_space: HilbertSpace, list, or tuple
+        :param col_space: the HilbertSpace to use for the column space of the matrix,
+            default is the ket space of the input array.
+        :type col_space: HilbertSpace, list, or tuple
+
+        See also: :func:`schatten_norm`
+
+        >>> from qitensor import qudit
+        >>> ha = qudit('a', 3)
+        >>> sv = [2, 3, 7]
+        >>> M = ha.random_unitary() * ha.diag(sv) * ha.random_unitary()
+        >>> abs(M.trace_norm() - 7) < 1e-14
+        True
+        """
+
+        return self.schatten_norm('inf', row_space=row_space, col_space=col_space)
+
     cpdef schatten_norm(self, p, row_space=None, col_space=None):
         """
         Returns the Schatten p-norm of this operator.
@@ -1561,7 +1584,10 @@ cdef class HilbertArray:
         """
 
         sv = self.singular_vals(row_space=row_space, col_space=col_space)
-        return np.sum([ x**p for x in sv ]) ** self.space.base_field.frac(1, p)
+        if p == 'inf':
+            return np.max(sv)
+        else:
+            return np.sum([ x**p for x in sv ]) ** self.space.base_field.frac(1, p)
 
     cpdef normalize(self):
         """

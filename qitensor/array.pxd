@@ -32,6 +32,7 @@ cdef class HilbertArray:
     cpdef fill(self, val)
     cpdef norm(self, p=*)
     cpdef trace_norm(self, row_space=*, col_space=*)
+    cpdef op_norm(self, row_space=*, col_space=*)
     cpdef schatten_norm(self, p, row_space=*, col_space=*)
     cpdef normalize(self)
     cpdef normalized(self)

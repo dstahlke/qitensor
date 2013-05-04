@@ -15,6 +15,7 @@
 	* HilbertArray.relative_entropy() [untested, broken?]
 	* HilbertArray.norm() takes p argument
 	* HilbertArray.tracekeep()
+	* HilbertArray.conj_by()
 	* HilbertSpace.hermitian_basis has tracefree option
 
 === qitensor-0.10 (Dan Stahlke, 2012-10-27) ===

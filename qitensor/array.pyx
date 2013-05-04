@@ -1554,7 +1554,7 @@ cdef class HilbertArray:
         >>> ha = qudit('a', 3)
         >>> sv = [2, 3, 7]
         >>> M = ha.random_unitary() * ha.diag(sv) * ha.random_unitary()
-        >>> abs(M.trace_norm() - 7) < 1e-14
+        >>> abs(M.op_norm() - 7) < 1e-14
         True
         """
 
@@ -1713,6 +1713,19 @@ cdef class HilbertArray:
         cdef object xxx = self.space.base_field # FIXME - need to forget type to avoid Cython error
         return self.np_matrix_transform( \
             xxx.mat_conj)
+
+    cpdef conj_by(self, U):
+        """
+        Returns U*self*U.H.
+
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> U = ha.random_unitary()
+        >>> x = ha.random_density()
+        >>> (U*x*U.H - x.conj_by(U)).norm() < 1e-13
+        True
+        """
+        return U*self*U.H
 
     def trace(self, axes=None):
         """

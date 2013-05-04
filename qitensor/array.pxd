@@ -38,6 +38,7 @@ cdef class HilbertArray:
     cpdef normalized(self)
     cpdef inv(self, row_space=*)
     cpdef conj(self)
+    cpdef conj_by(self, U)
     cpdef svd(self, full_matrices=*, inner_space=*)
     cpdef svd_list(self, row_space=*, col_space=*, thresh=*)
     cpdef singular_vals(self, row_space=*, col_space=*)

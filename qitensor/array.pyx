@@ -2314,9 +2314,9 @@ cdef class HilbertArray:
 
         (W, V) = self.eig(hermit=True)
         W = np.diag(W.as_np_matrix())
-        if not np.all(W >= 0):
+        if not np.all(W >= -1e-12):
             raise HilbertError('matrix was not positive')
-        W = self.space.diag(np.sqrt(W))
+        W = self.space.diag(np.sqrt(np.where(W >= 0, W, 0)))
         return V * W * V.H
 
     cpdef entropy(self, normalize=False, checks=True):

@@ -41,8 +41,7 @@ class Superoperator(object):
         Tells pickle how to store this object.
 
         >>> import pickle
-        >>> from qitensor import qubit, qudit
-        >>> from qitensor.experimental.superop import Superoperator, CP_Map
+        >>> from qitensor import qubit, qudit, Superoperator, CP_Map
         >>> ha = qudit('a', 3)
         >>> hb = qubit('b')
         >>> rho = (ha*hb).random_density()
@@ -115,8 +114,7 @@ class Superoperator(object):
 
     def __mul__(self, other):
         """
-        >>> from qitensor import qudit
-        >>> from qitensor.experimental.superop import Superoperator
+        >>> from qitensor import qudit, Superoperator
         >>> ha = qudit('a', 2)
         >>> hb = qudit('b', 3)
         >>> hc = qudit('c', 4)
@@ -169,8 +167,7 @@ class Superoperator(object):
 
     def __add__(self, other):
         """
-        >>> from qitensor import qudit
-        >>> from qitensor.experimental.superop import Superoperator
+        >>> from qitensor import qudit, Superoperator
         >>> ha = qudit('a', 4)
         >>> hb = qudit('b', 3)
         >>> E1 = CP_Map.random(ha, hb)
@@ -194,8 +191,7 @@ class Superoperator(object):
 
     def __neg__(self):
         """
-        >>> from qitensor import qudit
-        >>> from qitensor.experimental.superop import Superoperator
+        >>> from qitensor import qudit, Superoperator
         >>> ha = qudit('a', 4)
         >>> hb = qudit('b', 3)
         >>> E = CP_Map.random(ha, hb)
@@ -208,8 +204,7 @@ class Superoperator(object):
 
     def __sub__(self, other):
         """
-        >>> from qitensor import qudit
-        >>> from qitensor.experimental.superop import Superoperator
+        >>> from qitensor import qudit, Superoperator
         >>> ha = qudit('a', 4)
         >>> hb = qudit('b', 3)
         >>> E1 = CP_Map.random(ha, hb)
@@ -226,8 +221,7 @@ class Superoperator(object):
     @classmethod
     def from_function(cls, in_space, f):
         """
-        >>> from qitensor import qubit, qudit
-        >>> from qitensor.experimental.superop import Superoperator, CP_Map
+        >>> from qitensor import qubit, qudit, Superoperator, CP_Map
         >>> ha = qudit('a', 3)
         >>> hb = qubit('b')
         >>> rho = (ha*hb).random_density()
@@ -272,8 +266,7 @@ class Superoperator(object):
     @classmethod
     def transposer(cls, spc):
         """
-        >>> from qitensor import qubit, qudit
-        >>> from qitensor.experimental.superop import Superoperator
+        >>> from qitensor import qubit, qudit, Superoperator
         >>> ha = qudit('a', 3)
         >>> hb = qubit('b')
         >>> rho = (ha*hb).random_density()
@@ -348,8 +341,7 @@ class CP_Map(Superoperator):
         Tells pickle how to store this object.
 
         >>> import pickle
-        >>> from qitensor import qudit
-        >>> from qitensor.experimental.superop import CP_Map
+        >>> from qitensor import qudit, CP_Map
         >>> ha = qudit('a', 2)
         >>> rho = ha.O.random_array()
         >>> E = CP_Map.random(ha, ha)
@@ -380,8 +372,7 @@ class CP_Map(Superoperator):
         """
         Returns the channel ket.
 
-        >>> from qitensor import qudit
-        >>> from qitensor.experimental.superop import CP_Map
+        >>> from qitensor import qudit, CP_Map
         >>> ha = qudit('a', 2)
         >>> hb = qudit('b', 2)
         >>> E = CP_Map.random(ha, hb, 'c')
@@ -416,8 +407,7 @@ class CP_Map(Superoperator):
 
     def __mul__(self, other):
         """
-        >>> from qitensor import qudit
-        >>> from qitensor.experimental.superop import CP_Map
+        >>> from qitensor import qudit, CP_Map
         >>> ha = qudit('a', 2)
         >>> hb = qudit('b', 3)
         >>> hc = qudit('c', 2)
@@ -505,8 +495,7 @@ class CP_Map(Superoperator):
         is the direct sum of the component environments.
 
         >>> import numpy.linalg as linalg
-        >>> from qitensor import qudit
-        >>> from qitensor.experimental.superop import CP_Map
+        >>> from qitensor import qudit, CP_Map
         >>> ha = qudit('a', 2)
         >>> hb = qudit('b', 3)
         >>> E1 = CP_Map.random(ha, hb, 'hc1')
@@ -564,8 +553,7 @@ class CP_Map(Superoperator):
     @classmethod
     def from_function(cls, in_space, f, espc_def=None):
         """
-        >>> from qitensor import qubit, qudit
-        >>> from qitensor.experimental.superop import CP_Map
+        >>> from qitensor import qubit, qudit, CP_Map
         >>> ha = qudit('a', 3)
         >>> hb = qubit('b')
         >>> rho = (ha*hb).random_density()
@@ -590,8 +578,7 @@ class CP_Map(Superoperator):
     @classmethod
     def from_matrix(cls, m, spc_in, spc_out, espc_def=None, compact_environ_tol=1e-12):
         """
-        >>> from qitensor import qudit
-        >>> from qitensor.experimental.superop import CP_Map
+        >>> from qitensor import qudit, CP_Map
         >>> ha = qudit('a', 2)
         >>> hb = qudit('b', 3)
         >>> hx = qudit('x', 5)
@@ -672,8 +659,7 @@ class CP_Map(Superoperator):
     @classmethod
     def unitary(cls, U, espc_def=None):
         """
-        >>> from qitensor import qubit
-        >>> from qitensor.experimental.superop import CP_Map
+        >>> from qitensor import qubit, CP_Map
         >>> ha = qubit('a')
         >>> hb = qubit('b')
         >>> U = ha.random_unitary()
@@ -690,8 +676,7 @@ class CP_Map(Superoperator):
     @classmethod
     def identity(cls, spc, espc_def=None):
         """
-        >>> from qitensor import qubit
-        >>> from qitensor.experimental.superop import CP_Map
+        >>> from qitensor import qubit, CP_Map
         >>> ha = qubit('a')
         >>> hb = qubit('b')
         >>> rho = (ha*hb).random_density()
@@ -705,8 +690,7 @@ class CP_Map(Superoperator):
     @classmethod
     def totally_noisy(cls, spc, espc_def=None):
         """
-        >>> from qitensor import qudit
-        >>> from qitensor.experimental.superop import CP_Map
+        >>> from qitensor import qudit, CP_Map
         >>> ha = qudit('a', 5)
         >>> rho = ha.random_density()
         >>> E = CP_Map.totally_noisy(ha)
@@ -727,8 +711,7 @@ class CP_Map(Superoperator):
     @classmethod
     def noisy(cls, spc, p, espc_def=None):
         """
-        >>> from qitensor import qudit
-        >>> from qitensor.experimental.superop import CP_Map
+        >>> from qitensor import qudit, CP_Map
         >>> ha = qudit('a', 5)
         >>> rho = ha.random_density()
         >>> E = CP_Map.noisy(ha, 0.2)
@@ -746,8 +729,7 @@ class CP_Map(Superoperator):
     @classmethod
     def decohere(cls, spc, espc_def=None):
         """
-        >>> from qitensor import qudit
-        >>> from qitensor.experimental.superop import CP_Map
+        >>> from qitensor import qudit, CP_Map
         >>> ha = qudit('a', 5)
         >>> rho = ha.random_density()
         >>> E = CP_Map.decohere(ha)

@@ -5,7 +5,7 @@
 	* HilbertArray.inv() method, which allows taking inverse of cross
 	  operator
 	* HilbertSpace.fully_mixed()
-	* superoperators module (experimental)
+	* superoperators module
 	* HilbertArray.trace_norm()
 	* HilbertArray.schatten_norm()
 	* circuits.controlled_U

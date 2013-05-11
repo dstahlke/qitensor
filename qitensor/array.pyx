@@ -1220,11 +1220,10 @@ cdef class HilbertArray:
         array([ 1.+0.j,  4.+0.j])
         >>> (A*B).diag()
         HilbertArray(|a,b>,
-        array([[  1.00000000e+00+0.j,   1.00000000e+03+0.j],
-               [  4.00000000e+00+0.j,   4.00000000e+03+0.j]]))
+        array([[    1.+0.j,  1000.+0.j],
+               [    4.+0.j,  4000.+0.j]]))
         >>> (A*B).diag(as_np=True)
-        array([  1.00000000e+00+0.j,   1.00000000e+03+0.j,   4.00000000e+00+0.j,
-                 4.00000000e+03+0.j])
+        array([    1.+0.j,  1000.+0.j,     4.+0.j,  4000.+0.j])
         """
 
         cdef int D = self.space.assert_square()
@@ -1876,7 +1875,6 @@ cdef class HilbertArray:
 
         >>> import numpy
         >>> from qitensor import qubit
-        >>> numpy.set_printoptions(suppress = True)
         >>> ha = qubit('a')
         >>> ((ha.X * numpy.pi * 1j).expm() + ha.eye()).norm() < 1e-12
         True
@@ -1892,9 +1890,7 @@ cdef class HilbertArray:
         It is required that the dimension of the bra space be equal to the
         dimension of the ket space.
 
-        >>> import numpy
         >>> from qitensor import qubit
-        >>> numpy.set_printoptions(suppress = True)
         >>> ha = qubit('a')
         >>> hb = qubit('b')
         >>> op = ha.X * hb.Z

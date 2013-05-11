@@ -27,8 +27,6 @@ def cphase(h1, h2):
     contents of the space's index set.
 
     >>> from qitensor import qubit, cphase
-    >>> import numpy
-    >>> numpy.set_printoptions(suppress = True)
 
     >>> ha = qubit('a')
     >>> hb = qubit('b')
@@ -285,8 +283,6 @@ def max_entangled(h1, h2):
     index, regardless of the actual contents of the space's index set.
 
     >>> from qitensor import qubit, qudit, indexed_space, max_entangled
-    >>> import numpy
-    >>> numpy.set_printoptions(suppress = True, precision = 6)
 
     >>> ha = qubit('a')
     >>> hb = qubit('b')

@@ -50,6 +50,9 @@ class test_qitensor(Command):
         if cwd in sys.path:
             sys.path.remove(cwd)
 
+        import numpy
+        numpy.set_printoptions(precision = 6, suppress = True)
+
         import qitensor
         qitensor.doctest()
 

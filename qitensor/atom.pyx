@@ -479,6 +479,7 @@ cdef class HilbertAtom(HilbertSpace):
 
         See also: :func:`X`
 
+        >>> import numpy as np
         >>> from qitensor import qubit, qudit, indexed_space, dihedral_group
 
         >>> ha = qubit('a')
@@ -558,8 +559,6 @@ cdef class HilbertAtom(HilbertSpace):
         See also: :func:`Z`
 
         >>> from qitensor import qubit, indexed_space
-        >>> import numpy
-        >>> numpy.set_printoptions(suppress = True)
 
         >>> ha = qubit('a')
         >>> ha.pauliZ()
@@ -636,8 +635,6 @@ cdef class HilbertAtom(HilbertSpace):
         See also: :func:`pauliZ`
 
         >>> from qitensor import qubit, indexed_space
-        >>> import numpy
-        >>> numpy.set_printoptions(suppress = True)
 
         >>> ha = qubit('a')
         >>> ha.Z
@@ -682,8 +679,6 @@ cdef class HilbertAtom(HilbertSpace):
         This is only available for qubit spaces.
 
         >>> from qitensor import qubit
-        >>> import numpy
-        >>> numpy.set_printoptions(suppress = True, precision = 6)
 
         >>> ha = qubit('a')
         >>> ha.gateT()

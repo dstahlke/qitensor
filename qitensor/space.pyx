@@ -606,7 +606,7 @@ cdef class HilbertSpace:
         >>> op.space
         |a,b><a,b|
         >>> import numpy
-        >>> numpy.diag( op.as_np_matrix() )     
+        >>> numpy.diag( op.as_np_matrix() )
         array([ 1.+0.j,  2.+0.j,  3.+0.j,  4.+0.j,  5.+0.j,  6.+0.j])
         """
 
@@ -1109,8 +1109,6 @@ cdef class HilbertSpace:
         (regardless of the actual values of the index set).
 
         >>> from qitensor import qubit, qudit, indexed_space
-        >>> import numpy
-        >>> numpy.set_printoptions(suppress = True)
 
         >>> ha = qudit('a', 4)
         >>> ha.fourier_basis_state(0)

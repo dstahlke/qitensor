@@ -13,3 +13,4 @@ Examples
    graph_codes
    pickle
    pickle_sage
+   HPHH

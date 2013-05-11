@@ -14,3 +14,4 @@ Examples
    pickle
    pickle_sage
    HPHH
+   superactivation_smith_yard

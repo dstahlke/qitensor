@@ -27,6 +27,25 @@ dstahlke@gmail.com
 
 == Changelog ==
 
+=== qitensor-0.11 (Dan Stahlke, 2013-05-11) ===
+	* superoperators module
+	* sympy support
+	* added PNG renderers, for qtconsole (still need to find a way to
+	  detect qtconsole)
+	* HilbertArray.inv() method, which allows taking inverse of cross operator
+	* HilbertArray.trace_norm()
+	* HilbertArray.schatten_norm()
+	* HilbertArray.mutual_info()
+	* HilbertArray.relative_entropy()
+	* HilbertArray.norm() takes p argument
+	* HilbertArray.tracekeep()
+	* HilbertArray.conj_by()
+	* HilbertSpace.fully_mixed()
+	* HilbertSpace.hermitian_basis has tracefree option
+	* circuits.controlled_U
+	* circuits.toffoli
+	* circuits.fredkin
+
 === qitensor-0.10 (Dan Stahlke, 2012-10-27) ===
 	* can run doctests via 'setup.py test'
 	* HilbertSpace.fourier()

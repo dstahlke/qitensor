@@ -8,7 +8,6 @@ from qitensor.space import create_space2
 
 toler = 1e-12
 
-# FIXME - use exceptions rather than assert
 # FIXME - some methods don't have docs
 # FIXME - use CP_Map in the map-state duality example
 # FIXME - method to relabel input/output/env space
@@ -523,8 +522,11 @@ class CP_Map(Superoperator):
         if not isinstance(other, CP_Map):
             raise ValueError('other was not a CP_Map')
 
-        assert self.in_space == other.in_space
-        assert self.out_space == other.out_space
+        if self.in_space != other.in_space or self.out_space != other.out_space:
+            raise MismatchedSpaceError("spaces do not match: "+
+                    repr(self.in_space)+" -> "+repr(self.out_space)+" vs. "+
+                    repr(other.in_space)+" -> "+repr(other.out_space))
+
         ret_hc = direct_sum((self.env_space, other.env_space))
         ret_J = ret_hc.P[0]*self.J + ret_hc.P[1]*other.J
         return CP_Map(ret_J, ret_hc)
@@ -607,7 +609,11 @@ class CP_Map(Superoperator):
         da = in_space.dim()
         db = out_space.dim()
         t = np.array(m)
-        assert t.shape == (db*db, da*da)
+
+        if t.shape != (db*db, da*da):
+            raise HilbertShapeError("matrix wrong size for given spaces: "+
+                    repr(t.shape)+" vs. "+repr((db*db, da*da)))
+
         t = t.reshape(db, db, da, da)
         t = t.transpose([0, 2, 1, 3])
         t = t.reshape(db*da, db*da)
@@ -730,7 +736,9 @@ class CP_Map(Superoperator):
         True
         """
 
-        assert 0 <= p <= 1
+        if not (0 <= p <= 1):
+            raise HilbertError("p must be in [0,1], but it was "+repr(p))
+
         E0 = cls.totally_noisy(spc)
         E1 = cls.identity(spc)
         return p*E0 + (1-p)*E1

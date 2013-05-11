@@ -3,7 +3,7 @@ import itertools
 import random
 
 from qitensor import qudit, direct_sum, NotKetSpaceError, \
-    HilbertSpace, HilbertArray, HilbertError
+    HilbertSpace, HilbertArray, HilbertError, HilbertShapeError, MismatchedSpaceError
 from qitensor.space import create_space2
 
 toler = 1e-12
@@ -34,7 +34,8 @@ class Superoperator(object):
         self._out_space = self._to_ket_space(out_space)
         self._m = np.matrix(m)
 
-        assert m.shape == (self.out_space.O.dim(), self.in_space.O.dim())
+        if m.shape != (self.out_space.O.dim(), self.in_space.O.dim()):
+            raise HilbertShapeError(m.shape, (self.out_space.O.dim(), self.in_space.O.dim()))
 
     def __reduce__(self):
         """
@@ -102,7 +103,9 @@ class Superoperator(object):
         return self._m
 
     def __call__(self, rho):
-        assert rho.space.bra_ket_set >= self.in_space.O.bra_ket_set
+        if not rho.space.bra_ket_set >= self.in_space.O.bra_ket_set:
+            raise MismatchedSpaceError("argument space "+repr(rho.space)+
+                    " does not contain superop domain "+repr(self.in_space.O))
         (row_space, col_space) = rho._get_row_col_spaces(col_space=self.in_space.O)
         ret_vec = self._m * rho.as_np_matrix(col_space=self.in_space.O)
         if len(row_space):
@@ -183,8 +186,10 @@ class Superoperator(object):
         if not isinstance(other, Superoperator):
             return NotImplemented
 
-        assert self.in_space == other.in_space
-        assert self.out_space == other.out_space
+        if self.in_space != other.in_space or self.out_space != other.out_space:
+            raise MismatchedSpaceError("spaces do not match: "+
+                    repr(self.in_space)+" -> "+repr(self.out_space)+" vs. "+
+                    repr(other.in_space)+" -> "+repr(other.out_space))
 
         return Superoperator(self.in_space, self.out_space, self._m + other._m)
 
@@ -242,7 +247,8 @@ class Superoperator(object):
 
         in_space = cls._to_ket_space(in_space)
         out_space = f(in_space.eye()).space
-        assert out_space == out_space.H
+        if out_space != out_space.H:
+            raise MismatchedSpaceError("out space was not symmetric: "+repr(out_space))
         out_space = out_space.ket_space()
 
         m = np.zeros((out_space.dim()**2, in_space.dim()**2), in_space.base_field.dtype)
@@ -310,7 +316,9 @@ class CP_Map(Superoperator):
 
         env_space = self._to_ket_space(env_space)
         in_space = J.space.bra_space().H
-        assert J.space.ket_set >= env_space.ket_set
+        if not J.space.ket_set >= env_space.ket_set:
+            raise MismatchedSpaceError("J output does not contain env_space: "+repr(J.ket_space)+
+                    " vs. "+repr(env_space))
         out_space = J.space.ket_set - env_space.ket_set
         out_space = create_space2(out_space, frozenset())
 

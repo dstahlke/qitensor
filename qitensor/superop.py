@@ -28,6 +28,10 @@ def _unreduce_supop_v1(in_space, out_space, m):
     return Superoperator(in_space, out_space, m)
 
 class Superoperator(object):
+    """
+    FIXME: need to write documentation.
+    """
+
     def __init__(self, in_space, out_space, m):
         self._in_space = self._to_ket_space(in_space)
         self._out_space = self._to_ket_space(out_space)
@@ -295,6 +299,10 @@ def _unreduce_cpmap_v1(in_space, out_space, env_space, J):
     return CP_Map(J, env_space)
 
 class CP_Map(Superoperator):
+    """
+    FIXME: need to write documentation.
+    """
+
     def __init__(self, J, env_space, _complimentary_channel=None):
         """
         >>> ha = qudit('a', 2)

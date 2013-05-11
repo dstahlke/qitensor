@@ -9,5 +9,6 @@ Reference
    array
    circuit
    subspace
+   superop
    group
    experimental

@@ -1247,21 +1247,26 @@ cdef class HilbertArray:
 
         >>> import numpy
         >>> from qitensor import qubit, qudit
-        >>> ha = qubit('a')
-        >>> hb = qudit('b', 3)
+        >>> ha = qudit('a', 3)
+        >>> hb = qudit('b', 4)
         >>> x = (ha.O * hb).random_array()
         >>> x.space
         |a,b><a|
         >>> x.as_np_matrix().shape
-        (6, 2)
+        (12, 3)
         >>> # returns a copy, not a view
         >>> x.as_np_matrix().fill(0); x.norm() == 0
         False
         >>> x.as_np_matrix(col_space=ha.O).shape
-        (4, 3)
+        (9, 4)
         >>> x.as_np_matrix(row_space=ha.O).shape
-        (3, 4)
+        (4, 9)
         >>> numpy.allclose(x.as_np_matrix(col_space=ha.O), x.as_np_matrix(row_space=ha.O).T)
+        True
+        >>> # If you pass a list, you can control the storage order.
+        >>> x.as_np_matrix(col_space=[ha, hb])[1,2] == x[{ ha: 0, hb: 1, ha.H: 2 }]
+        True
+        >>> x.as_np_matrix(col_space=[hb, ha])[1,2] == x[{ hb: 0, ha: 1, ha.H: 2 }]
         True
         """
 

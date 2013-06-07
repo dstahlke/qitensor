@@ -856,7 +856,7 @@ cdef class HilbertSpace:
 
     cpdef HilbertArray random_density(self):
         """
-        Returns a random density matrix.
+        Returns a random density matrix (positive matrix with unit trace).
 
         >>> from qitensor import qubit, qudit
 
@@ -887,6 +887,42 @@ cdef class HilbertSpace:
         ket_spc = self.ket_space()
         eig = np.random.rand(ket_spc.dim())
         eig /= np.sum(eig)
+        U = ket_spc.random_unitary()
+        return U * ket_spc.diag(eig) * U.H
+
+    cpdef HilbertArray random_povm_element(self):
+        """
+        Returns a random POVM element (positive matrix with eigenvalues bounded
+        by one).
+
+        >>> from qitensor import qubit, qudit
+
+        >>> ha = qubit('a')
+        >>> hb = qudit('b', 3)
+        >>> ha.random_povm_element().space
+        |a><a|
+        >>> ha.H.random_povm_element().space
+        |a><a|
+        >>> ha.O.random_povm_element().space
+        |a><a|
+        >>> (ha*hb).random_povm_element().space
+        |a,b><a,b|
+        >>> (ha*hb.H).random_povm_element()
+        Traceback (most recent call last):
+            ...
+        HilbertError: 'not a symmetric operator space: |a><b|'
+        >>> nrm = (ha*hb).random_povm_element().op_norm()
+        >>> nrm <= 1
+        True
+        """
+
+        if len(self.ket_set) == 0:
+            return self.H.random_density()
+        if len(self.bra_set) > 0 and self.bra_set != self.H.bra_set:
+            raise HilbertError('not a symmetric operator space: '+str(self))
+
+        ket_spc = self.ket_space()
+        eig = np.random.rand(ket_spc.dim())
         U = ket_spc.random_unitary()
         return U * ket_spc.diag(eig) * U.H
 

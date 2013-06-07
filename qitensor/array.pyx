@@ -619,7 +619,7 @@ cdef class HilbertArray:
         arr = np.vectorize(fn, otypes=[dtype])(self.nparray)
         return self.space.array(arr)
 
-    cpdef closeto(self, other, rtol=1e-05, atol=1e-08):
+    cpdef closeto(self, HilbertArray other, rtol=1e-05, atol=1e-08):
         """
         Checks whether two arrays are nearly equal, similar to numpy.allclose.
 
@@ -683,7 +683,7 @@ cdef class HilbertArray:
         else:
             raise NotImplementedError()
 
-    cpdef lmul(self, other):
+    cpdef lmul(self, HilbertArray other):
         """
         Returns other*self.
 
@@ -2504,6 +2504,34 @@ cdef class HilbertArray:
         ret = ret.real
         assert ret > -toler*10
         return 0 if ret < 0 else ret
+
+    cpdef fidelity(self, HilbertArray other):
+        """
+        Compute the fidelity between two density operators.
+
+        The fidelity is defined as the trace norm of the product of square roots
+        of two operators,
+        :math:`\\lVert \\sqrt{\\rho} \\sqrt{\\sigma} \\rVert_{\\textrm{tr}}`.
+
+        >>> from qitensor import qudit
+        >>> ha = qudit('a', 4)
+        >>> hb = qudit('b', 4)
+        >>> # Create random bipartite states.
+        >>> psi = (ha*hb).random_array().normalized()
+        >>> phi = (ha*hb).random_array().normalized()
+        >>> # Fidelity of pure states is the overlap.
+        >>> abs(psi.O.fidelity(phi.O) - abs(psi.H * phi)) < 1e-12
+        True
+        >>> # Fidelity is nonincreasing under quantum operations.
+        >>> psi.O.trace(hb).fidelity(phi.O.trace(hb)) >= psi.O.fidelity(phi.O)
+        True
+        """
+
+        self.assert_density_matrix()
+        other.assert_density_matrix()
+        self._assert_same_axes(other)
+
+        return (self.sqrt() * other.sqrt()).trace_norm()
 
     cpdef QR(self, inner_space=None):
         """

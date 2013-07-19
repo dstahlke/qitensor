@@ -75,6 +75,8 @@ class NoncommutativeGraph(object):
         """
 
         self.S_basis = np.array(S.basis())
+        # FIXME - doesn't work if S has a HilbertSpace defined or is not rank two.
+        assert len(self.S_basis.shape) == 3
         self.Sp_basis = np.array(S.perp().basis())
 
         self._validate_S_Sp(self.S_basis, self.Sp_basis)
@@ -141,7 +143,7 @@ class NoncommutativeGraph(object):
         ...     [1, 0, 0, 1, 1]
         ... ])
         >>> G = NoncommutativeGraph.from_adjmat(adj_mat)
-        >>> theta = G.lovasz()
+        >>> theta = G.lovasz_theta()
         >>> abs(theta - numpy.sqrt(5)) < 1e-8
         True
         """
@@ -201,65 +203,22 @@ class NoncommutativeGraph(object):
         (nS, n, _n) = self.S_basis.shape
         assert n == _n
 
-        # FIXME - not the fastest way
-        foo = self.S.tensor_prod(TensorSubspace.full((n, n)))
-        bar = TensorSubspace(
-            np.array(foo.       basis()).transpose((0, 1, 3, 2, 4)) \
-                    .reshape(foo.dim(), n*n, n*n),
-            np.array(foo.perp().basis()).transpose((0, 1, 3, 2, 4)) \
-                    .reshape(foo.perp().dim(), n*n, n*n),
-            1e-10, None
-        )
-        baz = bar.hermitian_basis()
-        ret = baz.reshape(baz.shape[0], n, n, n, n).transpose((1, 2, 3, 4, 0))
+        fs = TensorSubspace.full((n, n))
+        baz = np.zeros((nS*n*n, n, n, n, n), dtype=complex)
+        i = 0
+
+        for x in self.S.hermitian_basis():
+            for y in fs.hermitian_basis():
+                baz[i] = np.tensordot(x, y, axes=([],[])).transpose((0, 2, 1, 3))
+                i += 1
+        assert i == baz.shape[0]
+
+        ret = baz.transpose((1, 2, 3, 4, 0))
+
         # [ |a>, |a'>, <a|, <a'| ; idx ]
         return ret
 
-    # FIXME - is this one faster?
-    def _get_Y_basis_old(self):
-        """
-        Compute a basis for the allowed Y operators for Theorem 9 of
-        arXiv:1002.2514.  These are the operators which are Hermitian and are
-        in S*L(A').  Note that this basis is intended to map real vectors to
-        complex Y operators.
-        """
-
-        (nS, n, _n) = self.S_basis.shape
-        assert n == _n
-
-        # x_to_Y = [ |a>, |a'>, <a|, <a'| ; Si, |a'>, <a'| ]
-        x_to_Y = np.zeros((n,n, n,n, nS,n,n), dtype=complex)
-        for (S_i, Sv) in enumerate(self.S_basis):
-            for (Ap_i, Ap_j) in itertools.product(range(n), repeat=2):
-                x_to_Y[:, Ap_i, :, Ap_j, S_i, Ap_i, Ap_j] = Sv
-        x_to_Y = x_to_Y.reshape(n,n, n,n, nS,n**2)
-        # project onto Hermitian space while simulating complex values with
-        # reals on the x side
-        x_to_Y_1  = x_to_Y    + np.transpose(x_to_Y,    [2, 3, 0, 1, 4, 5]).conjugate()
-        x_to_Y_1j = x_to_Y*1j + np.transpose(x_to_Y*1j, [2, 3, 0, 1, 4, 5]).conjugate()
-        x_to_Y = np.concatenate((
-                x_to_Y_1 .reshape(n,n,n,n, nS*(n**2)),
-                x_to_Y_1j.reshape(n,n,n,n, nS*(n**2))
-            ), axis=4)
-
-        # decrease parameters by only taking linearly independent subspace
-        sqrmat = np.array([x_to_Y.real, x_to_Y.imag]).reshape(2*(n**4), 2*nS*(n**2))
-        (U, s, V) = linalg.svd(sqrmat)
-        n_indep = np.sum(s > 1e-10)
-        Y_basis = U[:, :n_indep]
-        x_to_Y_reduced_real = Y_basis.reshape(2,n,n,n,n, n_indep)
-        x_to_Y_reduced = x_to_Y_reduced_real[0] + 1j*x_to_Y_reduced_real[1]
-
-        for i in xrange(n_indep):
-            s = x_to_Y_reduced[:, :, :, :, i]
-            sH = np.transpose(s, [2, 3, 0, 1]).conjugate()
-            assert linalg.norm(s - sH) < 1e-13
-            # correct for numerical error and make it exactly Hermitian
-            x_to_Y_reduced[:, :, :, :, i] = (s + sH)/2
-
-        return x_to_Y_reduced
-
-    def lovasz(self, long_return=False):
+    def lovasz_theta(self, long_return=False):
         """
         Compute the non-commutative generalization of the Lovasz function,
         using Theorem 9 of arXiv:1002.2514.
@@ -401,3 +360,24 @@ class NoncommutativeGraph(object):
 #
 #    import doctest
 #    doctest.testmod()
+
+# For testing whether two implementations of _get_Y_basis work the same.
+#d = 5
+#M = np.random.random((d, d)) + 1j*np.random.random((d, d))
+#M2 = np.random.random((d, d)) + 1j*np.random.random((d, d))
+#S = TensorSubspace.from_span([ M, M.T.conj(), np.eye(d, d), M2, M2.conj().T ])
+#G = NoncommutativeGraph(S)
+#print 'get 1'
+#yb1 = G._get_Y_basis().transpose(4,0,1,2,3)
+#print 'get 2'
+#yb2 = G._get_Y_basis_v2().transpose(4,0,1,2,3)
+#print 'test'
+#for x in yb1:
+#    x = x.reshape(d*d, d*d)
+#    assert linalg.norm(x - x.conj().T) == 0
+#for x in yb2:
+#    x = x.reshape(d*d, d*d)
+#    assert linalg.norm(x - x.conj().T) == 0
+#tb1 = TensorSubspace.from_span(yb1)
+#tb2 = TensorSubspace.from_span(yb2)
+#print tb1.equiv(tb2)

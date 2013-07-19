@@ -3,6 +3,9 @@
 import numpy as np
 import numpy.linalg as linalg
 
+from qitensor.array import HilbertArray
+from qitensor.space import HilbertSpace
+
 # FIXME - pickling
 
 # This is the only thing that is exported.
@@ -78,8 +81,7 @@ class TensorSubspace(object):
         self._config_kw = { 'tol': tol, 'hilb_space': hilb_space }
 
         if hilb_space is not None:
-            import qitensor.space
-            assert isinstance(hilb_space, qitensor.space.HilbertSpace)
+            assert isinstance(hilb_space, HilbertSpace)
             assert hilb_space.shape == basis.shape[1:]
 
         if validate:
@@ -124,12 +126,11 @@ class TensorSubspace(object):
         if not isinstance(X, np.ndarray):
             X = list(X)
             try:
-                import qitensor.array
-                if isinstance(X[0], qitensor.array.HilbertArray):
+                if isinstance(X[0], HilbertArray):
                     assert hilb_space is None or hilb_space == X[0].space
                     hilb_space = X[0].space
                     for op in X:
-                        assert isinstance(op, qitensor.array.HilbertArray)
+                        assert isinstance(op, HilbertArray)
                         assert op.space == hilb_space
                     X = [op.nparray for op in X]
             except ImportError:
@@ -392,8 +393,7 @@ class TensorSubspace(object):
         """
 
         if self._hilb_space is not None:
-            import qitensor.array
-            if isinstance(x, qitensor.array.HilbertArray):
+            if isinstance(x, HilbertArray):
                 assert x.space == self._hilb_space
                 return self.to_basis(x.nparray)
 
@@ -628,11 +628,13 @@ class TensorSubspace(object):
 
     def map(self, f):
         b_new = [f(m) for m in self]
-        if self._hilb_space is not None:
-            cfg = self._config_kw.copy()
+
+        cfg = self._config_kw.copy()
+        if isinstance(b_new[0], HilbertArray):
             cfg['hilb_space'] = b_new[0].space
         else:
-            cfg = self._config_kw
+            cfg['hilb_space'] = None
+
         return self.__class__.from_span(b_new, **cfg)
 
     def _nomath_map(self, f):
@@ -641,7 +643,14 @@ class TensorSubspace(object):
         """
         b_new  = np.array([f(m) for m in self._basis])
         bp_new = np.array([f(m) for m in self._perp_basis])
-        return self.__class__(b_new, bp_new, **self._config_kw)
+
+        cfg = self._config_kw.copy()
+        if isinstance(b_new[0], HilbertArray):
+            cfg['hilb_space'] = b_new[0].space
+        else:
+            cfg['hilb_space'] = None
+
+        return self.__class__(b_new, bp_new, **cfg)
 
     def transpose(self, axes):
         if self._hilb_space is not None:

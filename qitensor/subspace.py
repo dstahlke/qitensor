@@ -10,8 +10,8 @@ __all__ = ['TensorSubspace']
 
 class TensorSubspace(object):
     """
-    Represents a basis of a tensor subspace.  Methods are available for projecting
-    to this basis, computing span and intersection of subspaces, etc.  This module
+    Represents a subspace of tensors.  Methods are available for projecting
+    to this subspace, computing span and intersection of subspaces, etc.  This module
     can be used independently of qitensor, and the doctest below reflects this.
     However, if you are using qitensor then typically a subspace would be created
     using one of the following methods:
@@ -200,6 +200,9 @@ class TensorSubspace(object):
 
         # FIXME - col_shp not needed if hilb_space given
         return cls.empty(col_shp, tol=tol, hilb_space=hilb_space, dtype=dtype).perp()
+
+    def basis(self):
+        return list(self)
 
     def assert_compatible(self, other):
         """

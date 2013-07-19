@@ -94,6 +94,8 @@ def doctest():
         qitensor.experimental.cartan_decompose, \
         qitensor.experimental.cartan_decompose_impl, \
         qitensor.experimental.stabilizers, \
+        # Doctests are too slow:
+        #qitensor.experimental.noncommgraph, \
     ]
 
     print "\nRunning doctests..."

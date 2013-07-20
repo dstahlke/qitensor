@@ -1357,7 +1357,7 @@ cdef class HilbertSpace:
         <TensorSubspace of dim 4 over space (|a><a|)>
         """
 
-        return TensorSubspace.full(self.shape, hilb_space=self)
+        return TensorSubspace.full(self)
 
     cpdef empty_space(self):
         """
@@ -1371,7 +1371,7 @@ cdef class HilbertSpace:
         <TensorSubspace of dim 0 over space (|a><a|)>
         """
 
-        return TensorSubspace.empty(self.shape, hilb_space=self)
+        return TensorSubspace.empty(self)
 
     cpdef int dim(self):
         """
@@ -1381,7 +1381,7 @@ cdef class HilbertSpace:
         >>> ha = qubit('a')
         >>> hb = qudit('b', 5)
         >>> hc = indexed_space('c', ['x', 'y', 'z'])
-        
+
         >>> ha.dim()
         2
         >>> (ha*hb*hc.H).dim()

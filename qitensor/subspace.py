@@ -60,13 +60,28 @@ class TensorSubspace(object):
     True
     """
 
-    def __init__(self, basis, perp_basis, tol, hilb_space, validate=False):
+    def __init__(self, basis, perp_basis, tol, hilb_space, dtype, validate=False):
         """
         You can directly initialize this class if you have a basis for the
         subspace and a basis for the perpendicular subspace, but typically it
         is easier (although slower) to instead initialize using the
         ``from_span`` factory method.
         """
+
+        assert dtype is not None
+
+        # Convert input to an nparray of numbers (as opposed to a list of nparrays or a list of
+        # HilbertArrays.
+        def to_nparray(l):
+            return np.array([ x.nparray if isinstance(x, HilbertArray) else x \
+                    for x in l ], dtype=dtype)
+        basis = to_nparray(basis)
+        perp_basis = to_nparray(perp_basis)
+
+        if basis.shape[0] == 0:
+            basis = np.zeros(((0,)+perp_basis.shape[1:]), basis.dtype)
+        if perp_basis.shape[0] == 0:
+            perp_basis = np.zeros(((0,)+basis.shape[1:]), basis.dtype)
 
         self._tol = tol
         self._hilb_space = hilb_space
@@ -78,11 +93,12 @@ class TensorSubspace(object):
         self._perp_cache = None
         self._hermit_cache = None
         # can be passed to constructor to make a space with similar configuration
-        self._config_kw = { 'tol': tol, 'hilb_space': hilb_space }
+        self._config_kw = { 'tol': tol, 'hilb_space': hilb_space, 'dtype': dtype }
 
         if hilb_space is not None:
             assert isinstance(hilb_space, HilbertSpace)
             assert hilb_space.shape == basis.shape[1:]
+            assert dtype == hilb_space.base_field.dtype
 
         if validate:
             assert basis.shape[1:] == perp_basis.shape[1:]
@@ -136,9 +152,17 @@ class TensorSubspace(object):
             except ImportError:
                 pass
 
+        if hilb_space is not None:
+            if dtype is None:
+                dtype = hilb_space.base_field.dtype
+            else:
+                assert dtype == hilb_space.base_field.dtype
+
         # FIXME - make sure none of the vectors is zero
 
         X = np.array(X, dtype=dtype)
+        if dtype is None:
+            dtype = X.dtype
         assert len(X.shape) >= 2
 
         col_shp = X.shape[1:]
@@ -149,7 +173,9 @@ class TensorSubspace(object):
             assert col_shp == hilb_space.shape
 
         if m==0:
-            return cls.empty(col_shp, tol=tol, hilb_space=hilb_space)
+            if hilb_space is not None:
+                col_shp = hilb_space
+            return cls.empty(col_shp, tol=tol)
 
         X = X.reshape(m, n)
 
@@ -171,36 +197,47 @@ class TensorSubspace(object):
             basis      = V[:dim, :].reshape((dim,)+col_shp)
             perp_basis = V[dim:, :].reshape((n-dim,)+col_shp)
 
-        return cls(basis, perp_basis, tol=tol, hilb_space=hilb_space)
+        return cls(basis, perp_basis, tol=tol, hilb_space=hilb_space, dtype=dtype)
 
     @classmethod
-    def empty(cls, col_shp, tol=1e-10, hilb_space=None, dtype=complex):
+    def empty(cls, col_shp, tol=1e-10, dtype=complex):
         """
         Constructs the empty subspace of the given dimension.
 
-        >>> from qitensor import TensorSubspace
+        >>> from qitensor import TensorSubspace, qubit
         >>> TensorSubspace.empty((3,5))
         <TensorSubspace of dim 0 over space (3, 5)>
+        >>> ha = qubit('a')
+        >>> TensorSubspace.empty(ha)
+        <TensorSubspace of dim 0 over space (|a>)>
         """
 
-        # FIXME - col_shp not needed if hilb_space given
+        if isinstance(col_shp, HilbertSpace):
+            hilb_space = col_shp
+            dtype = hilb_space.base_field.dtype
+            col_shp = col_shp.shape
+        else:
+            hilb_space = None
+
         n = np.product(col_shp)
         basis = np.zeros((0,)+col_shp, dtype=dtype)
         perp_basis = np.eye(n).reshape((n,)+col_shp)
-        return cls(basis, perp_basis, tol=tol, hilb_space=hilb_space)
+        return cls(basis, perp_basis, tol=tol, hilb_space=hilb_space, dtype=dtype)
 
     @classmethod
-    def full(cls, col_shp, tol=1e-10, hilb_space=None, dtype=complex):
+    def full(cls, col_shp, tol=1e-10, dtype=complex):
         """
         Constructs the full subspace of the given dimension.
 
-        >>> from qitensor import TensorSubspace
+        >>> from qitensor import TensorSubspace, qubit
         >>> TensorSubspace.full((3,5))
         <TensorSubspace of dim 15 over space (3, 5)>
+        >>> ha = qubit('a')
+        >>> TensorSubspace.full(ha)
+        <TensorSubspace of dim 2 over space (|a>)>
         """
 
-        # FIXME - col_shp not needed if hilb_space given
-        return cls.empty(col_shp, tol=tol, hilb_space=hilb_space, dtype=dtype).perp()
+        return cls.empty(col_shp, tol=tol, dtype=dtype).perp()
 
     def basis(self):
         return list(self)
@@ -516,6 +553,17 @@ class TensorSubspace(object):
 
         return self.contains(other) and other.contains(self)
 
+    def _op_flatten(self):
+        if self._hilb_space:
+            return self._nomath_map(lambda x: x.as_np_matrix())
+        else:
+            nd = len(self._col_shp)
+            assert nd % 2 == 0
+            shp = self._col_shp[:nd/2]
+            assert shp == self._col_shp[nd/2:]
+            shp = np.product(shp)
+            return self.reshape(shp, shp)
+
     def is_hermitian(self):
         """
         A subspace S is Hermitian if :math:`S = \{ x^\dagger | x \in S \}`.
@@ -627,7 +675,7 @@ class TensorSubspace(object):
         return self.__class__(b_b, b_b_p, **self._config_kw)
 
     def map(self, f):
-        b_new = [f(m) for m in self]
+        b_new = [ f(m) for m in self ]
 
         cfg = self._config_kw.copy()
         if isinstance(b_new[0], HilbertArray):
@@ -641,8 +689,8 @@ class TensorSubspace(object):
         """
         Like map, but assumes the operation preserves orthogonality.
         """
-        b_new  = np.array([f(m) for m in self._basis])
-        bp_new = np.array([f(m) for m in self._perp_basis])
+        b_new  = np.array([f(m) for m in self ])
+        bp_new = np.array([f(m) for m in self.perp() ])
 
         cfg = self._config_kw.copy()
         if isinstance(b_new[0], HilbertArray):

@@ -553,6 +553,7 @@ class TensorSubspace(object):
 
         return self.contains(other) and other.contains(self)
 
+    # Helper for is_hermitian and hermitian_basis.
     def _op_flatten(self):
         if self._hilb_space:
             return self._nomath_map(lambda x: x.as_np_matrix())
@@ -563,6 +564,13 @@ class TensorSubspace(object):
             assert shp == self._col_shp[nd/2:]
             shp = np.product(shp)
             return self.reshape(shp, shp)
+
+    # Helper for is_hermitian and hermitian_basis.
+    def _op_unflatten(self, other):
+        other = [ x.reshape(self._col_shp) for x in other ]
+        if self._hilb_space:
+            other = [ self._hilb_space.array(x) for x in other ]
+        return other
 
     def is_hermitian(self):
         """
@@ -577,6 +585,16 @@ class TensorSubspace(object):
         >>> T.is_hermitian()
         True
         """
+
+        nd = len(self._col_shp)
+        if nd % 2 != 0:
+            return False
+        shp = self._col_shp[:nd/2]
+        if shp != self._col_shp[nd/2:]:
+            return False
+
+        if self._hilb_space or len(self._col_shp) > 2:
+            return self._op_flatten().is_hermitian()
 
         assert len(self._col_shp) == 2
         assert self._col_shp[0] == self._col_shp[1]
@@ -611,7 +629,12 @@ class TensorSubspace(object):
         if self._hermit_cache is not None:
             return self._hermit_cache
 
+        if self._hilb_space or len(self._col_shp) > 2:
+            hb = self._op_flatten().hermitian_basis()
+            return self._op_unflatten(hb)
+
         assert self.is_hermitian()
+
         assert len(self._col_shp) == 2
         assert self._col_shp[0] == self._col_shp[1]
         n = self._col_shp[0]

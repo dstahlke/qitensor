@@ -411,6 +411,7 @@ class CP_Map(Superoperator):
         """
         Returns the channel ket.
 
+        >>> import numpy
         >>> from qitensor import qudit, CP_Map
         >>> ha = qudit('a', 2)
         >>> hb = qudit('b', 2)
@@ -420,7 +421,7 @@ class CP_Map(Superoperator):
         >>> E.krauses()[0].space
         |b><a|
         >>> # Test closure condition.
-        >>> ( np.sum([ x.H * x for x in E.krauses() ]) - ha.eye() ).norm() < 1e-14
+        >>> ( numpy.sum([ x.H * x for x in E.krauses() ]) - ha.eye() ).norm() < 1e-14
         True
         """
 

@@ -12,6 +12,13 @@ from qitensor.exceptions import MismatchedSpaceError
 # This is the only thing that is exported.
 __all__ = ['TensorSubspace']
 
+def _unreduce_v1(basis, perp_basis, tol, hilb_space, dtype):
+    """
+    This is the function that handles restoring a pickle.
+    """
+
+    return TensorSubspace(basis, perp_basis, tol, hilb_space, dtype)
+
 class TensorSubspace(object):
     """
     Represents a subspace of tensors.  Methods are available for projecting
@@ -85,6 +92,7 @@ class TensorSubspace(object):
 
         self._tol = tol
         self._hilb_space = hilb_space
+        self._dtype = dtype
         self._basis = basis
         self._perp_basis = perp_basis
         self._dim = basis.shape[0]
@@ -116,6 +124,31 @@ class TensorSubspace(object):
 
             foo = np.tensordot(self._basis_flat.conjugate(), self._perp_basis_flat, axes=((1,),(1,)))
             assert linalg.norm(foo) < self._tol
+
+    def __reduce__(self):
+        """
+        Tells pickle how to store this object.
+
+        >>> from qitensor import qubit, indexed_space
+        >>> import pickle
+        >>> ha = qubit('a')
+        >>> hb = indexed_space('b', ['x', 'y', 'z'])
+        >>> x = (ha*hb).random_array()
+        >>> S = x.span(hb); S
+        <TensorSubspace of dim 2 over space (|b>)>
+        >>> T = pickle.loads(pickle.dumps(S)); T
+        <TensorSubspace of dim 2 over space (|b>)>
+        >>> S.equiv(T)
+        True
+        """
+
+        return _unreduce_v1, (
+                self._basis,
+                self._perp_basis,
+                self._tol,
+                self._hilb_space,
+                self._dtype,
+                )
 
     @classmethod
     def from_span(cls, X, tol=1e-10, hilb_space=None, dtype=None):

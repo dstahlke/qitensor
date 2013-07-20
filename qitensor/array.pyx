@@ -2655,14 +2655,19 @@ cdef class HilbertArray:
         >>> bigop = proj * ha.random_array() * hc.H.random_array()
         >>> bigop.space
         |a,b><b,c|
+
+        >>> # span of column space
         >>> bigop.span('col')
         <TensorSubspace of dim 2 over space (|a,b>)>
+
+        >>> # dimension 1 because it is a product operator $|b><b| \otimes |a><c|$
         >>> bigop.span(hb.O)
         <TensorSubspace of dim 1 over space (|b><b|)>
+
+        >>> bigop.span(hb.O).tensor_prod(bigop.span(ha)).equiv(
+        ...     bigop.span(hb.O*ha))
+        True
         """
-        # FIXME - not implemented
-        # >>> bigop.span(hb.O).tensor_prod(bigop.span(ha))
-        # <TensorSubspace of dim 2 over space (|a,b><b|)>
 
         if axes == 'all':
             axes = self.space

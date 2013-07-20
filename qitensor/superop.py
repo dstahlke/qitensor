@@ -407,6 +407,25 @@ class CP_Map(Superoperator):
         if not self.is_cptp():
             raise ValueError('channel is not trace preserving')
 
+    def krauses(self):
+        """
+        Returns the channel ket.
+
+        >>> from qitensor import qudit, CP_Map
+        >>> ha = qudit('a', 2)
+        >>> hb = qudit('b', 2)
+        >>> E = CP_Map.random(ha, hb)
+        >>> len(E.krauses())
+        4
+        >>> E.krauses()[0].space
+        |b><a|
+        >>> # Test closure condition.
+        >>> ( np.sum([ x.H * x for x in E.krauses() ]) - ha.eye() ).norm() < 1e-14
+        True
+        """
+
+        return [ self.J[{ self.env_space: x }] for x in self.env_space.indices ]
+
     def __str__(self):
         return 'CP_Map( '+str(self.in_space.O)+' to '+str(self.out_space.O)+' )'
 

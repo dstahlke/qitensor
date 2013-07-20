@@ -6,7 +6,6 @@ import itertools
 import cvxopt.base
 import cvxopt.solvers
 
-from qitensor import HilbertArray
 from qitensor.subspace import TensorSubspace
 
 # This is the only thing that is exported.
@@ -65,16 +64,6 @@ def call_sdp(c, Fx_list, F0_list):
     xvec = np.array(sol['x']).flatten()
     return (xvec, sol)
 
-def _flatten_basis_element(x):
-    if isinstance(x, HilbertArray):
-        x = x.nparray
-    nd = len(x.shape)
-    assert nd % 2 == 0
-    shp = x.shape[:nd/2]
-    assert shp == x.shape[nd/2:]
-    shp = np.product(shp)
-    return x.reshape(shp, shp)
-
 ### The main code ######################
 
 class NoncommutativeGraph(object):
@@ -87,58 +76,18 @@ class NoncommutativeGraph(object):
 
         assert S.is_hermitian()
 
+        self.S = S
+
         # Make it a space over rank-2 tensors.
         self.S_flat = S._op_flatten()
         self.S_basis  = np.array(self.S_flat.basis())
         self.Sp_basis = np.array(self.S_flat.perp().basis())
+        # FIXME - fails when either is empty
         assert len(self.S_basis.shape) == 3
         assert len(self.Sp_basis.shape) == 3
 
-        self._validate_S_Sp(self.S_basis, self.Sp_basis)
-
-        self.S = S
-
-    @classmethod
-    def _validate_S_Sp(cls, S, Sp):
-        '''
-        Verify that (S, Sp) actually correspond to a non-commutative graph.
-
-        S must be a Hermitian orthonormal basis, and Sp must be an orthonormal basis
-        for the orthogonal complement of S.
-        '''
-
-        tol = 1e-12
-
-        assert len(S.shape) == 3
-        assert len(Sp.shape) == 3
-        n = S.shape[1]
-        assert S.shape[2] == n
-        assert Sp.shape[1] == n
-        assert Sp.shape[2] == n
-        assert S.shape[0] + Sp.shape[0] == n*n
-
-        foo = np.tensordot(S, Sp.conjugate(), axes=[[1,2],[1,2]])
-        if linalg.norm(foo) > tol:
-            raise ArithmeticError("S and Sp are not orthogonal")
-
-        foo = np.tensordot(S, S.conjugate(), axes=[[1,2],[1,2]])
-        if linalg.norm(foo - np.eye(S.shape[0])) > tol:
-            raise ArithmeticError("S is not orthonormal")
-
-        foo = np.tensordot(Sp, Sp.conjugate(), axes=[[1,2],[1,2]])
-        if linalg.norm(foo - np.eye(Sp.shape[0])) > tol:
-            raise ArithmeticError("S is not orthonormal")
-
-        if S.shape[0] + Sp.shape[0] != n*n:
-            raise ArithmeticError("S+Sp is not a complete basis")
-
-        foo = np.trace(Sp, axis1=1, axis2=2)
-        if linalg.norm(foo) > tol:
-            raise ArithmeticError("S does not contain I (Sp is not trace free)")
-
-        foo = np.tensordot(S, Sp, axes=[[2,1],[1,2]])
-        if linalg.norm(foo) > tol:
-            raise ArithmeticError("S is not Hermitian")
+        (_nS, n, _n) = self.S_basis.shape
+        assert np.eye(n) in self.S_flat
 
     @classmethod
     def from_adjmat(cls, adj_mat):
@@ -368,14 +317,14 @@ class NoncommutativeGraph(object):
 #            return theta
 
 # If this module is run from the command line, run the doctests.
-#if __name__ == "__main__":
-#    # Doctests require not getting progress messages from SDP solver.
-#    cvxopt.solvers.options['show_progress'] = False
-#
-#    print "Running doctests."
-#
-#    import doctest
-#    doctest.testmod()
+if __name__ == "__main__":
+    # Doctests require not getting progress messages from SDP solver.
+    cvxopt.solvers.options['show_progress'] = False
+
+    print "Running doctests."
+
+    import doctest
+    doctest.testmod()
 
 # For testing whether two implementations of _get_Y_basis work the same.
 #d = 5
@@ -398,14 +347,13 @@ class NoncommutativeGraph(object):
 #tb2 = TensorSubspace.from_span(yb2)
 #print tb1.equiv(tb2)
 
-# FIXME!!
-if __name__ == "__main__":
-    from qitensor import qubit, qudit
-    ha = qubit('a')
-    hb = qubit('b')
-    S = TensorSubspace.from_span([ (ha*hb).eye() ])
-    G = NoncommutativeGraph(S)
-    print G.lovasz_theta()
-    hc = qudit('c', 5)
-    G2 = NoncommutativeGraph(NoncommutativeGraph.pentagon().S.map(lambda x: hc.O.array(x)))
-    print G2.lovasz_theta()
+#if __name__ == "__main__":
+#    from qitensor import qubit, qudit
+#    ha = qubit('a')
+#    hb = qubit('b')
+#    S = TensorSubspace.from_span([ (ha*hb).eye() ])
+#    G = NoncommutativeGraph(S)
+#    print G.lovasz_theta()
+#    hc = qudit('c', 5)
+#    G2 = NoncommutativeGraph(NoncommutativeGraph.pentagon().S.map(lambda x: hc.O.array(x)))
+#    print G2.lovasz_theta()

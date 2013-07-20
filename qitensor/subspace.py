@@ -62,10 +62,9 @@ class TensorSubspace(object):
 
     def __init__(self, basis, perp_basis, tol, hilb_space, dtype, validate=False):
         """
-        You can directly initialize this class if you have a basis for the
-        subspace and a basis for the perpendicular subspace, but typically it
-        is easier (although slower) to instead initialize using the
-        ``from_span`` factory method.
+        You can directly initialize this class if you have an orthonormal basis for the
+        subspace and a basis for the perpendicular subspace, but typically it is easier
+        (although slower) to instead initialize using the ``from_span`` factory method.
         """
 
         assert dtype is not None
@@ -240,6 +239,10 @@ class TensorSubspace(object):
         return cls.empty(col_shp, tol=tol, dtype=dtype).perp()
 
     def basis(self):
+        """
+        Returns an orthonormal basis for this subspace.
+        """
+
         return list(self)
 
     def assert_compatible(self, other):

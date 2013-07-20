@@ -5,6 +5,7 @@ import numpy.linalg as linalg
 
 from qitensor.array import HilbertArray
 from qitensor.space import HilbertSpace
+from qitensor.exceptions import MismatchedSpaceError
 
 # FIXME - pickling
 
@@ -23,9 +24,9 @@ class TensorSubspace(object):
     * :func:`qitensor.space.HilbertSpace.full_space`
     * :func:`qitensor.space.HilbertSpace.empty_space`
 
-    >>> import numpy as np
+    >>> import numpy
     >>> from qitensor import TensorSubspace
-    >>> x = TensorSubspace.from_span(np.random.randn(4,5,10))
+    >>> x = TensorSubspace.from_span(numpy.random.randn(4,5,10))
     >>> x
     <TensorSubspace of dim 4 over space (5, 10)>
     >>> x.dim()
@@ -34,10 +35,10 @@ class TensorSubspace(object):
     True
     >>> x.perp()[0] in x
     False
-    >>> y = TensorSubspace.from_span(np.random.randn(30,5,10))
+    >>> y = TensorSubspace.from_span(numpy.random.randn(30,5,10))
     >>> y
     <TensorSubspace of dim 30 over space (5, 10)>
-    >>> z = TensorSubspace.from_span(np.random.randn(30,5,10))
+    >>> z = TensorSubspace.from_span(numpy.random.randn(30,5,10))
     >>> z
     <TensorSubspace of dim 30 over space (5, 10)>
     >>> x | y
@@ -156,8 +157,6 @@ class TensorSubspace(object):
                 dtype = hilb_space.base_field.dtype
             else:
                 assert dtype == hilb_space.base_field.dtype
-
-        # FIXME - make sure none of the vectors is zero
 
         X = np.array(X, dtype=dtype)
         if dtype is None:
@@ -677,10 +676,48 @@ class TensorSubspace(object):
         return self._hermit_cache
 
     def tensor_prod(self, other):
-        # FIXME - implement this.  It involves reshuffling the indices and
-        # making sure the spaces aren't duplicated.
+        """
+        >>> from qitensor import qudit
+
+        >>> ha = qudit('a', 3)
+        >>> hb = qudit('b', 4)
+        >>> Sn = TensorSubspace.from_span(np.random.randn(2,3,4)); Sn
+        <TensorSubspace of dim 2 over space (3, 4)>
+        >>> Tn = TensorSubspace.from_span(np.random.randn(3,4,3)); Tn
+        <TensorSubspace of dim 3 over space (4, 3)>
+        >>> STn = Sn.tensor_prod(Tn); STn
+        <TensorSubspace of dim 6 over space (3, 4, 4, 3)>
+        >>> Sh = Sn.map(lambda x: (ha*hb.H).array(x)); Sh
+        <TensorSubspace of dim 2 over space (|a><b|)>
+        >>> Th = Tn.map(lambda x: (hb*ha.H).array(x)); Th
+        <TensorSubspace of dim 3 over space (|b><a|)>
+        >>> Sh.tensor_prod(Tn)
+        Traceback (most recent call last):
+            ...
+        MismatchedSpaceError: "one factor had HilbertSpace, the other didn't"
+        >>> STh = Sh.tensor_prod(Th); STh
+        <TensorSubspace of dim 6 over space (|a,b><a,b|)>
+        >>> # transpose maps |a,b><a,b| to |a>,<b|,|b>,<a|
+        >>> STn.equiv(STh.map(lambda x: x.nparray.transpose(0,3,1,2)))
+        True
+        """
+
+        if (self._hilb_space is None) != (other._hilb_space is None):
+            raise MismatchedSpaceError('one factor had HilbertSpace, the other didn\'t')
+
         if self._hilb_space is not None:
-            raise NotImplementedError()
+            h1 = self._hilb_space
+            h2 = other._hilb_space
+            if not h1.bra_ket_set.isdisjoint(h2.bra_ket_set):
+                raise MismatchedSpaceError('spaces are not disjoint')
+            b_b   = [ x.tensordot(y, frozenset()) for x in  self for y in  other ]
+            bp_b  = [ x.tensordot(y, frozenset()) for x in ~self for y in  other ]
+            b_bp  = [ x.tensordot(y, frozenset()) for x in  self for y in ~other ]
+            bp_bp = [ x.tensordot(y, frozenset()) for x in ~self for y in ~other ]
+            b_b_p = np.concatenate((bp_b, b_bp, bp_bp), axis=0)
+            cfg = self._config_kw.copy()
+            cfg['hilb_space'] = h1*h2
+            return self.__class__(b_b, b_b_p, **cfg)
 
         n = len(self._basis.shape)
         m = len(other._basis.shape)
@@ -703,11 +740,16 @@ class TensorSubspace(object):
     def map(self, f):
         b_new = [ f(m) for m in self ]
 
+        if len(b_new) == 0:
+            return self
+
         cfg = self._config_kw.copy()
         if isinstance(b_new[0], HilbertArray):
             cfg['hilb_space'] = b_new[0].space
+            cfg['dtype'] = b_new[0].space.base_field.dtype
         else:
             cfg['hilb_space'] = None
+            cfg['dtype'] = np.array(b_new).dtype
 
         return self.__class__.from_span(b_new, **cfg)
 
@@ -718,11 +760,14 @@ class TensorSubspace(object):
         b_new  = np.array([f(m) for m in self ])
         bp_new = np.array([f(m) for m in self.perp() ])
 
+        element = b_new[0] if len(b_new) else bp_new[0]
         cfg = self._config_kw.copy()
-        if isinstance(b_new[0], HilbertArray):
-            cfg['hilb_space'] = b_new[0].space
+        if isinstance(element, HilbertArray):
+            cfg['hilb_space'] = element.space
+            cfg['dtype'] = element.space.base_field.dtype
         else:
             cfg['hilb_space'] = None
+            cfg['dtype'] = np.array(b_new).dtype
 
         return self.__class__(b_new, bp_new, **cfg)
 

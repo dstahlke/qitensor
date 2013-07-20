@@ -563,7 +563,7 @@ class TensorSubspace(object):
             shp = self._col_shp[:nd/2]
             assert shp == self._col_shp[nd/2:]
             shp = np.product(shp)
-            return self.reshape(shp, shp)
+            return self.reshape((shp, shp))
 
     # Helper for is_hermitian and hermitian_basis.
     def _op_unflatten(self, other):

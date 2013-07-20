@@ -6,6 +6,7 @@ import itertools
 import cvxopt.base
 import cvxopt.solvers
 
+from qitensor import HilbertArray
 from qitensor.subspace import TensorSubspace
 
 # This is the only thing that is exported.
@@ -64,6 +65,16 @@ def call_sdp(c, Fx_list, F0_list):
     xvec = np.array(sol['x']).flatten()
     return (xvec, sol)
 
+def _flatten_basis_element(x):
+    if isinstance(x, HilbertArray):
+        x = x.nparray
+    nd = len(x.shape)
+    assert nd % 2 == 0
+    shp = x.shape[:nd/2]
+    assert shp == x.shape[nd/2:]
+    shp = np.product(shp)
+    return x.reshape(shp, shp)
+
 ### The main code ######################
 
 class NoncommutativeGraph(object):
@@ -74,10 +85,14 @@ class NoncommutativeGraph(object):
         Create a non-commutative graph from provided TensorSubspace.
         """
 
-        self.S_basis = np.array(S.basis())
-        # FIXME - doesn't work if S has a HilbertSpace defined or is not rank two.
+        assert S.is_hermitian()
+
+        # Make it a space over rank-2 tensors.
+        self.S_flat = S._op_flatten()
+        self.S_basis  = np.array(self.S_flat.basis())
+        self.Sp_basis = np.array(self.S_flat.perp().basis())
         assert len(self.S_basis.shape) == 3
-        self.Sp_basis = np.array(S.perp().basis())
+        assert len(self.Sp_basis.shape) == 3
 
         self._validate_S_Sp(self.S_basis, self.Sp_basis)
 
@@ -203,12 +218,13 @@ class NoncommutativeGraph(object):
         (nS, n, _n) = self.S_basis.shape
         assert n == _n
 
-        fs = TensorSubspace.full((n, n))
+        Sb = self.S_flat.hermitian_basis()
+        Lb = TensorSubspace.full((n, n)).hermitian_basis()
+
         baz = np.zeros((nS*n*n, n, n, n, n), dtype=complex)
         i = 0
-
-        for x in self.S.hermitian_basis():
-            for y in fs.hermitian_basis():
+        for x in Sb:
+            for y in Lb:
                 baz[i] = np.tensordot(x, y, axes=([],[])).transpose((0, 2, 1, 3))
                 i += 1
         assert i == baz.shape[0]
@@ -381,3 +397,15 @@ class NoncommutativeGraph(object):
 #tb1 = TensorSubspace.from_span(yb1)
 #tb2 = TensorSubspace.from_span(yb2)
 #print tb1.equiv(tb2)
+
+# FIXME!!
+if __name__ == "__main__":
+    from qitensor import qubit, qudit
+    ha = qubit('a')
+    hb = qubit('b')
+    S = TensorSubspace.from_span([ (ha*hb).eye() ])
+    G = NoncommutativeGraph(S)
+    print G.lovasz_theta()
+    hc = qudit('c', 5)
+    G2 = NoncommutativeGraph(NoncommutativeGraph.pentagon().S.map(lambda x: hc.O.array(x)))
+    print G2.lovasz_theta()

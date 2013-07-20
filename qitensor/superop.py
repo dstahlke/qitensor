@@ -675,10 +675,24 @@ class CP_Map(Superoperator):
 
     @classmethod
     def random(cls, spc_in, spc_out, espc_def=None):
+        """
+        Return a random CPTP map.  The channel's isometry is distributed uniformly over the
+        Haar measure.
+
+        :param espc_def: a HilbertSpace for the environment, or a label for that space if a
+            string is provided, or the dimension of the environment if an integer is provided.
+            If not specified, the environment will have full dimension.
+        """
+
         in_space = cls._to_ket_space(spc_in)
         out_space = cls._to_ket_space(spc_out)
-        # FIXME - allow small environment if espc is given
-        dc = in_space.dim() * out_space.dim()
+        if isinstance(espc_def, HilbertSpace):
+            dc = espc_def.dim()
+        elif isinstance(espc_def, int):
+            dc = espc_def
+            espc_def = None
+        else:
+            dc = in_space.dim() * out_space.dim()
         env_space = cls._make_environ_spc(espc_def, in_space.base_field, dc)
         J = (out_space*env_space*in_space.H).random_isometry()
         return CP_Map(J, env_space)

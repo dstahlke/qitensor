@@ -702,7 +702,7 @@ cdef class HilbertArray:
     def __mul__(self, other):
         """
         Multiplies two arrays, or an array and a scalar.
-        
+
         Given two arrays, contracts between the common bra spaces of the left
         argument and ket spaces of the right argument.  This is equivalent to
         calling self.tensordot(other).
@@ -735,6 +735,8 @@ cdef class HilbertArray:
 
         if isinstance(other, HilbertArray):
             return self.tensordot(other)
+        elif isinstance(other, TensorSubspace):
+            return other.__rmul__(self)
         else:
             ret = self.copy()
             ret *= other

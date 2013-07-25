@@ -406,7 +406,7 @@ class TensorSubspace(object):
     def __and__(self, other):
         """
         Intersection of spaces.
-        
+
         >>> import numpy as np
         >>> from qitensor import TensorSubspace
         >>> x = TensorSubspace.from_span(np.random.randn(4,5,10))
@@ -438,6 +438,77 @@ class TensorSubspace(object):
         """
 
         return self & other.perp()
+
+    def __mul__(self, other):
+        """
+        Returns span{x*other : x in self}.
+
+        >>> from qitensor import qudit
+        >>> ha = qudit('a', 3)
+        >>> S = TensorSubspace.from_span([ ha.O.random_array(), ha.O.random_array() ])
+        >>> S
+        <TensorSubspace of dim 2 over space (|a><a|)>
+        >>> T = TensorSubspace.from_span([ ha.O.random_array(), ha.O.random_array() ])
+        >>> T
+        <TensorSubspace of dim 2 over space (|a><a|)>
+        >>> U1 = S * T; U1
+        <TensorSubspace of dim 4 over space (|a><a|)>
+        >>> U2 = TensorSubspace.from_span([ x*y for x in S for y in T ])
+        >>> U1.equiv(U2)
+        True
+        >>> (S * -2).equiv(S)
+        True
+        >>> rho = ha.O.random_array()
+        >>> (S * rho).equiv( TensorSubspace.from_span([ x*rho for x in S ]) )
+        True
+        """
+
+        if isinstance(other, TensorSubspace):
+            return TensorSubspace.from_span([ x*y for x in self for y in other ])
+        else:
+            return TensorSubspace.from_span([ x*other for x in self ])
+
+    def __rmul__(self, other):
+        """
+        Returns span{other*x : x in self}.
+
+        >>> from qitensor import qudit
+        >>> ha = qudit('a', 3)
+        >>> S = TensorSubspace.from_span([ ha.O.random_array(), ha.O.random_array() ])
+        >>> S
+        <TensorSubspace of dim 2 over space (|a><a|)>
+        >>> (-2 * S).equiv(S)
+        True
+        >>> rho = ha.O.random_array()
+        >>> (rho * S).equiv( TensorSubspace.from_span([ rho*x for x in S ]) )
+        True
+        """
+
+        return TensorSubspace.from_span([ other*x for x in self ])
+
+    @property
+    def H(self):
+        """
+        Returns span{x.H : x in self}
+
+        >>> from qitensor import qudit
+        >>> ha = qudit('a', 3)
+        >>> hb = qudit('b', 4)
+        >>> rho = (ha*hb.H).random_array()
+        >>> sigma = (ha*hb.H).random_array()
+        >>> S = TensorSubspace.from_span([ rho, sigma ])
+        >>> S
+        <TensorSubspace of dim 2 over space (|a><b|)>
+        >>> S.H
+        <TensorSubspace of dim 2 over space (|b><a|)>
+        >>> S.H.equiv( TensorSubspace.from_span([ rho.H, sigma.H ]) )
+        True
+        """
+
+        if self._hilb_space is not None:
+            return TensorSubspace.from_span([ x.H for x in self ])
+        else:
+            return TensorSubspace.from_span([ x.conj().T for x in self ])
 
     def to_basis(self, x):
         """

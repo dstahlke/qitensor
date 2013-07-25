@@ -5,6 +5,7 @@
 	* fixes for the way TensorSubspace deals with dtype, etc.
 	* CP_Map.krauses
 	* Superoperator.H and CP_Map.H to create adjoint channel
+	* TensorSubspace multiplication and H
 
 === qitensor-0.11 (Dan Stahlke, 2013-05-11) ===
 	* superoperators module

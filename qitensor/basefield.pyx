@@ -91,7 +91,7 @@ cdef class HilbertBaseField:
         return FORMATTER.py_scalar_latex_formatter(data, dollar_if_tex)
 
     cpdef input_cast_function(self):
-        return None
+        return self.dtype
 
     cpdef complex_unit(self):
         return 1j

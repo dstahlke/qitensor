@@ -171,8 +171,7 @@ cdef class HilbertArray:
 
         if self.nparray is not None:
             cast_fn = space.base_field.input_cast_function()
-            if cast_fn is not None:
-                self.nparray = np.vectorize(cast_fn)(self.nparray)
+            self.nparray = np.vectorize(cast_fn)(self.nparray)
 
     def __reduce__(self):
         """
@@ -667,6 +666,10 @@ cdef class HilbertArray:
         False
         >>> x != x.relabel({ ha: hb })
         True
+        >>> x == 0
+        FIXME - does this doctest even run?
+        >>> x > 0
+        FIXME - does this doctest even run?
         """
 
         if not isinstance(other, HilbertArray):
@@ -681,7 +684,7 @@ cdef class HilbertArray:
         elif op == 3:
             return not eq
         else:
-            raise NotImplementedError()
+            return NotImplemented
 
     cpdef lmul(self, HilbertArray other):
         """
@@ -735,11 +738,14 @@ cdef class HilbertArray:
 
         if isinstance(other, HilbertArray):
             return self.tensordot(other)
-        elif isinstance(other, TensorSubspace):
-            return other.__rmul__(self)
         else:
+            cast_fn = self.space.base_field.input_cast_function()
+            try:
+                x = cast_fn(other)
+            except TypeError:
+                return NotImplemented
             ret = self.copy()
-            ret *= other
+            ret *= x
             return ret
 
     def __imul__(self, other):
@@ -767,8 +773,12 @@ cdef class HilbertArray:
         if isinstance(other, HilbertArray):
             self._reassign(self * other)
         else:
-            # hopefully other is a scalar
-            self.nparray *= other
+            cast_fn = self.space.base_field.input_cast_function()
+            try:
+                x = cast_fn(other)
+            except TypeError:
+                return NotImplemented
+            self.nparray *= x
         return self
 
     def __add__(self, other):
@@ -899,15 +909,21 @@ cdef class HilbertArray:
         >>> x / x
         Traceback (most recent call last):
             ...
-        TypeError: unsupported operand type(s) for /: 'complex' and 'qitensor.array.HilbertArray'
+        TypeError: unsupported operand type(s) for /: 'qitensor.array.HilbertArray' and 'qitensor.array.HilbertArray'
         """
 
         # Cython calls arithmetic methods with arguments reversed instead of __r*__ methods
         if not isinstance(self, HilbertArray):
             return NotImplemented
 
+        cast_fn = self.space.base_field.input_cast_function()
+        try:
+            x = cast_fn(other)
+        except TypeError:
+            return NotImplemented
+
         ret = self.copy()
-        ret /= other
+        ret /= x
         return ret
 
     def __idiv__(self, other):
@@ -928,7 +944,13 @@ cdef class HilbertArray:
         True
         """
 
-        self.nparray /= other
+        cast_fn = self.space.base_field.input_cast_function()
+        try:
+            x = cast_fn(other)
+        except TypeError:
+            return NotImplemented
+
+        self.nparray /= x
         return self
 
     def __truediv__(self, other):
@@ -944,11 +966,17 @@ cdef class HilbertArray:
         >>> x / x
         Traceback (most recent call last):
             ...
-        TypeError: unsupported operand type(s) for /: 'complex' and 'qitensor.array.HilbertArray'
+        TypeError: unsupported operand type(s) for /: 'qitensor.array.HilbertArray' and 'qitensor.array.HilbertArray'
         """
 
+        cast_fn = self.space.base_field.input_cast_function()
+        try:
+            x = cast_fn(other)
+        except TypeError:
+            return NotImplemented
+
         ret = self.copy()
-        ret.__itruediv__(other)
+        ret.__itruediv__(x)
         return ret
 
     def __itruediv__(self, other):
@@ -969,7 +997,13 @@ cdef class HilbertArray:
         True
         """
 
-        self.nparray.__itruediv__(other)
+        cast_fn = self.space.base_field.input_cast_function()
+        try:
+            x = cast_fn(other)
+        except TypeError:
+            return NotImplemented
+
+        self.nparray.__itruediv__(x)
         return self
 
     def __pow__(self, other, mod):

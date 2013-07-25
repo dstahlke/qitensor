@@ -33,6 +33,17 @@ class Superoperator(object):
     """
 
     def __init__(self, in_space, out_space, m):
+        """
+        >>> ha = qudit('a', 3)
+        >>> hb = qudit('b', 4)
+        >>> E = Superoperator.random(ha, hb)
+        >>> X = ha.O.random_array()
+        >>> Y = hb.O.random_array()
+        >>> # Test the adjoint channel.
+        >>> abs( (E(X).H * Y).trace() - (X.H * E.H(Y)).trace() ) < 1e-14
+        True
+        """
+
         self._in_space = self._to_ket_space(in_space)
         self._out_space = self._to_ket_space(out_space)
         self._m = np.matrix(m)
@@ -40,12 +51,14 @@ class Superoperator(object):
         if m.shape != (self.out_space.O.dim(), self.in_space.O.dim()):
             raise HilbertShapeError(m.shape, (self.out_space.O.dim(), self.in_space.O.dim()))
 
+        self._H_S = None
+
     def __reduce__(self):
         """
         Tells pickle how to store this object.
 
         >>> import pickle
-        >>> from qitensor import qubit, qudit, Superoperator, CP_Map
+        >>> from qitensor import qubit, qudit, Superoperator
         >>> ha = qudit('a', 3)
         >>> hb = qubit('b')
         >>> rho = (ha*hb).random_density()
@@ -174,8 +187,8 @@ class Superoperator(object):
         >>> from qitensor import qudit, Superoperator
         >>> ha = qudit('a', 4)
         >>> hb = qudit('b', 3)
-        >>> E1 = CP_Map.random(ha, hb)
-        >>> E2 = CP_Map.random(ha, hb)
+        >>> E1 = Superoperator.random(ha, hb)
+        >>> E2 = Superoperator.random(ha, hb)
         >>> rho = ha.random_density()
         >>> chi = (E1*0.2 + E2*0.8)(rho)
         >>> xi  = E1(rho)*0.2 + E2(rho)*0.8
@@ -198,7 +211,7 @@ class Superoperator(object):
         >>> from qitensor import qudit, Superoperator
         >>> ha = qudit('a', 4)
         >>> hb = qudit('b', 3)
-        >>> E = CP_Map.random(ha, hb)
+        >>> E = Superoperator.random(ha, hb)
         >>> rho = ha.random_density()
         >>> ((-E)(rho) + E(rho)).norm() < 1e-14
         True
@@ -211,8 +224,8 @@ class Superoperator(object):
         >>> from qitensor import qudit, Superoperator
         >>> ha = qudit('a', 4)
         >>> hb = qudit('b', 3)
-        >>> E1 = CP_Map.random(ha, hb)
-        >>> E2 = CP_Map.random(ha, hb)
+        >>> E1 = Superoperator.random(ha, hb)
+        >>> E2 = Superoperator.random(ha, hb)
         >>> rho = ha.random_density()
         >>> chi = (E1 - E2)(rho)
         >>> xi  = E1(rho) - E2(rho)
@@ -222,18 +235,38 @@ class Superoperator(object):
 
         return self + (-other)
 
+    @property
+    def H(self):
+        """The adjoint channel."""
+        if self._H_S is None:
+            da = self.in_space.dim()
+            db = self.out_space.dim()
+            MH = self.as_matrix().A.conj().reshape(db,db,da,da).transpose(2,3,0,1). \
+                    reshape(da*da, db*db)
+            self._H_S = Superoperator(self.out_space, self.in_space, MH)
+        return self._H_S
+
     @classmethod
     def from_function(cls, in_space, f):
         """
-        >>> from qitensor import qubit, qudit, Superoperator, CP_Map
+        >>> from qitensor import qudit, Superoperator
         >>> ha = qudit('a', 3)
-        >>> hb = qubit('b')
+        >>> hb = qudit('b', 4)
         >>> rho = (ha*hb).random_density()
 
         >>> ET = Superoperator.from_function(ha, lambda x: x.T)
         >>> ET
         Superoperator( |a><a| to |a><a| )
         >>> (ET(rho) - rho.transpose(ha)).norm() < 1e-14
+        True
+
+        >>> hc = qudit('c', 5)
+        >>> L = (hc*ha.H).random_array()
+        >>> R = (ha*hc.H).random_array()
+        >>> N = Superoperator.from_function(ha, lambda x: L*x*R)
+        >>> N
+        Superoperator( |a><a| to |c><c| )
+        >>> (N(rho) - L*rho*R).norm() < 1e-14
         True
 
         >>> Superoperator.from_function(ha, lambda x: x.H)
@@ -303,14 +336,24 @@ class CP_Map(Superoperator):
     FIXME: need to write documentation.
     """
 
-    def __init__(self, J, env_space, _complimentary_channel=None):
+    def __init__(self, J, env_space):
         """
-        >>> ha = qudit('a', 2)
-        >>> hb = qudit('b', 2)
+        >>> ha = qudit('a', 3)
+        >>> hb = qudit('b', 4)
         >>> hd = qudit('d', 3)
         >>> rho = (ha*hd).random_density()
         >>> E = CP_Map.random(ha, hb)
+        >>> # Test the channel via its isometry.
         >>> ((E.J * rho * E.J.H).trace(E.env_space) - E(rho)).norm() < 1e-14
+        True
+        >>> # Test complementary channel.
+        >>> ((E.J * rho * E.J.H).trace(hb) - E.C(rho)).norm() < 1e-14
+        True
+
+        >>> X = ha.O.random_array()
+        >>> Y = hb.O.random_array()
+        >>> # Test the adjoint channel.
+        >>> abs( (E(X).H * Y).trace() - (X.H * E.H(Y)).trace() ) < 1e-14
         True
         """
 
@@ -338,11 +381,8 @@ class CP_Map(Superoperator):
 
         self._J = J
         self._env_space = env_space
-
-        if _complimentary_channel is None:
-            self._C = CP_Map(self.J, self.out_space, _complimentary_channel=self)
-        else:
-            self._C = _complimentary_channel
+        self._C = None
+        self._H_CP = None
 
     def __reduce__(self):
         """
@@ -374,7 +414,17 @@ class CP_Map(Superoperator):
     @property
     def C(self):
         """The complimentary channel."""
+        if self._C is None:
+            self._C = CP_Map(self.J, self.out_space)
         return self._C
+
+    @property
+    def H(self):
+        """The adjoint channel."""
+        if self._H_CP is None:
+            JH = self.J.H.relabel({ self.env_space.H: self.env_space })
+            self._H_CP = CP_Map(JH, self.env_space)
+        return self._H_CP
 
     def ket(self):
         """

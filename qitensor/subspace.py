@@ -131,14 +131,14 @@ class TensorSubspace(object):
         self._perp_basis_flat = perp_basis.reshape(((self._col_dim-self._dim), self._col_dim))
 
         if validate:
-            foo = np.tensordot(self._basis_flat.conjugate(), self._basis_flat, axes=((1,),(1,)))
-            assert linalg.norm(foo - np.eye(self._dim)) < self._tol
+            products = np.tensordot(self._basis_flat.conjugate(), self._basis_flat, axes=((1,),(1,)))
+            assert linalg.norm(products - np.eye(self._dim)) < self._tol
 
-            foo = np.tensordot(self._perp_basis_flat.conjugate(), self._perp_basis_flat, axes=((1,),(1,)))
-            assert linalg.norm(foo - np.eye(self._col_dim - self._dim)) < self._tol
+            products = np.tensordot(self._perp_basis_flat.conjugate(), self._perp_basis_flat, axes=((1,),(1,)))
+            assert linalg.norm(products - np.eye(self._col_dim - self._dim)) < self._tol
 
-            foo = np.tensordot(self._basis_flat.conjugate(), self._perp_basis_flat, axes=((1,),(1,)))
-            assert linalg.norm(foo) < self._tol
+            products = np.tensordot(self._basis_flat.conjugate(), self._perp_basis_flat, axes=((1,),(1,)))
+            assert linalg.norm(products) < self._tol
 
     def __reduce__(self):
         """
@@ -319,7 +319,7 @@ class TensorSubspace(object):
         AssertionError
         """
 
-        if not isinstance(other, self.__class__):
+        if not isinstance(other, TensorSubspace):
             raise TypeError('other object is not a TensorSubspace')
 
         if self._hilb_space is not None and other._hilb_space is not None:
@@ -349,7 +349,7 @@ class TensorSubspace(object):
         """
 
         if self._perp_cache is None:
-            self._perp_cache = self.__class__(self._perp_basis, self._basis, **self._config_kw)
+            self._perp_cache = TensorSubspace(self._perp_basis, self._basis, **self._config_kw)
             self._perp_cache._perp_cache = self
         return self._perp_cache
 
@@ -639,10 +639,10 @@ class TensorSubspace(object):
         >>> (y-x).is_perp(x[0])
         True
         """
-        if isinstance(other, self.__class__):
+        if isinstance(other, TensorSubspace):
             self.assert_compatible(other)
-            foo = np.tensordot(self._basis_flat.conjugate(), other._basis_flat, axes=((1,),(1,)))
-            return linalg.norm(foo) < self._tol
+            products = np.tensordot(self._basis_flat.conjugate(), other._basis_flat, axes=((1,),(1,)))
+            return linalg.norm(products) < self._tol
         else:
             return linalg.norm(self.to_basis(other)) < self._tol
 
@@ -704,7 +704,7 @@ class TensorSubspace(object):
         return other
 
     def is_hermitian(self):
-        """
+        r"""
         A subspace S is Hermitian if :math:`x \in S \iff x^\dagger \in S`.
 
         >>> import numpy as np
@@ -783,7 +783,7 @@ class TensorSubspace(object):
 
         # decrease parameters by only taking linearly independent subspace
         sqrmat = np.array([x_to_S.real, x_to_S.imag]).reshape(2*(n**2), 2*self._dim)
-        (U, s, V) = linalg.svd(sqrmat)
+        (U, s, _V) = linalg.svd(sqrmat)
         n_indep = np.sum(s > self._tol)
         S_basis = U[:, :n_indep]
         x_to_S_reduced_real = S_basis.reshape(2,n,n, n_indep)
@@ -847,28 +847,29 @@ class TensorSubspace(object):
             b_b_p = np.concatenate((bp_b, b_bp, bp_bp), axis=0)
             cfg = self._config_kw.copy()
             cfg['hilb_space'] = h1*h2
-            return self.__class__(b_b, b_b_p, **cfg)
+            return TensorSubspace(b_b, b_b_p, **cfg)
 
         n = len(self._basis.shape)
         m = len(other._basis.shape)
 
+        # Compute tensor product and shuffle axes.
         def tp(a, b):
-            foo = np.tensordot(a, b, axes=([], []))
-            foo = foo.transpose([n] + range(n) + range(n+1, n+m))
-            foo = foo.reshape((foo.shape[0]*foo.shape[1],) + foo.shape[2:])
-            return foo
+            products = np.tensordot(a, b, axes=([], []))
+            products = products.transpose([n] + range(n) + range(n+1, n+m))
+            products = products.reshape((products.shape[0]*products.shape[1],) + products.shape[2:])
+            return products
 
         b_b = tp(self._basis, other._basis)
         # this is simpler, but computing perp_basis manually avoids an svd/qr call
-        #return self.__class__.from_span(b_b, **self._config_kw)
+        #return TensorSubspace.from_span(b_b, **self._config_kw)
         bp_b  = tp(self._perp_basis, other._basis)
         b_bp  = tp(self._basis,  other._perp_basis)
         bp_bp = tp(self._perp_basis, other._perp_basis)
         b_b_p = np.concatenate((bp_b, b_bp, bp_bp), axis=0)
-        return self.__class__(b_b, b_b_p, **self._config_kw)
+        return TensorSubspace(b_b, b_b_p, **self._config_kw)
 
     def map(self, f):
-        """
+        r"""
         Returns span{ f(x) : x \in S }.
         """
 
@@ -885,7 +886,7 @@ class TensorSubspace(object):
             cfg['hilb_space'] = None
             cfg['dtype'] = np.array(b_new).dtype
 
-        return self.__class__.from_span(b_new, **cfg)
+        return TensorSubspace.from_span(b_new, **cfg)
 
     def _nomath_map(self, f):
         """
@@ -904,7 +905,7 @@ class TensorSubspace(object):
             cfg['hilb_space'] = None
             cfg['dtype'] = np.array(b_new).dtype
 
-        return self.__class__(b_new, bp_new, **cfg)
+        return TensorSubspace(b_new, bp_new, **cfg)
 
     def transpose(self, axes):
         if self._hilb_space is not None:

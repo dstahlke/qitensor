@@ -7,8 +7,6 @@ from qitensor.array import HilbertArray
 from qitensor.space import HilbertSpace
 from qitensor.exceptions import MismatchedSpaceError
 
-# FIXME - pickling
-
 # This is the only thing that is exported.
 __all__ = ['TensorSubspace']
 
@@ -21,11 +19,12 @@ def _unreduce_v1(basis, perp_basis, tol, hilb_space, dtype):
 
 class TensorSubspace(object):
     """
-    Represents a subspace of tensors.  Methods are available for projecting
-    to this subspace, computing span and intersection of subspaces, etc.  This module
-    can be used independently of qitensor, and the doctest below reflects this.
-    However, if you are using qitensor then typically a subspace would be created
-    using one of the following methods:
+    Represents a subspace of vectors, matrices, or tensors.
+
+    Methods are available for projecting to this subspace, computing span and intersection of
+    subspaces, etc.  This module can be used independently of the rest of qitensor, and the
+    doctest below reflects this.  However, if you are using qitensor then typically a subspace
+    would be created using one of the following methods:
 
     * :func:`qitensor.array.HilbertArray.span`
     * :func:`qitensor.space.HilbertSpace.full_space`
@@ -38,6 +37,7 @@ class TensorSubspace(object):
     <TensorSubspace of dim 4 over space (5, 10)>
     >>> x.dim()
     4
+    >>> # TensorSubspace can act like a list of orthonormal basis vectors.
     >>> x[0] in x
     True
     >>> x.perp()[0] in x
@@ -48,20 +48,22 @@ class TensorSubspace(object):
     >>> z = TensorSubspace.from_span(numpy.random.randn(30,5,10))
     >>> z
     <TensorSubspace of dim 30 over space (5, 10)>
-    >>> x | y
+    >>> x | y # span of two subspaces
     <TensorSubspace of dim 34 over space (5, 10)>
     >>> y | z
     <TensorSubspace of dim 50 over space (5, 10)>
-    >>> y & z
+    >>> y & z # intersection of two subspaces
     <TensorSubspace of dim 10 over space (5, 10)>
+    >>> # `<` and `>` check whether one subspace contains the other
     >>> y > x&y
     True
     >>> y > x|y
     False
     >>> x|y > y
     True
-    >>> y - x
+    >>> y - x # subspace of y perpendicular to x
     <TensorSubspace of dim 26 over space (5, 10)>
+    >>> # `~x` gives the perpendicular subspace, equivalent to x.perp().
     >>> (y & z).equiv(~(~y | ~z))
     True
     >>> (y-(y-x)).equiv(TensorSubspace.from_span([ y.project(v) for v in x ]))
@@ -70,9 +72,18 @@ class TensorSubspace(object):
 
     def __init__(self, basis, perp_basis, tol, hilb_space, dtype, validate=False):
         """
-        You can directly initialize this class if you have an orthonormal basis for the
-        subspace and a basis for the perpendicular subspace, but typically it is easier
-        (although slower) to instead initialize using the ``from_span`` factory method.
+        Don't directly instantiate this class using this constructor, use the
+        ``TensorSubspace.from_span`` factory method instead.
+
+        :param basis: an orthonormal basis for this subspace
+        :type basis: list of numpy arrays or ``HilbertArray``s, or numpy array whose first axis
+            indexes the operators
+        :param perp_basis: an orthonormal basis for the perpendicular subspace
+        :param tol: tolerance to use for checking whether vectors are perpendicular
+        :param hilb_space: the ``HilbertSpace`` that this is a subspace of, if any
+        :param dtype: the numpy dtype to use
+        :param validate: if true, a check is made that the arguments indeed represent an
+            orthonormal basis
         """
 
         assert dtype is not None
@@ -85,6 +96,9 @@ class TensorSubspace(object):
         basis = to_nparray(basis)
         perp_basis = to_nparray(perp_basis)
 
+        # basis and perp_basis must be arrays of the appropriate shape, even if they are empty.
+        # If one of them is empty, then copy the shape from the other one.  The empty basis
+        # will be a numpy array of shape (0, ...).
         if basis.shape[0] == 0:
             basis = np.zeros(((0,)+perp_basis.shape[1:]), basis.dtype)
         if perp_basis.shape[0] == 0:
@@ -108,10 +122,11 @@ class TensorSubspace(object):
             assert hilb_space.shape == basis.shape[1:]
             assert dtype == hilb_space.base_field.dtype
 
-        if validate:
-            assert basis.shape[1:] == perp_basis.shape[1:]
-            assert self._dim + perp_basis.shape[0] == self._col_dim
+        assert basis.shape[1:] == perp_basis.shape[1:]
+        assert self._dim + perp_basis.shape[0] == self._col_dim
 
+        # These contain a copy of the basis and perpendicular basis in which each basis element
+        # has been flattened into a vector.
         self._basis_flat = basis.reshape((self._dim, self._col_dim))
         self._perp_basis_flat = perp_basis.reshape(((self._col_dim-self._dim), self._col_dim))
 
@@ -153,10 +168,10 @@ class TensorSubspace(object):
     @classmethod
     def from_span(cls, X, tol=1e-10, hilb_space=None, dtype=None):
         """
-        Construct a TensorSubspace that represents the span of the given operators.
+        Construct a ``TensorSubspace`` that represents the span of the given operators.
 
         :param X: the operators to take the span of.
-        :type X: list of numpy array or numpy array whose first axes indexes the operators
+        :type X: list of numpy arrays or HilbertArray, or numpy array whose first axis indexes the operators
         :param tol: tolerance for determining whether operators are perpendicular
         :param dtype: the datatype (default is to use the datatype of the input operators)
 
@@ -172,18 +187,19 @@ class TensorSubspace(object):
         <TensorSubspace of dim 3 over space (5,)>
         """
 
+        # The input must either be a numpy array or be convertible to a list.
         if not isinstance(X, np.ndarray):
             X = list(X)
-            try:
-                if isinstance(X[0], HilbertArray):
-                    assert hilb_space is None or hilb_space == X[0].space
-                    hilb_space = X[0].space
-                    for op in X:
-                        assert isinstance(op, HilbertArray)
-                        assert op.space == hilb_space
-                    X = [op.nparray for op in X]
-            except ImportError:
-                pass
+
+        # If the basis elements are of type HilbertArray, then do some validation and convert
+        # them to numpy arrays.
+        if isinstance(X[0], HilbertArray):
+            assert hilb_space is None or hilb_space == X[0].space
+            hilb_space = X[0].space
+            for op in X:
+                assert isinstance(op, HilbertArray)
+                assert op.space == hilb_space
+            X = [op.nparray for op in X]
 
         if hilb_space is not None:
             if dtype is None:
@@ -191,25 +207,32 @@ class TensorSubspace(object):
             else:
                 assert dtype == hilb_space.base_field.dtype
 
+        # Convert the basis now to a numpy array.  Let numpy choose a dtype if none was
+        # specified.
         X = np.array(X, dtype=dtype)
         if dtype is None:
             dtype = X.dtype
         assert len(X.shape) >= 2
 
+        # First axis of X enumerates the basis elements, remaining axes belong to the basis
+        # elements themselves.
         col_shp = X.shape[1:]
-        m = X.shape[0]
-        n = np.product(col_shp)
+        num_bases = X.shape[0]
+        element_dimension = np.product(col_shp)
 
         if hilb_space is not None:
             assert col_shp == hilb_space.shape
 
-        if m==0:
+        if num_bases==0:
             if hilb_space is not None:
                 col_shp = hilb_space
             return cls.empty(col_shp, tol=tol)
 
-        X = X.reshape(m, n)
+        # Now convert X to a rank 2 tensor.  Each basis element is treated as a vector.
+        X = X.reshape(num_bases, element_dimension)
 
+        # Form an orthonormal basis from the basis X.  The QR transform method is faster, but
+        # seems to have problems sometimes.  The SVD method seems to work well.
         use_qr = False
         if use_qr:
             # I think that sometimes QR doesn't do exactly what I want.  The code
@@ -217,16 +240,16 @@ class TensorSubspace(object):
             assert 0
             # Append random values to that Y represents the whole space.
             # This allows us to also generate the basis orthogonal to span{X}.
-            Y = np.concatenate((X, np.random.rand(n, n)), axis=0)
+            Y = np.concatenate((X, np.random.rand(element_dimension, element_dimension)), axis=0)
             (Q, R) = linalg.qr(Y.transpose(), mode='full')
-            dim = np.sum([linalg.norm(row) > tol for row in R[:, :m]])
+            dim = np.sum([linalg.norm(row) > tol for row in R[:, :num_bases]])
             basis      = Q[:, :dim].transpose().reshape((dim,)+col_shp)
-            perp_basis = Q[:, dim:].transpose().reshape((n-dim,)+col_shp)
+            perp_basis = Q[:, dim:].transpose().reshape((element_dimension-dim,)+col_shp)
         else:
             (_U, s, V) = linalg.svd(X, full_matrices=True)
             dim = np.sum(s > tol)
             basis      = V[:dim, :].reshape((dim,)+col_shp)
-            perp_basis = V[dim:, :].reshape((n-dim,)+col_shp)
+            perp_basis = V[dim:, :].reshape((element_dimension-dim,)+col_shp)
 
         return cls(basis, perp_basis, tol=tol, hilb_space=hilb_space, dtype=dtype)
 
@@ -273,6 +296,8 @@ class TensorSubspace(object):
     def basis(self):
         """
         Returns an orthonormal basis for this subspace.
+
+        You can also just directly treat a TensorSubspace object as a list, to the same effect.
         """
 
         return list(self)
@@ -441,7 +466,7 @@ class TensorSubspace(object):
 
     def __mul__(self, other):
         """
-        Returns span{x*other : x in self}.
+        Returns span{ x*other : x in self }.
 
         >>> from qitensor import qudit
         >>> ha = qudit('a', 3)
@@ -470,7 +495,7 @@ class TensorSubspace(object):
 
     def __rmul__(self, other):
         """
-        Returns span{other*x : x in self}.
+        Returns span{ other*x : x in self }.
 
         >>> from qitensor import qudit
         >>> ha = qudit('a', 3)
@@ -489,7 +514,7 @@ class TensorSubspace(object):
     @property
     def H(self):
         """
-        Returns span{x.H : x in self}
+        Returns span{ x.H : x in self }
 
         >>> from qitensor import qudit
         >>> ha = qudit('a', 3)
@@ -680,7 +705,7 @@ class TensorSubspace(object):
 
     def is_hermitian(self):
         """
-        A subspace S is Hermitian if :math:`S = \{ x^\dagger | x \in S \}`.
+        A subspace S is Hermitian if :math:`x \in S \iff x^\dagger \in S`.
 
         >>> import numpy as np
         >>> from qitensor import TensorSubspace
@@ -711,8 +736,9 @@ class TensorSubspace(object):
 
     def hermitian_basis(self):
         """
-        Compute a basis for the Hermitian operators of this space.  Note that
-        this basis is intended to map real vectors to complex operators.
+        Compute a basis consisting of Hermitian operators.  This is only allowed for Hermitian
+        subspaces (see ``is_hermitian``).  This basis can be used to map real vectors to
+        complex operators.
 
         >>> import numpy as np
         >>> from qitensor import TensorSubspace
@@ -842,10 +868,14 @@ class TensorSubspace(object):
         return self.__class__(b_b, b_b_p, **self._config_kw)
 
     def map(self, f):
-        b_new = [ f(m) for m in self ]
+        """
+        Returns span{ f(x) : x \in S }.
+        """
 
-        if len(b_new) == 0:
+        if self.dim() == 0:
             return self
+
+        b_new = [ f(m) for m in self ]
 
         cfg = self._config_kw.copy()
         if isinstance(b_new[0], HilbertArray):
@@ -861,6 +891,7 @@ class TensorSubspace(object):
         """
         Like map, but assumes the operation preserves orthogonality.
         """
+
         b_new  = np.array([f(m) for m in self ])
         bp_new = np.array([f(m) for m in self.perp() ])
 

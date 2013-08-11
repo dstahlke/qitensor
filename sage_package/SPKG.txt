@@ -13,17 +13,17 @@ http://www.stahlke.org/dan/qitensor
 New BSD: http://www.opensource.org/licenses/bsd-license.php
 
 == SPKG Maintainers ==
- * Dan Stahlke
+	* Dan Stahlke
 
 == Upstream Contact ==
 
 dstahlke@gmail.com
 
 == Dependencies ==
- * None
+	* None
 
 == Special Update/Build Instructions ==
- * None
+	* None
 
 == Changelog ==
 

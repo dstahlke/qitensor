@@ -1,8 +1,8 @@
 #!/bin/sh
 
 fatal() {
-	echo Fatal error.
-	exit 1
+    echo Fatal error.
+    exit 1
 }
 
 test "z" == "z$1" && fatal

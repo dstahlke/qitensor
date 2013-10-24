@@ -13,19 +13,29 @@ __all__ = ['NoncommutativeGraph']
 
 ### Some helper functions for cvxopt ###
 
+def mat_cplx_to_real(cmat):
+    rmat = np.zeros((cmat.shape[0], 2, cmat.shape[1], 2))
+    rmat[:, 0, :, 0] = cmat.real
+    rmat[:, 1, :, 1] = cmat.real
+    rmat[:, 0, :, 1] = -cmat.imag
+    rmat[:, 1, :, 0] = cmat.imag
+    return rmat.reshape(cmat.shape[0]*2, cmat.shape[1]*2)
+
+# This could help for extracting the dual solution for the solver.  But I haven't yet figured
+# out how to interpret the things that cvxopt returns.
+#ret=NoncommutativeGraph(S).lovasz_theta(long_return=True)
+#ss=mat_real_to_cplx(np.array(ret['sdp_stats']['ss'][1]))
+#zs=mat_real_to_cplx(np.array(ret['sdp_stats']['zs'][1]))
+def mat_real_to_cplx(rmat):
+    w = rmat.shape[0]/2
+    h = rmat.shape[1]/2
+    return rmat[:w,:h] + 1j*rmat[w:,:h]
+
 def make_F_real(Fx_list, F0_list):
     '''
     Convert F0, Fx arrays to real if needed, by considering C as a vector space
     over R.  This is needed because cvxopt cannot handle complex inputs.
     '''
-
-    def mat_cplx_to_real(cmat):
-        rmat = np.zeros((cmat.shape[0], 2, cmat.shape[1], 2))
-        rmat[:, 0, :, 0] = cmat.real
-        rmat[:, 1, :, 1] = cmat.real
-        rmat[:, 0, :, 1] = -cmat.imag
-        rmat[:, 1, :, 0] = cmat.imag
-        return rmat.reshape(cmat.shape[0]*2, cmat.shape[1]*2)
 
     F0_list_real = []
     Fx_list_real = []
@@ -256,6 +266,131 @@ class NoncommutativeGraph(object):
             ret = {}
             for key in ['n', 'x_to_Y', 'Fx_1', 'Fx_2', 'F0_1', 'F0_2', 'phi_phi', 'c', 't', 'Y', 'xvec', 'sdp_stats']:
                 ret[key] = locals()[key]
+            return ret
+        else:
+            return t
+
+    def _doubly_hermitian_basis(self, n):
+        def perms(i,j,k,l):
+            return [(i,j,k,l), (j,i,l,k), (l,k,j,i), (k,l,i,j)]
+
+        inds = set()
+        for (i,j,k,l) in itertools.product(range(n), repeat=4):
+            p = perms(i,j,k,l)
+            if not np.any([ x in inds for x in p ]):
+                inds.add((i,j,k,l))
+
+        ops = []
+        for (i,j,k,l) in inds:
+            a = np.zeros((n,n,n,n), dtype=complex)
+            a[i,j,k,l] = 1
+            a += a.transpose((1,0,3,2))
+            a += a.transpose((2,3,0,1))
+            ops.append(a)
+
+            a = np.zeros((n,n,n,n), dtype=complex)
+            a[i,j,k,l] = 1j
+            a += a.transpose((1,0,3,2)).conj()
+            a += a.transpose((2,3,0,1)).conj()
+            if np.sum(np.abs(a)) > 1e-6:
+                ops.append(a)
+
+        return np.array(ops).transpose(1,2,3,4,0)
+
+    def schrijver(self, long_return=False):
+        """
+        My non-commutative generalization of Schrijver's number.
+
+        min t s.t.
+            tI - Tr_A (Y-Z) \succeq 0
+            Y \in S \ot \mathcal{L}
+            Y-Z \succeq \Phi
+            R(Z) \succeq 0
+        """
+
+        (nS, n, _n) = self.S_basis.shape
+        assert n == _n
+
+        Y_basis = self._get_Y_basis()
+        Z_basis = self._doubly_hermitian_basis(n)
+
+        # x = [t, Y.A:Si * Y.A':i * Y.A':j, Z]
+        xvec_len = 1 + Y_basis.shape[4] + Z_basis.shape[4]
+
+        x_to_Y = np.concatenate((
+                np.zeros((n,n,n,n, 1)),
+                Y_basis,
+                np.zeros((n,n,n,n, Z_basis.shape[4])),
+            ), axis=4)
+        assert x_to_Y.shape[4] == xvec_len
+
+        x_to_Z = np.concatenate((
+                np.zeros((n,n,n,n, 1)),
+                np.zeros((n,n,n,n, Y_basis.shape[4])),
+                Z_basis,
+            ), axis=4)
+        assert x_to_Z.shape[4] == xvec_len
+
+        phi_phi = np.zeros((n,n, n,n), dtype=complex)
+        for (i, j) in itertools.product(range(n), repeat=2):
+            phi_phi[i, i, j, j] = 1
+        phi_phi = phi_phi.reshape(n**2, n**2)
+
+        # Cost vector.
+        # x = [t, Y.A:Si * Y.A':i * Y.A':j]
+        c = np.zeros(xvec_len)
+        c[0] = 1
+
+        # tI - tr_A{Y-Z} >= 0
+        Fx_1 = -np.trace(x_to_Y - x_to_Z, axis1=0, axis2=2)
+        for i in xrange(n):
+            Fx_1[i, i, 0] = 1
+
+        F0_1 = np.zeros((n, n))
+
+        # Y - Z  >=  |phi><phi|
+        Fx_2 = (x_to_Y - x_to_Z).reshape(n**2, n**2, xvec_len)
+        F0_2 = phi_phi
+
+        Fx_3 = x_to_Z.transpose((0,2,1,3,4)).reshape(n**2, n**2, xvec_len)
+        F0_3 = np.zeros((n**2, n**2), dtype=complex)
+
+        (xvec, sdp_stats) = call_sdp(c, (Fx_1, Fx_2, Fx_3), (F0_1, F0_2, F0_3))
+        if sdp_stats['status'] != 'optimal':
+            raise ArithmeticError(sdp_stats['status'])
+
+        t = xvec[0]
+        Y = np.dot(x_to_Y, xvec)
+        Z = np.dot(x_to_Z, xvec)
+
+        # some sanity checks to make sure the output makes sense
+        verify_tol=1e-7
+        if verify_tol:
+            err = linalg.eigvalsh((Y-Z).reshape(n**2, n**2) - phi_phi)[0]
+            if err < -verify_tol: print "WARNING: phi_phi err =", err
+
+            err = linalg.eigvalsh(Z.transpose(0,2,1,3).reshape(n**2, n**2))[0]
+            if err < -verify_tol: print "WARNING: R(Z) err =", err
+
+            maxeig = linalg.eigvalsh(np.trace(Y-Z, axis1=0, axis2=2))[-1].real
+            err = abs(xvec[0] - maxeig)
+            if err > verify_tol: print "WARNING: t err =", err
+
+            # make sure it is in S*L(A')
+            for mat in self.Sp_basis:
+                dp = np.tensordot(Y, mat.conjugate(), axes=[[0, 2], [0, 1]])
+                err = linalg.norm(dp)
+                if err > 1e-10: print "err:", err
+                assert err < 1e-10
+
+        if long_return:
+            ret = {}
+            for key in [
+                    'n', 'x_to_Y', 'x_to_Z',
+                    'Fx_1', 'Fx_2', 'Fx_3', 'F0_1', 'F0_2', 'F0_3',
+                    'phi_phi', 'c', 't', 'Y', 'Z', 'xvec', 'sdp_stats'
+                ]:
+                    ret[key] = locals()[key]
             return ret
         else:
             return t

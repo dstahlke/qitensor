@@ -15,6 +15,7 @@ cdef class HilbertArray:
     cpdef assert_density_matrix(self, check_hermitian=*, check_normalized=*, check_positive=*)
     cpdef set_data(self, new_data)
     cpdef tensordot(self, HilbertArray other, contraction_spaces=*)
+    cpdef tensor(self, HilbertArray other)
     cpdef transpose(self, tpose_axes=*)
     cpdef relabel(self, from_spaces, to_spaces=*)
     cpdef relabel_prime(self)

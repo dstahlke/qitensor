@@ -421,6 +421,13 @@ cdef class HilbertArray:
             ret.nparray = td.transpose(wisdom.transpose_axes)
             return ret
 
+    cpdef tensor(self, HilbertArray other):
+        """
+        Perform a tensor product between two array.
+        """
+
+        return self.tensordot(other, contraction_spaces=frozenset())
+
     cpdef transpose(self, tpose_axes=None):
         """
         Perform a transpose or partial transpose operation.
@@ -1375,6 +1382,8 @@ cdef class HilbertArray:
 
         m = self.as_np_matrix(**rowcol_kw)
         m = f(m)
+        if m is None:
+            raise HilbertError("transformer returned None")
 
         if transpose_dims:
             out_hilb = self.space.H

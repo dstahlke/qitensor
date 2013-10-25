@@ -317,6 +317,41 @@ cdef class HilbertArray:
                 raise HilbertError('not a density matrix: had negative eigenvalue ('+
                     str(ew)+')')
 
+    cpdef is_positive(self):
+        """
+        Returns true if this is a positive operator.
+
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> hb = qubit('b')
+
+        >>> (1.23 * ha.random_density()).is_positive()
+        True
+        >>> # small errors are accepted
+        >>> (ha.random_density() + ha.O.random_array()*1e-14).is_positive()
+        True
+        >>> (ha.ket(0) * hb.bra(0)).is_positive()
+        False
+        >>> ha.random_unitary().is_positive()
+        False
+        >>> U = ha.random_unitary()
+        >>> (U * ha.diag([ 1.1, -0.1 ]) * U.H).is_positive()
+        False
+        >>> (U * ha.diag([ 1.1,  0.0 ]) * U.H).is_positive()
+        True
+        """
+
+        toler = 1e-9
+
+        if not self.space.is_symmetric():
+            return False
+
+        if not (self == self.H or self.closeto(self.H)):
+            return False
+
+        ew = np.min(self.eigvalsh())
+        return ew > -toler
+
     cpdef set_data(self, new_data):
         """
         Sets this array equal to the given argument.
@@ -2261,11 +2296,11 @@ cdef class HilbertArray:
         >>> vec = hb.random_array().normalized()
         >>> dyad = vec * vec.H
         >>> (W, V) = dyad.eig(hermit=True)
-        >>> (W - hb.diag([1, 0, 0])).norm() < epsilon
+        >>> (W - hb.diag([0, 0, 1])).norm() < epsilon
         True
         >>> (V.H * V - hb.eye()).norm() < epsilon
         True
-        >>> vec2 = V[:, 0]
+        >>> vec2 = V[:, hb.dim()-1]
         >>> # Correct for phase ambiguity
         >>> vec2 *= (vec[0]/vec2[0]) / abs(vec[0]/vec2[0])
         >>> (vec - vec2).norm() < epsilon
@@ -2284,7 +2319,7 @@ cdef class HilbertArray:
         (w, v) = self.space.base_field.mat_eig(self.as_np_matrix(), hermit)
 
         # sort eigenvalues in ascending order of real component
-        srt = np.argsort(-w)
+        srt = np.argsort(w)
         w = w[srt]
         v = v[:, srt]
 
@@ -2294,7 +2329,7 @@ cdef class HilbertArray:
 
     cpdef eigvals(self, hermit=False):
         """
-        Return the eigenvalues of this array, sorted in order of decreasing
+        Return the eigenvalues of this array, sorted in order of ascending
         real component.
 
         :param hermit: set this to True if the input is Hermitian.  In this
@@ -2322,13 +2357,19 @@ cdef class HilbertArray:
         w = self.space.base_field.mat_eigvals(self.as_np_matrix(), hermit)
 
         # sort eigenvalues in ascending order of real component
-        w = -np.sort(-w)
+        w = np.sort(w)
 
         if hermit:
             assert np.all(np.imag(w) == 0)
             w = np.real(w)
 
         return w
+
+    cpdef eigvalsh(self):
+        """
+        Alias for eigvals(hermit=True).
+        """
+        return self.eigvals(hermit=True)
 
     cpdef sqrt(self):
         """

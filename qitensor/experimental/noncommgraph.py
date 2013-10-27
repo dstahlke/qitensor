@@ -524,6 +524,166 @@ class NoncommutativeGraph(object):
         else:
             return t
 
+    def unified_test(self):
+        (nS, n, _n) = self.S_basis.shape
+        assert n == _n
+
+        psd = {
+            'x': lambda Z: Z.transpose((0,2,1,3)).reshape(n**2, n**2),
+            '0': np.zeros((n**2, n**2), dtype=complex),
+        }
+
+        ppt = {
+            'x': lambda Z: Z.transpose((1,2,0,3)).reshape(n**2, n**2),
+            '0': np.zeros((n**2, n**2), dtype=complex),
+        }
+
+        #a_th = self.lovasz_theta()
+        #b_th = self.unified([], [])
+        #print a_th, b_th
+        #a_thm = self.schrijver(False)
+        #b_thm = self.unified([], [psd])
+        #print a_thm, b_thm
+        #a_thm = self.schrijver(True)
+        #b_thm = self.unified([], [psd, ppt])
+        #print a_thm, b_thm
+        a_thp = self.szegedy(False)
+        b_thp = self.unified([psd], [])
+        print a_thp, b_thp
+        a_thp = self.szegedy(True)
+        b_thp = self.unified([psd, ppt], [])
+        print a_thp, b_thp
+
+    def unified(self, extra_constraints, extra_vars, long_return=False):
+        """
+        My non-commutative generalization of Schrijver's number.
+
+        min t s.t.
+            tI - Tr_A (Y-Z) \succeq 0
+            Y \in S \ot \mathcal{L}
+            Y-Z (-Z2) \succeq \Phi
+            R(Z) \succeq 0
+            optional: R(Z2) \in PPT
+        """
+
+        (nS, n, _n) = self.S_basis.shape
+        assert n == _n
+
+        Y_basis = self._get_Y_basis()
+        Yb_len = Y_basis.shape[4]
+        Z_basis = self._doubly_hermitian_basis(n)
+        Zb_len = Z_basis.shape[4]
+
+        # x = [t, Y.A:Si * Y.A':i * Y.A':j, Z]
+        xvec_len = 1 + Yb_len + len(extra_vars)*Zb_len
+
+        idx = 1
+        x_to_Y = np.zeros((n,n,n,n,xvec_len), dtype=complex)
+        x_to_Y[:,:,:,:,idx:idx+Yb_len] = Y_basis
+        idx += Yb_len
+
+        x_to_Z = []
+        for v in extra_vars:
+            xZ = np.zeros((n,n,n,n,xvec_len), dtype=complex)
+            xZ[:,:,:,:,idx:idx+Zb_len] = Z_basis
+            idx += Zb_len
+            x_to_Z.append(xZ)
+
+        assert idx == xvec_len
+
+        phi_phi = np.zeros((n,n, n,n), dtype=complex)
+        for (i, j) in itertools.product(range(n), repeat=2):
+            phi_phi[i, i, j, j] = 1
+        phi_phi = phi_phi.reshape(n**2, n**2)
+
+        # Cost vector.
+        # x = [t, Y.A:Si * Y.A':i * Y.A':j]
+        c = np.zeros(xvec_len)
+        c[0] = 1
+
+        # tI - tr_A{Y-Z} >= 0
+        Fx_1 = -np.trace(x_to_Y, axis1=0, axis2=2)
+        for xZ in x_to_Z:
+            Fx_1 += np.trace(xZ, axis1=0, axis2=2)
+        for i in xrange(n):
+            Fx_1[i, i, 0] = 1
+        F0_1 = np.zeros((n, n))
+
+        # Y - Z  >=  |phi><phi|
+        Fx_2 = x_to_Y.reshape(n**2, n**2, xvec_len).copy()
+        for xZ in x_to_Z:
+            Fx_2 -= xZ.reshape(n**2, n**2, xvec_len)
+        F0_2 = phi_phi
+
+        Fx_evars = []
+        F0_evars = []
+        for (xZ, v) in zip(x_to_Z, extra_vars):
+            Fx = np.array([ v['x'](z) for z in np.rollaxis(xZ, -1) ])
+            Fx = np.rollaxis(Fx, 0, len(Fx.shape))
+            F0 = v['0']
+            Fx_evars.append(Fx)
+            F0_evars.append(F0)
+
+        Fx_econs = []
+        F0_econs = []
+        for v in extra_constraints:
+            Fx = np.array([ v['x'](y) for y in np.rollaxis(x_to_Y, -1) ])
+            Fx = np.rollaxis(Fx, 0, len(Fx.shape))
+            F0 = v['0']
+            Fx_econs.append(Fx)
+            F0_econs.append(F0)
+
+        Fx_list = [Fx_1, Fx_2] + Fx_evars + Fx_econs
+        F0_list = [F0_1, F0_2] + F0_evars + F0_econs
+
+        (xvec, sdp_stats) = call_sdp(c, Fx_list, F0_list)
+        if sdp_stats['status'] != 'optimal':
+            raise ArithmeticError(sdp_stats['status'])
+
+        t = xvec[0]
+        Y = np.dot(x_to_Y, xvec)
+        Z_list = [ np.dot(xZ, xvec) for xZ in x_to_Z ]
+        Z_sum = np.sum(Z_list, axis=0)
+
+        # some sanity checks to make sure the output makes sense
+        verify_tol=1e-7
+        if verify_tol:
+            err = linalg.eigvalsh((Y-Z_sum).reshape(n**2, n**2) - phi_phi)[0]
+            if err < -verify_tol: print "WARNING: phi_phi err =", err
+
+            for (i, (v, Z)) in enumerate(zip(extra_vars, Z_list)):
+                M = v['x'](Z) - v['0']
+                err = linalg.eigvalsh(M)[0]
+                if err < -verify_tol: print "WARNING: R(Z%d) err = %g" % (i, err)
+
+            for (i, v) in enumerate(extra_constraints):
+                M = v['x'](Y) - v['0']
+                err = linalg.eigvalsh(M)[0]
+                print linalg.eigvalsh(M) # FIXME
+                if err < -verify_tol: print "WARNING: R(Y) err =", err
+
+            maxeig = linalg.eigvalsh(np.trace(Y-Z_sum, axis1=0, axis2=2))[-1].real
+            err = abs(xvec[0] - maxeig)
+            if err > verify_tol: print "WARNING: t err =", err
+
+            # make sure it is in S*L(A')
+            for mat in self.Sp_basis:
+                dp = np.tensordot(Y, mat.conjugate(), axes=[[0, 2], [0, 1]])
+                err = linalg.norm(dp)
+                if err > 1e-10: print "S err:", err
+                assert err < 1e-10
+
+        if long_return:
+            ret = {}
+            for key in [
+                    'n', 'x_to_Y', 'x_to_Z',
+                    'phi_phi', 'c', 't', 'Y', 'Z_list', 'xvec', 'sdp_stats'
+                ]:
+                    ret[key] = locals()[key]
+            return ret
+        else:
+            return t
+
 # Maybe this cannot be computed using a semidefinite program.
 #
 #    def small_lovasz(self, long_return=False):

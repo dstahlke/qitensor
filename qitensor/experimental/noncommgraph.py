@@ -813,16 +813,6 @@ class NoncommutativeGraph(object):
 #        else:
 #            return theta
 
-# If this module is run from the command line, run the doctests.
-if __name__ == "__main__":
-    # Doctests require not getting progress messages from SDP solver.
-    cvxopt.solvers.options['show_progress'] = False
-
-    print "Running doctests."
-
-    import doctest
-    doctest.testmod()
-
 # For testing whether two implementations of _get_Y_basis work the same.
 #d = 5
 #M = np.random.random((d, d)) + 1j*np.random.random((d, d))
@@ -865,16 +855,26 @@ if __name__ == "__main__":
             S |= TensorSubspace.from_span([ M, M.H ])
         return S
 
+    cvxopt.solvers.options['show_progress'] = False
     # Unfortunately, Schrijver doesn't converge well.
-    #cvxopt.solvers.options['abstol'] = float(1e-5)
-    #cvxopt.solvers.options['reltol'] = float(1e-5)
+    cvxopt.solvers.options['abstol'] = float(1e-5)
+    cvxopt.solvers.options['reltol'] = float(1e-5)
 
     n = 3
     ha = qudit('a', n)
 
     S = rand_graph(ha, 3)
-    #S = NoncommutativeGraph.pentagon().S.map(ha.O.array)
     #S = TensorSubspace.from_span([ ha.eye() ])
     print S
 
     NoncommutativeGraph(S).unified_test()
+
+# If this module is run from the command line, run the doctests.
+if __name__ == "__main__":
+    # Doctests require not getting progress messages from SDP solver.
+    cvxopt.solvers.options['show_progress'] = False
+
+    print "Running doctests."
+
+    import doctest
+    doctest.testmod()

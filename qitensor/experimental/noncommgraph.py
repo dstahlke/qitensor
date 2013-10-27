@@ -14,11 +14,11 @@ __all__ = ['NoncommutativeGraph']
 ### Some helper functions for cvxopt ###
 
 def mat_cplx_to_real(cmat):
-    rmat = np.zeros((cmat.shape[0], 2, cmat.shape[1], 2))
-    rmat[:, 0, :, 0] = cmat.real
-    rmat[:, 1, :, 1] = cmat.real
-    rmat[:, 0, :, 1] = -cmat.imag
-    rmat[:, 1, :, 0] = cmat.imag
+    rmat = np.zeros((2, cmat.shape[0], 2, cmat.shape[1]))
+    rmat[0, :, 0, :] = cmat.real
+    rmat[1, :, 1, :] = cmat.real
+    rmat[0, :, 1, :] = -cmat.imag
+    rmat[1, :, 0, :] = cmat.imag
     return rmat.reshape(cmat.shape[0]*2, cmat.shape[1]*2)
 
 # This could help for extracting the dual solution for the solver.  But I haven't yet figured
@@ -65,6 +65,11 @@ def call_sdp(c, Fx_list, F0_list):
     # interfacing to C libraries.
     #xvec = sdpa.run_sdpa(c, Fx_list, F0_list).
 
+    for (k, (F0, Fx)) in enumerate(zip(F0_list, Fx_list)):
+        assert linalg.norm(F0 - F0.conj().T) < 1e-10
+        for i in range(Fx.shape[2]):
+            assert linalg.norm(Fx[:,:,i] - Fx[:,:,i].conj().T) < 1e-10
+
     # Note: Fx and F0 must be negated when passed to cvxopt.sdp.
     (Fx_list, F0_list) = make_F_real(Fx_list, F0_list)
     Gs = [cvxopt.base.matrix(-Fx.reshape(Fx.shape[0]**2, Fx.shape[2])) for Fx in Fx_list]
@@ -72,6 +77,13 @@ def call_sdp(c, Fx_list, F0_list):
 
     sol = cvxopt.solvers.sdp(cvxopt.base.matrix(c), Gs=Gs, hs=hs)
     xvec = np.array(sol['x']).flatten()
+
+    for (G, h) in zip(Gs, hs):
+        G = np.array(G)
+        h = np.array(h)
+        M = np.dot(G, xvec).reshape(h.shape)
+        assert linalg.eigvalsh(h-M)[0] > -1e-7
+
     return (xvec, sol)
 
 ### The main code ######################
@@ -90,14 +102,17 @@ class NoncommutativeGraph(object):
 
         # Make it a space over rank-2 tensors.
         self.S_flat = S._op_flatten()
-        self.S_basis  = np.array(self.S_flat.basis())
-        self.Sp_basis = np.array(self.S_flat.perp().basis())
-        # FIXME - fails when either is empty
+        assert self.S_flat._col_shp[0] == self.S_flat._col_shp[1]
+        self.n = self.S_flat._col_shp[0]
+
+        self.S_basis  = np.array(self.S_flat.basis()) \
+                if self.S_flat.dim() else np.zeros((0, self.n, self.n), dtype=complex)
+        self.Sp_basis = np.array(self.S_flat.perp().basis()) \
+                if self.S_flat.perp().dim() else np.zeros((0, self.n, self.n), dtype=complex)
         assert len(self.S_basis.shape) == 3
         assert len(self.Sp_basis.shape) == 3
 
-        (_nS, n, _n) = self.S_basis.shape
-        assert np.eye(n) in self.S_flat
+        assert np.eye(self.n) in self.S_flat
 
     @classmethod
     def from_adjmat(cls, adj_mat):
@@ -193,6 +208,91 @@ class NoncommutativeGraph(object):
         # [ |a>, |a'>, <a|, <a'| ; idx ]
         return ret
 
+    def test_get_Y_basis_doubly_hermit(self):
+        Yb = self._get_Y_basis()
+        Hb = self._basis_doubly_hermit(TensorSubspace.full((n,n)))
+        A = TensorSubspace.from_span([ mat_cplx_to_real(Yb[:,:,:,:,i].reshape((n*n, n*n))) for i in range(Yb.shape[4]) ])
+        B = TensorSubspace.from_span([ mat_cplx_to_real(Hb[:,:,:,:,i].reshape((n*n, n*n))) for i in range(Hb.shape[4]) ])
+        C = A & B
+        print A,B,C
+        out = np.array([ mat_real_to_cplx(x).reshape((n,n,n,n)) for x in C ])
+        for (i,c) in enumerate(np.rollaxis(Hb, -1)):
+            x = c.reshape((n*n, n*n))
+            y = mat_real_to_cplx(mat_cplx_to_real(x))
+            assert linalg.norm(x - x.conj().T) < 1e-10
+            assert np.allclose(x, y)
+        for (i,c) in enumerate(B):
+            x = mat_real_to_cplx(c)
+            assert linalg.norm(x - x.conj().T) < 1e-10
+        for (i,c) in enumerate(C):
+            x = mat_real_to_cplx(c)
+            assert linalg.norm(x - x.conj().T) < 1e-10
+        a = TensorSubspace.from_span([ mat_cplx_to_real(x.reshape(n*n,n*n)) for x in \
+                np.rollaxis(self._basis_doubly_hermit(self.S_flat), -1) ])
+        b = TensorSubspace.from_span([ mat_cplx_to_real(x.reshape(n*n,n*n)) for x in out ])
+        print a
+        print b
+        print a.equiv(b)
+        assert a.equiv(b)
+
+    def test_doubly_hermitian_basis(self):
+        n = self.n
+
+        def perms(i,j,k,l):
+            return [(i,j,k,l), (j,i,l,k), (l,k,j,i), (k,l,i,j)]
+
+        inds = set()
+        for (i,j,k,l) in itertools.product(range(n), repeat=4):
+            p = perms(i,j,k,l)
+            if not np.any([ x in inds for x in p ]):
+                inds.add((i,j,k,l))
+
+        ops = []
+        for (i,j,k,l) in inds:
+            a = np.zeros((n,n,n,n), dtype=complex)
+            a[i,j,k,l] = 1
+            a += a.transpose((1,0,3,2))
+            a += a.transpose((2,3,0,1))
+            ops.append(a)
+
+            a = np.zeros((n,n,n,n), dtype=complex)
+            a[i,j,k,l] = 1j
+            a += a.transpose((1,0,3,2)).conj()
+            a += a.transpose((2,3,0,1)).conj()
+            if np.sum(np.abs(a)) > 1e-6:
+                ops.append(a)
+
+        full = TensorSubspace.full((n,n))
+        a = TensorSubspace.from_span([ mat_cplx_to_real(x.reshape(n*n,n*n)) for x in \
+                np.rollaxis(self._basis_doubly_hermit(full), -1) ])
+        b = TensorSubspace.from_span([ mat_cplx_to_real(x.reshape(n*n,n*n)) for x in ops ])
+        print a
+        print b
+        print a.equiv(b)
+        assert a.equiv(b)
+
+    def _basis_doubly_hermit(self, spc):
+        """
+        Returns a basis of elements of spc \ot spc that are Hermitian and also have Hermitian
+        images under R().
+        """
+
+        Sb = spc.hermitian_basis()
+        out = []
+        for (i, x) in enumerate(Sb):
+            out.append( np.tensordot(x, x.conj(), axes=([],[])).transpose((0, 2, 1, 3)) )
+            for (j, y) in enumerate(Sb):
+                if j >= i:
+                    continue;
+                xy = np.tensordot(x, y.conj(), axes=([],[])).transpose((0, 2, 1, 3))
+                yx = np.tensordot(y, x.conj(), axes=([],[])).transpose((0, 2, 1, 3))
+                out.append(xy+yx)
+
+        ret = np.array(out).transpose((1, 2, 3, 4, 0))
+
+        # [ |a>, |a'>, <a|, <a'| ; idx ]
+        return ret
+
     def lovasz_theta(self, long_return=False):
         """
         Compute the non-commutative generalization of the Lovasz function,
@@ -270,33 +370,6 @@ class NoncommutativeGraph(object):
         else:
             return t
 
-    def _doubly_hermitian_basis(self, n):
-        def perms(i,j,k,l):
-            return [(i,j,k,l), (j,i,l,k), (l,k,j,i), (k,l,i,j)]
-
-        inds = set()
-        for (i,j,k,l) in itertools.product(range(n), repeat=4):
-            p = perms(i,j,k,l)
-            if not np.any([ x in inds for x in p ]):
-                inds.add((i,j,k,l))
-
-        ops = []
-        for (i,j,k,l) in inds:
-            a = np.zeros((n,n,n,n), dtype=complex)
-            a[i,j,k,l] = 1
-            a += a.transpose((1,0,3,2))
-            a += a.transpose((2,3,0,1))
-            ops.append(a)
-
-            a = np.zeros((n,n,n,n), dtype=complex)
-            a[i,j,k,l] = 1j
-            a += a.transpose((1,0,3,2)).conj()
-            a += a.transpose((2,3,0,1)).conj()
-            if np.sum(np.abs(a)) > 1e-6:
-                ops.append(a)
-
-        return np.array(ops).transpose(1,2,3,4,0)
-
     def schrijver(self, ppt, long_return=False):
         """
         My non-commutative generalization of Schrijver's number.
@@ -314,7 +387,7 @@ class NoncommutativeGraph(object):
 
         Y_basis = self._get_Y_basis()
         Yb_len = Y_basis.shape[4]
-        Z_basis = self._doubly_hermitian_basis(n)
+        Z_basis = self._basis_doubly_hermit(TensorSubspace.full((n,n)))
         Zb_len = Z_basis.shape[4]
 
         # x = [t, Y.A:Si * Y.A':i * Y.A':j, Z]
@@ -435,7 +508,7 @@ class NoncommutativeGraph(object):
         (nS, n, _n) = self.S_basis.shape
         assert n == _n
 
-        Y_basis = self._get_Y_basis()
+        Y_basis = self._basis_doubly_hermit(self.S_flat)
         Yb_len = Y_basis.shape[4]
 
         # x = [t, Y.A:Si * Y.A':i * Y.A':j, Z]
@@ -495,8 +568,6 @@ class NoncommutativeGraph(object):
             if err < -verify_tol: print "WARNING: phi_phi err =", err
 
             err = linalg.eigvalsh(Y.transpose(0,2,1,3).reshape(n**2, n**2))[0]
-            # FIXME
-            print '?', linalg.eigvalsh(np.dot(Fx_list[2], xvec) - F0_list[2])
             if err < -verify_tol: print "WARNING: R(Y) err =", err
 
             if ppt:
@@ -540,23 +611,26 @@ class NoncommutativeGraph(object):
             '0': np.zeros((n**2, n**2), dtype=complex),
         }
 
-        #a_th = self.lovasz_theta()
-        #b_th = self.unified([], [])
-        #print a_th, b_th
-        #a_thm = self.schrijver(False)
-        #b_thm = self.unified([], [psd])
-        #print a_thm, b_thm
-        #a_thm = self.schrijver(True)
-        #b_thm = self.unified([], [psd, ppt])
-        #print a_thm, b_thm
+        Y_basis = self._get_Y_basis()
+        Y_basis_dh = self._basis_doubly_hermit(self.S_flat)
+
+        a_th = self.lovasz_theta()
+        b_th = self.unified(Y_basis, [], [])
+        print a_th, b_th
+        a_thm = self.schrijver(False)
+        b_thm = self.unified(Y_basis, [], [psd])
+        print a_thm, b_thm
+        a_thm = self.schrijver(True)
+        b_thm = self.unified(Y_basis, [], [psd, ppt])
+        print a_thm, b_thm
         a_thp = self.szegedy(False)
-        b_thp = self.unified([psd], [])
+        b_thp = self.unified(Y_basis_dh, [psd], [])
         print a_thp, b_thp
         a_thp = self.szegedy(True)
-        b_thp = self.unified([psd, ppt], [])
+        b_thp = self.unified(Y_basis_dh, [psd, ppt], [])
         print a_thp, b_thp
 
-    def unified(self, extra_constraints, extra_vars, long_return=False):
+    def unified(self, Y_basis, extra_constraints, extra_vars, long_return=False):
         """
         My non-commutative generalization of Schrijver's number.
 
@@ -568,12 +642,10 @@ class NoncommutativeGraph(object):
             R(Y) \in \cap( extra_constraints )
         """
 
-        (nS, n, _n) = self.S_basis.shape
-        assert n == _n
+        n = self.n
 
-        Y_basis = self._get_Y_basis()
         Yb_len = Y_basis.shape[4]
-        Z_basis = self._doubly_hermitian_basis(n)
+        Z_basis = self._basis_doubly_hermit(TensorSubspace.full((n,n)))
         Zb_len = Z_basis.shape[4]
 
         # x = [t, Y.A:Si * Y.A':i * Y.A':j, Z]
@@ -661,10 +733,7 @@ class NoncommutativeGraph(object):
             for (i, v) in enumerate(extra_constraints):
                 M = v['x'](Y) - v['0']
                 err = linalg.eigvalsh(M)[0]
-                print '?', linalg.eigvalsh(np.dot(Fx_list[2], xvec) - F0_list[2])
-                print '?', linalg.eigvalsh(M) # FIXME
                 if err < -verify_tol: print "WARNING: R(Y) err =", err
-                assert 0
 
             maxeig = linalg.eigvalsh(np.trace(Y-Z_sum, axis1=0, axis2=2))[-1].real
             err = abs(xvec[0] - maxeig)
@@ -785,3 +854,27 @@ if __name__ == "__main__":
 #    hc = qudit('c', 5)
 #    G2 = NoncommutativeGraph(NoncommutativeGraph.pentagon().S.map(lambda x: hc.O.array(x)))
 #    print G2.lovasz_theta()
+
+if __name__ == "__main__":
+    from qitensor import qudit
+
+    def rand_graph(spc, num_ops):
+        S = TensorSubspace.from_span([ spc.eye() ])
+        for i in range(num_ops):
+            M = spc.O.random_array()
+            S |= TensorSubspace.from_span([ M, M.H ])
+        return S
+
+    # Unfortunately, Schrijver doesn't converge well.
+    #cvxopt.solvers.options['abstol'] = float(1e-5)
+    #cvxopt.solvers.options['reltol'] = float(1e-5)
+
+    n = 3
+    ha = qudit('a', n)
+
+    S = rand_graph(ha, 3)
+    #S = NoncommutativeGraph.pentagon().S.map(ha.O.array)
+    #S = TensorSubspace.from_span([ ha.eye() ])
+    print S
+
+    NoncommutativeGraph(S).unified_test()

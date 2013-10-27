@@ -130,6 +130,12 @@ class NoncommutativeGraph(object):
             '0': np.zeros((n**2, n**2), dtype=complex),
         }
 
+    def __str__(self):
+        return '<NoncommutativeGraph of '+self.S._str_inner()+'>'
+
+    def __repr__(self):
+        return str(self)
+
     @classmethod
     def from_adjmat(cls, adj_mat):
         """
@@ -196,6 +202,15 @@ class NoncommutativeGraph(object):
         ])
         G = cls.from_adjmat(adj_mat)
         return G
+
+    @classmethod
+    def random(cls, n, num_seeds):
+        S = TensorSubspace.from_span([ np.eye(n, dtype=complex) ])
+        for i in range(num_seeds):
+            M = np.random.standard_normal(size=(n,n)) + \
+                np.random.standard_normal(size=(n,n))*1j
+            S |= TensorSubspace.from_span([ M, M.conj().T ])
+        return NoncommutativeGraph(S)
 
     def _get_Y_basis(self):
         """
@@ -500,30 +515,17 @@ class NoncommutativeGraph(object):
             return t
 
 
-if __name__ == "__main__":
-    from qitensor import qudit
-
-    def rand_graph(spc, num_ops):
-        S = TensorSubspace.from_span([ spc.eye() ])
-        for i in range(num_ops):
-            M = spc.O.random_array()
-            S |= TensorSubspace.from_span([ M, M.H ])
-        return S
-
-    cvxopt.solvers.options['show_progress'] = False
-    # Unfortunately, Schrijver doesn't converge well.
-    cvxopt.solvers.options['abstol'] = float(1e-5)
-    cvxopt.solvers.options['reltol'] = float(1e-5)
-
-    ha = qudit('a', 3)
-
-    S = rand_graph(ha, 3)
-    #S = TensorSubspace.from_span([ ha.eye() ])
-    print S
-
-    vals = NoncommutativeGraph(S).get_five_values()
-    for v in vals:
-        print v
+#if __name__ == "__main__":
+#    cvxopt.solvers.options['show_progress'] = False
+#    # Unfortunately, Schrijver doesn't converge well.
+#    cvxopt.solvers.options['abstol'] = float(1e-5)
+#
+#    S = NoncommutativeGraph.random(3, 3)
+#    print S
+#
+#    vals = S.get_five_values()
+#    for v in vals:
+#        print v
 
 # If this module is run from the command line, run the doctests.
 if __name__ == "__main__":

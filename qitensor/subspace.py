@@ -353,6 +353,13 @@ class TensorSubspace(object):
             self._perp_cache._perp_cache = self
         return self._perp_cache
 
+    def _str_inner(self):
+        if self._hilb_space is None:
+            spc_str = str(self._col_shp)
+        else:
+            spc_str = '('+repr(self._hilb_space)+')'
+        return "dim "+str(self._dim)+" over space "+spc_str
+
     def __str__(self):
         """
         Returns string representation.
@@ -363,11 +370,7 @@ class TensorSubspace(object):
         '<TensorSubspace of dim 15 over space (3, 5)>'
         """
 
-        if self._hilb_space is None:
-            spc_str = str(self._col_shp)
-        else:
-            spc_str = '('+repr(self._hilb_space)+')'
-        return "<TensorSubspace of dim "+str(self._dim)+" over space "+spc_str+">"
+        return "<TensorSubspace of "+self._str_inner()+">"
 
     def __repr__(self):
         """

@@ -420,6 +420,110 @@ class NoncommutativeGraph(object):
         else:
             return t
 
+    def szegedy(self, ppt, long_return=False):
+        """
+        My non-commutative generalization of Schrijver's number.
+
+        min t s.t.
+            tI - Tr_A Y \succeq 0
+            Y \in S \ot \mathcal{L}
+            Y \succeq \Phi
+            R(Y) \succeq 0
+            optional: R(Y) \in PPT
+        """
+
+        (nS, n, _n) = self.S_basis.shape
+        assert n == _n
+
+        Y_basis = self._get_Y_basis()
+        Yb_len = Y_basis.shape[4]
+
+        # x = [t, Y.A:Si * Y.A':i * Y.A':j, Z]
+        xvec_len = 1 + Yb_len
+
+        idx = 1
+        x_to_Y = np.zeros((n,n,n,n,xvec_len), dtype=complex)
+        x_to_Y[:,:,:,:,idx:idx+Yb_len] = Y_basis
+        idx += Yb_len
+
+        assert idx == xvec_len
+
+        phi_phi = np.zeros((n,n, n,n), dtype=complex)
+        for (i, j) in itertools.product(range(n), repeat=2):
+            phi_phi[i, i, j, j] = 1
+        phi_phi = phi_phi.reshape(n**2, n**2)
+
+        # Cost vector.
+        # x = [t, Y.A:Si * Y.A':i * Y.A':j]
+        c = np.zeros(xvec_len)
+        c[0] = 1
+
+        # tI - tr_A{Y} >= 0
+        Fx_1 = -np.trace(x_to_Y, axis1=0, axis2=2)
+        for i in xrange(n):
+            Fx_1[i, i, 0] = 1
+
+        F0_1 = np.zeros((n, n))
+
+        # Y  >=  |phi><phi|
+        Fx_2 = x_to_Y.reshape(n**2, n**2, xvec_len)
+        F0_2 = phi_phi
+
+        Fx_3 = x_to_Y.transpose((0,2,1,3,4)).reshape(n**2, n**2, xvec_len)
+        F0_3 = np.zeros((n**2, n**2), dtype=complex)
+
+        Fx_list = [Fx_1, Fx_2, Fx_3]
+        F0_list = [F0_1, F0_2, F0_3]
+
+        if ppt:
+            Fx_4 = x_to_Y.transpose((1,2,0,3,4)).reshape(n**2, n**2, xvec_len)
+            F0_4 = np.zeros((n**2, n**2), dtype=complex)
+            Fx_list.append(Fx_4)
+            F0_list.append(F0_4)
+
+        (xvec, sdp_stats) = call_sdp(c, Fx_list, F0_list)
+        if sdp_stats['status'] != 'optimal':
+            raise ArithmeticError(sdp_stats['status'])
+
+        t = xvec[0]
+        Y = np.dot(x_to_Y, xvec)
+
+        # some sanity checks to make sure the output makes sense
+        verify_tol=1e-7
+        if verify_tol:
+            err = linalg.eigvalsh(Y.reshape(n**2, n**2) - phi_phi)[0]
+            if err < -verify_tol: print "WARNING: phi_phi err =", err
+
+            err = linalg.eigvalsh(Y.transpose(0,2,1,3).reshape(n**2, n**2))[0]
+            if err < -verify_tol: print "WARNING: R(Y) err =", err
+
+            if ppt:
+                err = linalg.eigvalsh(Y.transpose(1,2,0,3).reshape(n**2, n**2))[0]
+                if err < -verify_tol: print "WARNING: R(Y) err =", err
+
+            maxeig = linalg.eigvalsh(np.trace(Y, axis1=0, axis2=2))[-1].real
+            err = abs(xvec[0] - maxeig)
+            if err > verify_tol: print "WARNING: t err =", err
+
+            # make sure it is in S*L(A')
+            for mat in self.Sp_basis:
+                dp = np.tensordot(Y, mat.conjugate(), axes=[[0, 2], [0, 1]])
+                err = linalg.norm(dp)
+                if err > 1e-10: print "err:", err
+                assert err < 1e-10
+
+        if long_return:
+            ret = {}
+            for key in [
+                    'n', 'x_to_Y',
+                    'Fx_1', 'Fx_2', 'Fx_3', 'F0_1', 'F0_2', 'F0_3',
+                    'phi_phi', 'c', 't', 'Y', 'xvec', 'sdp_stats'
+                ]:
+                    ret[key] = locals()[key]
+            return ret
+        else:
+            return t
+
 # Maybe this cannot be computed using a semidefinite program.
 #
 #    def small_lovasz(self, long_return=False):

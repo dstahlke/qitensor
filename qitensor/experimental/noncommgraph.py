@@ -495,6 +495,8 @@ class NoncommutativeGraph(object):
             if err < -verify_tol: print "WARNING: phi_phi err =", err
 
             err = linalg.eigvalsh(Y.transpose(0,2,1,3).reshape(n**2, n**2))[0]
+            # FIXME
+            print '?', linalg.eigvalsh(np.dot(Fx_list[2], xvec) - F0_list[2])
             if err < -verify_tol: print "WARNING: R(Y) err =", err
 
             if ppt:
@@ -561,9 +563,9 @@ class NoncommutativeGraph(object):
         min t s.t.
             tI - Tr_A (Y-Z) \succeq 0
             Y \in S \ot \mathcal{L}
-            Y-Z (-Z2) \succeq \Phi
-            R(Z) \succeq 0
-            optional: R(Z2) \in PPT
+            Y-Z \succeq \Phi
+            R(Z) \in \sum( extra_vars )
+            R(Y) \in \cap( extra_constraints )
         """
 
         (nS, n, _n) = self.S_basis.shape
@@ -618,7 +620,7 @@ class NoncommutativeGraph(object):
         Fx_evars = []
         F0_evars = []
         for (xZ, v) in zip(x_to_Z, extra_vars):
-            Fx = np.array([ v['x'](z) for z in np.rollaxis(xZ, -1) ])
+            Fx = np.array([ v['x'](z) for z in np.rollaxis(xZ, -1) ], dtype=complex)
             Fx = np.rollaxis(Fx, 0, len(Fx.shape))
             F0 = v['0']
             Fx_evars.append(Fx)
@@ -627,7 +629,7 @@ class NoncommutativeGraph(object):
         Fx_econs = []
         F0_econs = []
         for v in extra_constraints:
-            Fx = np.array([ v['x'](y) for y in np.rollaxis(x_to_Y, -1) ])
+            Fx = np.array([ v['x'](y) for y in np.rollaxis(x_to_Y, -1) ], dtype=complex)
             Fx = np.rollaxis(Fx, 0, len(Fx.shape))
             F0 = v['0']
             Fx_econs.append(Fx)
@@ -659,8 +661,10 @@ class NoncommutativeGraph(object):
             for (i, v) in enumerate(extra_constraints):
                 M = v['x'](Y) - v['0']
                 err = linalg.eigvalsh(M)[0]
-                print linalg.eigvalsh(M) # FIXME
+                print '?', linalg.eigvalsh(np.dot(Fx_list[2], xvec) - F0_list[2])
+                print '?', linalg.eigvalsh(M) # FIXME
                 if err < -verify_tol: print "WARNING: R(Y) err =", err
+                assert 0
 
             maxeig = linalg.eigvalsh(np.trace(Y-Z_sum, axis1=0, axis2=2))[-1].real
             err = abs(xvec[0] - maxeig)

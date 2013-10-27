@@ -297,39 +297,46 @@ class NoncommutativeGraph(object):
 
         return np.array(ops).transpose(1,2,3,4,0)
 
-    def schrijver(self, long_return=False):
+    def schrijver(self, ppt, long_return=False):
         """
         My non-commutative generalization of Schrijver's number.
 
         min t s.t.
             tI - Tr_A (Y-Z) \succeq 0
             Y \in S \ot \mathcal{L}
-            Y-Z \succeq \Phi
+            Y-Z (-Z2) \succeq \Phi
             R(Z) \succeq 0
+            optional: R(Z2) \in PPT
         """
 
         (nS, n, _n) = self.S_basis.shape
         assert n == _n
 
         Y_basis = self._get_Y_basis()
+        Yb_len = Y_basis.shape[4]
         Z_basis = self._doubly_hermitian_basis(n)
+        Zb_len = Z_basis.shape[4]
 
         # x = [t, Y.A:Si * Y.A':i * Y.A':j, Z]
-        xvec_len = 1 + Y_basis.shape[4] + Z_basis.shape[4]
+        xvec_len = 1 + Yb_len + Zb_len
+        if ppt:
+            xvec_len += Zb_len
 
-        x_to_Y = np.concatenate((
-                np.zeros((n,n,n,n, 1)),
-                Y_basis,
-                np.zeros((n,n,n,n, Z_basis.shape[4])),
-            ), axis=4)
-        assert x_to_Y.shape[4] == xvec_len
+        idx = 1
+        x_to_Y = np.zeros((n,n,n,n,xvec_len), dtype=complex)
+        x_to_Y[:,:,:,:,idx:idx+Yb_len] = Y_basis
+        idx += Yb_len
 
-        x_to_Z = np.concatenate((
-                np.zeros((n,n,n,n, 1)),
-                np.zeros((n,n,n,n, Y_basis.shape[4])),
-                Z_basis,
-            ), axis=4)
-        assert x_to_Z.shape[4] == xvec_len
+        x_to_Z = np.zeros((n,n,n,n,xvec_len), dtype=complex)
+        x_to_Z[:,:,:,:,idx:idx+Zb_len] = Z_basis
+        idx += Zb_len
+
+        if ppt:
+            x_to_Z2 = np.zeros((n,n,n,n,xvec_len), dtype=complex)
+            x_to_Z2[:,:,:,:,idx:idx+Zb_len] = Z_basis
+            idx += Zb_len
+
+        assert idx == xvec_len
 
         phi_phi = np.zeros((n,n, n,n), dtype=complex)
         for (i, j) in itertools.product(range(n), repeat=2):
@@ -343,6 +350,8 @@ class NoncommutativeGraph(object):
 
         # tI - tr_A{Y-Z} >= 0
         Fx_1 = -np.trace(x_to_Y - x_to_Z, axis1=0, axis2=2)
+        if ppt:
+            Fx_1 += np.trace(x_to_Z2, axis1=0, axis2=2)
         for i in xrange(n):
             Fx_1[i, i, 0] = 1
 
@@ -350,29 +359,45 @@ class NoncommutativeGraph(object):
 
         # Y - Z  >=  |phi><phi|
         Fx_2 = (x_to_Y - x_to_Z).reshape(n**2, n**2, xvec_len)
+        if ppt:
+            Fx_2 -= x_to_Z2.reshape(n**2, n**2, xvec_len)
         F0_2 = phi_phi
 
         Fx_3 = x_to_Z.transpose((0,2,1,3,4)).reshape(n**2, n**2, xvec_len)
         F0_3 = np.zeros((n**2, n**2), dtype=complex)
 
-        (xvec, sdp_stats) = call_sdp(c, (Fx_1, Fx_2, Fx_3), (F0_1, F0_2, F0_3))
+        Fx_list = [Fx_1, Fx_2, Fx_3]
+        F0_list = [F0_1, F0_2, F0_3]
+
+        if ppt:
+            Fx_4 = x_to_Z2.transpose((1,2,0,3,4)).reshape(n**2, n**2, xvec_len)
+            F0_4 = np.zeros((n**2, n**2), dtype=complex)
+            Fx_list.append(Fx_4)
+            F0_list.append(F0_4)
+
+        (xvec, sdp_stats) = call_sdp(c, Fx_list, F0_list)
         if sdp_stats['status'] != 'optimal':
             raise ArithmeticError(sdp_stats['status'])
 
         t = xvec[0]
         Y = np.dot(x_to_Y, xvec)
         Z = np.dot(x_to_Z, xvec)
+        Z2 = np.dot(x_to_Z2, xvec) if ppt else np.zeros((n,n,n,n))
 
         # some sanity checks to make sure the output makes sense
         verify_tol=1e-7
         if verify_tol:
-            err = linalg.eigvalsh((Y-Z).reshape(n**2, n**2) - phi_phi)[0]
+            err = linalg.eigvalsh((Y-Z-Z2).reshape(n**2, n**2) - phi_phi)[0]
             if err < -verify_tol: print "WARNING: phi_phi err =", err
 
             err = linalg.eigvalsh(Z.transpose(0,2,1,3).reshape(n**2, n**2))[0]
             if err < -verify_tol: print "WARNING: R(Z) err =", err
 
-            maxeig = linalg.eigvalsh(np.trace(Y-Z, axis1=0, axis2=2))[-1].real
+            if ppt:
+                err = linalg.eigvalsh(Z2.transpose(1,2,0,3).reshape(n**2, n**2))[0]
+                if err < -verify_tol: print "WARNING: R(Z2) err =", err
+
+            maxeig = linalg.eigvalsh(np.trace(Y-Z-Z2, axis1=0, axis2=2))[-1].real
             err = abs(xvec[0] - maxeig)
             if err > verify_tol: print "WARNING: t err =", err
 

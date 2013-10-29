@@ -78,11 +78,12 @@ def call_sdp(c, Fx_list, F0_list):
     sol = cvxopt.solvers.sdp(cvxopt.base.matrix(c), Gs=Gs, hs=hs)
     xvec = np.array(sol['x']).flatten()
 
-    for (G, h) in zip(Gs, hs):
-        G = np.array(G)
-        h = np.array(h)
-        M = np.dot(G, xvec).reshape(h.shape)
-        assert linalg.eigvalsh(h-M)[0] > -1e-7
+    if sol['status'] == 'optimal':
+        for (G, h) in zip(Gs, hs):
+            G = np.array(G)
+            h = np.array(h)
+            M = np.dot(G, xvec).reshape(h.shape)
+            assert linalg.eigvalsh(h-M)[0] > -1e-7
 
     return (xvec, sol)
 
@@ -468,51 +469,64 @@ class NoncommutativeGraph(object):
         F0_list = [F0_1, F0_2] + F0_evars + F0_econs
 
         (xvec, sdp_stats) = call_sdp(c, Fx_list, F0_list)
-        if sdp_stats['status'] != 'optimal':
-            raise ArithmeticError(sdp_stats['status'])
 
-        t = xvec[0]
-        Y = np.dot(x_to_Y, xvec)
-        Z_list = [ np.dot(xZ, xvec) for xZ in x_to_Z ]
-        Z_sum = np.sum(Z_list, axis=0)
+        if sdp_stats['status'] == 'optimal':
+            t = xvec[0]
+            Y = np.dot(x_to_Y, xvec)
+            Z_list = [ np.dot(xZ, xvec) for xZ in x_to_Z ]
+            Z_sum = np.sum(Z_list, axis=0)
 
-        # some sanity checks to make sure the output makes sense
-        verify_tol=1e-7
-        if verify_tol:
-            err = linalg.eigvalsh((Y-Z_sum).reshape(n**2, n**2) - phi_phi)[0]
-            if err < -verify_tol: print "WARNING: phi_phi err =", err
+            # some sanity checks to make sure the output makes sense
+            verify_tol=1e-7
+            if verify_tol:
+                err = linalg.eigvalsh((Y-Z_sum).reshape(n**2, n**2) - phi_phi)[0]
+                if err < -verify_tol: print "WARNING: phi_phi err =", err
 
-            for (i, (v, Z)) in enumerate(zip(extra_vars, Z_list)):
-                M = v['x'](Z) - v['0']
-                err = linalg.eigvalsh(M)[0]
-                if err < -verify_tol: print "WARNING: R(Z%d) err = %g" % (i, err)
+                for (i, (v, Z)) in enumerate(zip(extra_vars, Z_list)):
+                    M = v['x'](Z) - v['0']
+                    err = linalg.eigvalsh(M)[0]
+                    if err < -verify_tol: print "WARNING: R(Z%d) err = %g" % (i, err)
 
-            for (i, v) in enumerate(extra_constraints):
-                M = v['x'](Y) - v['0']
-                err = linalg.eigvalsh(M)[0]
-                if err < -verify_tol: print "WARNING: R(Y) err =", err
+                for (i, v) in enumerate(extra_constraints):
+                    M = v['x'](Y) - v['0']
+                    err = linalg.eigvalsh(M)[0]
+                    if err < -verify_tol: print "WARNING: R(Y) err =", err
 
-            maxeig = linalg.eigvalsh(np.trace(Y-Z_sum, axis1=0, axis2=2))[-1].real
-            err = abs(xvec[0] - maxeig)
-            if err > verify_tol: print "WARNING: t err =", err
+                maxeig = linalg.eigvalsh(np.trace(Y-Z_sum, axis1=0, axis2=2))[-1].real
+                err = abs(xvec[0] - maxeig)
+                if err > verify_tol: print "WARNING: t err =", err
 
-            # make sure it is in S*L(A')
-            for mat in self.Sp_basis:
-                dp = np.tensordot(Y, mat.conjugate(), axes=[[0, 2], [0, 1]])
-                err = linalg.norm(dp)
-                if err > 1e-10: print "S err:", err
-                assert err < 1e-10
+                # make sure it is in S*L(A')
+                for mat in self.Sp_basis:
+                    dp = np.tensordot(Y, mat.conjugate(), axes=[[0, 2], [0, 1]])
+                    err = linalg.norm(dp)
+                    if err > 1e-10: print "S err:", err
+                    assert err < 1e-10
 
-        if long_return:
-            ret = {}
-            for key in [
-                    'n', 'x_to_Y', 'x_to_Z',
-                    'phi_phi', 'c', 't', 'Y', 'Z_list', 'xvec', 'sdp_stats'
-                ]:
-                    ret[key] = locals()[key]
-            return ret
+            if long_return:
+                ret = {}
+                for key in [
+                        'n', 'x_to_Y', 'x_to_Z',
+                        'phi_phi', 'c', 't', 'Y', 'Z_list', 'xvec', 'sdp_stats'
+                    ]:
+                        ret[key] = locals()[key]
+                return ret
+            else:
+                return t
+        elif sdp_stats['status'] == 'primal infeasible':
+            t = np.inf
+            if long_return:
+                ret = {}
+                for key in [
+                        'n', 'x_to_Y', 'x_to_Z',
+                        'phi_phi', 'c', 't', 'xvec', 'sdp_stats'
+                    ]:
+                        ret[key] = locals()[key]
+                return ret
+            else:
+                return t
         else:
-            return t
+            raise Exception('cvxopt.sdp returned error: '+sdp_stats['status'])
 
 
 #if __name__ == "__main__":

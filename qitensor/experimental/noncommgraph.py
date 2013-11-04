@@ -102,21 +102,22 @@ class NoncommutativeGraph(object):
         self.S = S
 
         # Make it a space over rank-2 tensors.
-        self.S_flat = S._op_flatten()
-        assert self.S_flat._col_shp[0] == self.S_flat._col_shp[1]
-        n = self.n = self.S_flat._col_shp[0]
+        S_flat = S._op_flatten()
+        assert S_flat._col_shp[0] == S_flat._col_shp[1]
+        n = self.n = S_flat._col_shp[0]
 
-        self.S_basis  = np.array(self.S_flat.basis()) \
-                if self.S_flat.dim() else np.zeros((0, n, n), dtype=complex)
-        self.Sp_basis = np.array(self.S_flat.perp().basis()) \
-                if self.S_flat.perp().dim() else np.zeros((0, n, n), dtype=complex)
+        self.S_basis  = np.array(S_flat.hermitian_basis()) \
+                if S_flat.dim() else np.zeros((0, n, n), dtype=complex)
+        self.Sp_basis = np.array(S_flat.perp().hermitian_basis()) \
+                if S_flat.perp().dim() else np.zeros((0, n, n), dtype=complex)
         assert len(self.S_basis.shape) == 3
         assert len(self.Sp_basis.shape) == 3
 
-        assert np.eye(n) in self.S_flat
+        assert np.eye(n) in S_flat
 
-        self.Y_basis = self._get_Y_basis()
-        self.Y_basis_dh = self._basis_doubly_hermit(self.S_flat)
+        self.Y_basis = self._get_S_ot_L_basis(self.S_basis)
+        self.Y_basis_dh = self._basis_doubly_hermit(S_flat)
+        self.T_basis = self._get_S_ot_L_basis(self.Sp_basis)
         self.full_basis_dh = self._basis_doubly_hermit(TensorSubspace.full((n,n)))
 
         self.cond_psd = {
@@ -210,10 +211,10 @@ class NoncommutativeGraph(object):
         for i in range(num_seeds):
             M = np.random.standard_normal(size=(n,n)) + \
                 np.random.standard_normal(size=(n,n))*1j
-            S |= TensorSubspace.from_span([ M, M.conj().T ])
+            S |= TensorSubspace.from_span([ M + M.conj().T ])
         return NoncommutativeGraph(S)
 
-    def _get_Y_basis(self):
+    def _get_S_ot_L_basis(self, Sb):
         """
         Compute a basis for the allowed Y operators for Theorem 9 of
         arXiv:1002.2514.  These are the operators which are Hermitian and are
@@ -221,10 +222,9 @@ class NoncommutativeGraph(object):
         complex Y operators.
         """
 
-        (nS, n, _n) = self.S_basis.shape
+        (nS, n, _n) = Sb.shape
         assert n == _n
 
-        Sb = self.S_flat.hermitian_basis()
         Lb = TensorSubspace.full((n, n)).hermitian_basis()
 
         baz = np.zeros((nS*n*n, n, n, n, n), dtype=complex)
@@ -334,7 +334,7 @@ class NoncommutativeGraph(object):
         quantities are returned (such as the optimal Y operator).
         """
 
-        return self.unified(self.Y_basis, [], [], long_return)
+        return self.unified_dual(self.Y_basis, [], [], long_return)
 
     def schrijver(self, ppt, long_return=False):
         """
@@ -354,7 +354,7 @@ class NoncommutativeGraph(object):
         v = [self.cond_psd]
         if ppt:
             v.append(self.cond_ppt)
-        return self.unified(self.Y_basis, [], v, long_return)
+        return self.unified_dual(self.Y_basis, [], v, long_return)
 
     def szegedy(self, ppt, long_return=False):
         """
@@ -374,7 +374,7 @@ class NoncommutativeGraph(object):
         v = [self.cond_psd]
         if ppt:
             v.append(self.cond_ppt)
-        return self.unified(self.Y_basis_dh, v, [], long_return)
+        return self.unified_dual(self.Y_basis_dh, v, [], long_return)
 
 
     def get_five_values(self):
@@ -389,7 +389,7 @@ class NoncommutativeGraph(object):
             self.szegedy(True),
         ]
 
-    def unified(self, Y_basis, extra_constraints, extra_vars, long_return=False):
+    def unified_dual(self, Y_basis, extra_constraints, extra_vars, long_return=False):
         """
         Compute Lovasz/Schrijver/Szegedy type quantities.
 
@@ -476,6 +476,13 @@ class NoncommutativeGraph(object):
             Z_list = [ np.dot(xZ, xvec) for xZ in x_to_Z ]
             Z_sum = np.sum(Z_list, axis=0)
 
+            zs0 = mat_real_to_cplx(np.array(sdp_stats['zs'][0]))
+            zs1 = mat_real_to_cplx(np.array(sdp_stats['zs'][1]))
+            # FIXME - why times 2?
+            T = (zs1.reshape(n,n,n,n) - \
+                    np.tensordot(np.eye(n), zs0, axes=0).transpose(0,2,1,3)) * 2
+            rho = zs0 * 2
+
             # some sanity checks to make sure the output makes sense
             verify_tol=1e-7
             if verify_tol:
@@ -503,11 +510,26 @@ class NoncommutativeGraph(object):
                     if err > 1e-10: print "S err:", err
                     assert err < 1e-10
 
+                # Test the primal solution
+                err = np.sum([linalg.norm(S.S.project(T[:,i,:,j])) \
+                        for i in range(n) for j in range(n)])
+                if err > verify_tol: print "WARNING: T err =", err
+                err = abs(T.trace().trace() + 1 - t)
+                if err > verify_tol: print "WARNING: primal vs dual err =", err
+                T_plus_Irho = T + np.tensordot(np.eye(n), rho, axes=0).transpose(0,2,1,3)
+                err = linalg.eigvalsh(T_plus_Irho.reshape(n**2, n**2))[0]
+                if err < -verify_tol: print "WARNING: T_plus_Irho pos err =", err
+                err = abs(np.trace(rho) - 1)
+                if err < -verify_tol: print "WARNING: Tr(rho) err =", err
+                err = linalg.eigvalsh(rho)[0]
+                if err < -verify_tol: print "WARNING: rho pos err =", err
+
             if long_return:
                 ret = {}
                 for key in [
                         'n', 'x_to_Y', 'x_to_Z',
-                        'phi_phi', 'c', 't', 'Y', 'Z_list', 'xvec', 'sdp_stats'
+                        'phi_phi', 'c', 't', 'Y', 'Z_list', 'xvec', 'sdp_stats',
+                        'T', 'rho', 'T_plus_Irho',
                     ]:
                         ret[key] = locals()[key]
                 return ret
@@ -520,6 +542,93 @@ class NoncommutativeGraph(object):
                 for key in [
                         'n', 'x_to_Y', 'x_to_Z',
                         'phi_phi', 'c', 't', 'xvec', 'sdp_stats'
+                    ]:
+                        ret[key] = locals()[key]
+                return ret
+            else:
+                return t
+        else:
+            raise Exception('cvxopt.sdp returned error: '+sdp_stats['status'])
+
+    def primal(self, long_return=False):
+        r"""
+        FIXME - only Lovasz for now
+        Compute Lovasz/Schrijver/Szegedy type quantities.
+
+        max <\Phi|T + I \ot \rho|\Phi> s.t.
+            \rho \succeq 0, \Tr(\rho)=1
+            T + I \ot \rho \succeq 0
+            T \in S^\perp \ot \mathcal{L}
+        """
+
+        n = self.n
+
+        T_basis = self.T_basis # FIXME
+        Tb_len = T_basis.shape[4]
+
+        # rhotf is the trace-free component of the actual rho
+        rhotf_basis = TensorSubspace.from_span([np.eye(n)]).perp(). \
+            hermitian_basis().transpose((1,2,0))
+        rb_len = rhotf_basis.shape[2]
+        assert rb_len == n*n-1
+
+        xvec_len = Tb_len + rb_len
+
+        idx = 0
+        x_to_T = np.zeros((n,n,n,n,xvec_len), dtype=complex)
+        x_to_T[:,:,:,:,idx:idx+Tb_len] = T_basis
+        idx += Tb_len
+
+        x_to_rhotf = np.zeros((n,n,xvec_len), dtype=complex)
+        x_to_rhotf[:,:,idx:idx+rb_len] = rhotf_basis
+        idx += rb_len
+
+        assert idx == xvec_len
+
+        # T + I \ot rhotf
+        x_to_sum = x_to_T + np.tensordot(np.eye(n), x_to_rhotf, axes=0).transpose((0,2,1,3,4))
+
+        # rho \succeq 0
+        Fx_1 = x_to_rhotf
+        F0_1 = -np.eye(n)/n
+
+        # T + I \ot rho \succeq 0
+        Fx_2 = x_to_sum.reshape(n**2, n**2, xvec_len)
+        for i in range(Fx_2.shape[2]):
+            assert linalg.norm(Fx_2[:,:,i] - Fx_2[:,:,i].conj().T) < 1e-10
+        F0_2 = -np.eye(n**2)/n
+
+        c = -np.trace(np.trace(x_to_sum)).real
+
+        Fx_list = [Fx_1, Fx_2]
+        F0_list = [F0_1, F0_2]
+
+        (xvec, sdp_stats) = call_sdp(c, Fx_list, F0_list)
+
+        if sdp_stats['status'] == 'optimal':
+            t = -np.dot(c, xvec) + 1
+            T = np.dot(x_to_T, xvec)
+            the_sum = np.dot(x_to_sum, xvec)
+            rho = np.dot(x_to_rhotf, xvec) + np.eye(n)/n
+
+            if long_return:
+                ret = {}
+                for key in [
+                        'Fx_list', 'F0_list',
+                        'n', 'x_to_T', 'x_to_rhotf', 'the_sum',
+                        'c', 't', 'T', 'rho', 'xvec', 'sdp_stats'
+                    ]:
+                        ret[key] = locals()[key]
+                return ret
+            else:
+                return t
+        elif sdp_stats['status'] == 'primal infeasible':
+            t = np.inf
+            if long_return:
+                ret = {}
+                for key in [
+                        'n', 'x_to_T', 'x_to_rhotf',
+                        'c', 't', 'T', 'rho', 'xvec', 'sdp_stats'
                     ]:
                         ret[key] = locals()[key]
                 return ret
@@ -550,3 +659,21 @@ if __name__ == "__main__":
 
     import doctest
     doctest.testmod()
+
+    np.random.seed(1)
+    S = NoncommutativeGraph.random(3, 5)
+    # FIXME - Unfortunately, Schrijver doesn't converge well.
+    #cvxopt.solvers.options['abstol'] = float(1e-5)
+    #cvxopt.solvers.options['reltol'] = float(1e-5)
+    cvxopt.solvers.options['show_progress'] = True
+    #vals = S.get_five_values()
+    #print vals
+    #good = np.array([1.0000000895503431, 2.5283253619689754, 2.977455214593435, \
+            #2.9997454690478249, 2.9999999897950529])
+    #print np.sum(np.abs(vals-good))
+    a = S.primal(True)
+    b = S.lovasz_theta(True)
+    print a['t'], b['t']
+    #xx = (np.tensordot(b['T'], a['x_to_T'].conj(), axes=4) + np.tensordot(b['rho'], a['x_to_rhotf'].conj(), axes=2)).real
+    #T = b['T']
+    #rho = b['rho']

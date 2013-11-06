@@ -481,9 +481,9 @@ class NoncommutativeGraph(object):
             zs0 = mat_real_to_cplx(np.array(sdp_stats['zs'][0]))
             zs1 = mat_real_to_cplx(np.array(sdp_stats['zs'][1]))
             # FIXME - why times 2?
+            rho = zs0 * 2
             T = (zs1.reshape(n,n,n,n) - \
                     np.tensordot(np.eye(n), zs0, axes=0).transpose(0,2,1,3)) * 2
-            rho = zs0 * 2
 
             # some sanity checks to make sure the output makes sense
             verify_tol=1e-7
@@ -553,17 +553,17 @@ class NoncommutativeGraph(object):
         else:
             raise Exception('cvxopt.sdp returned error: '+sdp_stats['status'])
 
-    def primal(self, T_basis, extra_constraints, extra_vars, long_return=False):
+    def unified_primal(self, T_basis, extra_constraints, extra_vars, long_return=False):
         r"""
         FIXME - only Lovasz for now
         Compute Lovasz/Schrijver/Szegedy type quantities.
 
-        max <\Phi|T + I \ot \rho|\Phi> s.t.
+        max <\Phi|T-Z + I \ot \rho|\Phi> s.t.
             \rho \succeq 0, \Tr(\rho)=1
-            T + I \ot \rho \succeq 0
+            T-Z + I \ot \rho \succeq 0
             T \in S^\perp \ot \mathcal{L}
             R(Z) \in \sum( extra_vars )
-            R(Y) \in \cap( extra_constraints )
+            R(T) \in \cap( extra_constraints )
         """
 
         n = self.n
@@ -598,7 +598,10 @@ class NoncommutativeGraph(object):
         assert idx == xvec_len
 
         # T + I \ot rhotf
-        x_to_sum = x_to_T + np.tensordot(np.eye(n), x_to_rhotf, axes=0).transpose((0,2,1,3,4))
+        x_to_sum = x_to_T + \
+                np.tensordot(np.eye(n), x_to_rhotf, axes=0).transpose((0,2,1,3,4))
+        for xZ in x_to_Z:
+            x_to_sum -= xZ
 
         # rho \succeq 0
         Fx_1 = x_to_rhotf
@@ -687,13 +690,14 @@ if __name__ == "__main__":
     # Doctests require not getting progress messages from SDP solver.
     cvxopt.solvers.options['show_progress'] = False
 
-    print "Running doctests."
+    #print "Running doctests."
 
-    import doctest
-    doctest.testmod()
+    #import doctest
+    #doctest.testmod()
 
-    np.random.seed(1)
-    S = NoncommutativeGraph.random(3, 2)
+    n = 4
+    np.random.seed(5)
+    S = NoncommutativeGraph.random(n, 9)
     # FIXME - Unfortunately, Schrijver doesn't converge well.
     cvxopt.solvers.options['abstol'] = float(1e-5)
     cvxopt.solvers.options['reltol'] = float(1e-5)
@@ -703,19 +707,32 @@ if __name__ == "__main__":
     good = np.array([1.0000000895503431, 2.5283253619689754, 2.977455214593435, \
             2.9997454690478249, 2.9999999897950529])
     #print np.sum(np.abs(vals-good))
-    #a = S.primal(True)
+    #a = S.unified_primal(True)
     #b = S.lovasz_theta(True)
     #print a['t'], b['t']
     #xx = (np.tensordot(b['T'], a['x_to_T'].conj(), axes=4) + np.tensordot(b['rho'], a['x_to_rhotf'].conj(), axes=2)).real
     #T = b['T']
     #rho = b['rho']
 
-    self = S
-    v = []
-    v.append(self.cond_psd)
-    v.append(self.cond_ppt)
-    a = self.primal(self.T_basis_dh, v, True)
-    print a['t']
-    w = S.schrijver(True)
-    print w
-    print a['t'] - w
+    #w = S.szegedy(False)
+    #print w
+    #v = []
+    #v.append(S.cond_psd)
+    ##v.append(S.cond_ppt)
+    #a = S.unified_primal(S.T_basis_dh, [], v, True)
+    #print a['t']
+    #print a['t'] - w
+
+    print S.unified_dual(S.Y_basis_dh, [], [], False)
+    b = S.szegedy(False, long_return=True)
+    #b = S.lovasz_theta(long_return=True)
+    locals().update(b)
+    print t
+
+    zs1 = mat_real_to_cplx(np.array(sdp_stats['zs'][1])).reshape(n,n,n,n) * 2
+    zs2 = mat_real_to_cplx(np.array(sdp_stats['zs'][2])).reshape(n,n,n,n) * 2
+    #zs3 = mat_real_to_cplx(np.array(sdp_stats['zs'][3])).reshape(n,n,n,n) * 2
+    print T.trace().trace()+1 - t
+    w=[np.tensordot(x, y.conj(), axes=([],[])).transpose((0, 2, 1, 3)) for x in S.S_basis for y in S.S_basis]
+    q=T+zs2.transpose(0,2,1,3)
+    print np.max([linalg.norm(np.tensordot(q, (x + x.transpose(1,0,3,2).conj()).conj(), axes=4)) for x in w])

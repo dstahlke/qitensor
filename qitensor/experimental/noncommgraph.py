@@ -125,13 +125,15 @@ class NoncommutativeGraph(object):
 
         self.cond_psd = {
             'basis': self.full_basis_dh,
-            'x': lambda Z: Z.transpose((0,2,1,3)).reshape(n**2, n**2),
+            'R':  lambda Z: Z.transpose((0,2,1,3)).reshape(n**2, n**2),
+            'R*': lambda Z: Z.reshape(n,n,n,n).transpose((0,2,1,3)),
             '0': np.zeros((n**2, n**2), dtype=complex),
         }
 
         self.cond_ppt = {
             'basis': self.full_basis_dh,
-            'x': lambda Z: Z.transpose((1,2,0,3)).reshape(n**2, n**2),
+            'R':  lambda Z: Z.transpose((1,2,0,3)).reshape(n**2, n**2),
+            'R*': lambda Z: Z.reshape(n,n,n,n).transpose((2,0,1,3)),
             '0': np.zeros((n**2, n**2), dtype=complex),
         }
 
@@ -467,7 +469,7 @@ class NoncommutativeGraph(object):
         Fx_evars = []
         F0_evars = []
         for (xZ, v) in zip(x_to_Z, extra_vars):
-            Fx = np.array([ v['x'](z) for z in np.rollaxis(xZ, -1) ], dtype=complex)
+            Fx = np.array([ v['R'](z) for z in np.rollaxis(xZ, -1) ], dtype=complex)
             Fx = np.rollaxis(Fx, 0, len(Fx.shape))
             F0 = v['0']
             Fx_evars.append(Fx)
@@ -476,7 +478,7 @@ class NoncommutativeGraph(object):
         Fx_econs = []
         F0_econs = []
         for v in extra_constraints:
-            Fx = np.array([ v['x'](y) for y in np.rollaxis(x_to_Y, -1) ], dtype=complex)
+            Fx = np.array([ v['R'](y) for y in np.rollaxis(x_to_Y, -1) ], dtype=complex)
             Fx = np.rollaxis(Fx, 0, len(Fx.shape))
             F0 = v['0']
             Fx_econs.append(Fx)
@@ -497,10 +499,9 @@ class NoncommutativeGraph(object):
             I_ot_rho = np.tensordot(np.eye(n), rho, axes=0).transpose(0,2,1,3)
             zs1 = mat_real_to_cplx(np.array(sdp_stats['zs'][1])).reshape(n,n,n,n)
             TZ_list = []
-            for i in range(len(extra_constraints)):
-                zsi = mat_real_to_cplx(np.array(sdp_stats['zs'][2+i])).reshape(n,n,n,n)
-                # FIXME - need R^*
-                TZ_list.append(zsi.transpose(0,2,1,3))
+            for (i,v) in enumerate(extra_constraints):
+                zsi = mat_real_to_cplx(np.array(sdp_stats['zs'][2+i]))
+                TZ_list.append(v['R*'](zsi))
             TZ_sum = np.sum(TZ_list, axis=0)
             T = zs1 - I_ot_rho + TZ_sum
 
@@ -511,12 +512,12 @@ class NoncommutativeGraph(object):
                 if err < -verify_tol: print "WARNING: phi_phi err =", err
 
                 for (i, (v, Z)) in enumerate(zip(extra_vars, Z_list)):
-                    M = v['x'](Z) - v['0']
+                    M = v['R'](Z) - v['0']
                     err = linalg.eigvalsh(M)[0]
                     if err < -verify_tol: print "WARNING: R(Z%d) err = %g" % (i, err)
 
                 for (i, v) in enumerate(extra_constraints):
-                    M = v['x'](Y) - v['0']
+                    M = v['R'](Y) - v['0']
                     err = linalg.eigvalsh(M)[0]
                     if err < -verify_tol: print "WARNING: R(Y) err =", err
 
@@ -637,7 +638,7 @@ class NoncommutativeGraph(object):
         Fx_evars = []
         F0_evars = []
         for (xZ, v) in zip(x_to_Z, extra_vars):
-            Fx = np.array([ v['x'](z) for z in np.rollaxis(xZ, -1) ], dtype=complex)
+            Fx = np.array([ v['R'](z) for z in np.rollaxis(xZ, -1) ], dtype=complex)
             Fx = np.rollaxis(Fx, 0, len(Fx.shape))
             F0 = v['0']
             Fx_evars.append(Fx)
@@ -646,7 +647,7 @@ class NoncommutativeGraph(object):
         Fx_econs = []
         F0_econs = []
         for v in extra_constraints:
-            Fx = np.array([ v['x'](y) for y in np.rollaxis(x_to_T, -1) ], dtype=complex)
+            Fx = np.array([ v['R'](y) for y in np.rollaxis(x_to_T, -1) ], dtype=complex)
             Fx = np.rollaxis(Fx, 0, len(Fx.shape))
             F0 = v['0']
             Fx_econs.append(Fx)
@@ -663,7 +664,8 @@ class NoncommutativeGraph(object):
             the_sum = np.dot(x_to_sum, xvec)
             rho = np.dot(x_to_rhotf, xvec) + np.eye(n)/n
 
-            # FIXME - do tests
+            # FIXME - construct dual solution
+            # FIXME - test primal and dual solutions
 
             if long_return:
                 ret = {}

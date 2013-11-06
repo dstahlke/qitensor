@@ -19,6 +19,8 @@ def mat_cplx_to_real(cmat):
     rmat[1, :, 1, :] = cmat.real
     rmat[0, :, 1, :] = -cmat.imag
     rmat[1, :, 0, :] = cmat.imag
+    # preserve the norm
+    rmat /= np.sqrt(2)
     return rmat.reshape(cmat.shape[0]*2, cmat.shape[1]*2)
 
 # This could help for extracting the dual solution for the solver.  But I haven't yet figured
@@ -29,7 +31,7 @@ def mat_cplx_to_real(cmat):
 def mat_real_to_cplx(rmat):
     w = rmat.shape[0]/2
     h = rmat.shape[1]/2
-    return rmat[:w,:h] + 1j*rmat[w:,:h]
+    return (rmat[:w,:h] + 1j*rmat[w:,:h]) * np.sqrt(2)
 
 def make_F_real(Fx_list, F0_list):
     '''
@@ -116,10 +118,10 @@ class NoncommutativeGraph(object):
         assert np.eye(n) in S_flat
 
         self.Y_basis = self._get_S_ot_L_basis(self.S_basis)
-        self.Y_basis_dh = self._basis_doubly_hermit(S_flat)
+        self.Y_basis_dh = self._basis_doubly_hermit(self.S_basis)
         self.T_basis = self._get_S_ot_L_basis(self.Sp_basis)
-        self.T_basis_dh = self._basis_doubly_hermit(S_flat.perp())
-        self.full_basis_dh = self._basis_doubly_hermit(TensorSubspace.full((n,n)))
+        self.T_basis_dh = self._basis_doubly_hermit(self.Sp_basis)
+        self.full_basis_dh = self._basis_doubly_hermit(TensorSubspace.full((n,n)).hermitian_basis())
 
         self.cond_psd = {
             'basis': self.full_basis_dh,
@@ -241,14 +243,14 @@ class NoncommutativeGraph(object):
         # [ |a>, |a'>, <a|, <a'| ; idx ]
         return ret
 
-    def _basis_doubly_hermit(self, spc):
+    def _basis_doubly_hermit(self, Sb):
         """
         Returns a basis of elements of spc \ot spc that are Hermitian and also have Hermitian
         images under R().
+
+        Sb must be a Hermitian basis.
         """
 
-        # FIXME - just pass hermitian_basis (already computed)
-        Sb = spc.hermitian_basis()
         out = []
         for (i, x) in enumerate(Sb):
             out.append( np.tensordot(x, x.conj(), axes=([],[])).transpose((0, 2, 1, 3)) )
@@ -380,6 +382,19 @@ class NoncommutativeGraph(object):
 
 
     def get_five_values(self):
+        """
+        >>> np.random.seed(1)
+        >>> S = NoncommutativeGraph.random(3, 5)
+        >>> # FIXME - Unfortunately, Schrijver doesn't converge well.
+        >>> cvxopt.solvers.options['abstol'] = float(1e-5)
+        >>> cvxopt.solvers.options['reltol'] = float(1e-5)
+        >>> vals = S.get_five_values()
+        >>> good = np.array([1.0000000895503431, 2.5283253619689754, 2.977455214593435, \
+                    2.9997454690478249, 2.9999999897950529])
+        >>> np.sum(np.abs(vals-good)) < 1e-5
+        True
+        """
+
         (nS, n, _n) = self.S_basis.shape
         assert n == _n
 
@@ -478,12 +493,16 @@ class NoncommutativeGraph(object):
             Z_list = [ np.dot(xZ, xvec) for xZ in x_to_Z ]
             Z_sum = np.sum(Z_list, axis=0)
 
-            zs0 = mat_real_to_cplx(np.array(sdp_stats['zs'][0]))
-            zs1 = mat_real_to_cplx(np.array(sdp_stats['zs'][1]))
-            # FIXME - why times 2?
-            rho = zs0 * 2
-            T = (zs1.reshape(n,n,n,n) - \
-                    np.tensordot(np.eye(n), zs0, axes=0).transpose(0,2,1,3)) * 2
+            rho = mat_real_to_cplx(np.array(sdp_stats['zs'][0]))
+            I_ot_rho = np.tensordot(np.eye(n), rho, axes=0).transpose(0,2,1,3)
+            zs1 = mat_real_to_cplx(np.array(sdp_stats['zs'][1])).reshape(n,n,n,n)
+            TZ_list = []
+            for i in range(len(extra_constraints)):
+                zsi = mat_real_to_cplx(np.array(sdp_stats['zs'][2+i])).reshape(n,n,n,n)
+                # FIXME - need R^*
+                TZ_list.append(zsi.transpose(0,2,1,3))
+            TZ_sum = np.sum(TZ_list, axis=0)
+            T = zs1 - I_ot_rho + TZ_sum
 
             # some sanity checks to make sure the output makes sense
             verify_tol=1e-7
@@ -513,13 +532,13 @@ class NoncommutativeGraph(object):
                     assert err < 1e-10
 
                 # Test the primal solution
-                for mat in self.S_basis:
-                    dp = np.tensordot(T, mat.conjugate(), axes=[[0, 2], [0, 1]])
+                for mat in np.rollaxis(Y_basis, -1):
+                    dp = np.tensordot(T, mat.conjugate(), axes=4)
                     err = linalg.norm(dp)
-                    if err > verify_tol: print "T in Sp err:", err
-                err = abs(T.trace().trace() + 1 - t)
+                    if err > verify_tol: print "T in Y_basis.perp() err:", err
+                err = abs((T-TZ_sum).trace().trace() + 1 - t)
                 if err > verify_tol: print "WARNING: primal vs dual err =", err
-                T_plus_Irho = T + np.tensordot(np.eye(n), rho, axes=0).transpose(0,2,1,3)
+                T_plus_Irho = T - TZ_sum + I_ot_rho
                 err = linalg.eigvalsh(T_plus_Irho.reshape(n**2, n**2))[0]
                 if err < -verify_tol: print "WARNING: T_plus_Irho pos err =", err
                 err = abs(np.trace(rho) - 1)
@@ -532,7 +551,7 @@ class NoncommutativeGraph(object):
                 for key in [
                         'n', 'x_to_Y', 'x_to_Z',
                         'phi_phi', 'c', 't', 'Y', 'Z_list', 'xvec', 'sdp_stats',
-                        'T', 'rho', 'T_plus_Irho',
+                        'T', 'rho', 'T_plus_Irho', 'TZ_list', 'TZ_sum',
                     ]:
                         ret[key] = locals()[key]
                 return ret
@@ -690,29 +709,21 @@ if __name__ == "__main__":
     # Doctests require not getting progress messages from SDP solver.
     cvxopt.solvers.options['show_progress'] = False
 
-    #print "Running doctests."
+# FIXME
+#    print "Running doctests."
+#
+#    import doctest
+#    doctest.testmod()
 
-    #import doctest
-    #doctest.testmod()
-
+    # seed=5 NoncommutativeGraph.random(4, 5) gives gap between Szegedy with positive and with
+    # just Hermitian.
     n = 4
     np.random.seed(5)
-    S = NoncommutativeGraph.random(n, 9)
+    S = NoncommutativeGraph.random(n, 12)
     # FIXME - Unfortunately, Schrijver doesn't converge well.
     cvxopt.solvers.options['abstol'] = float(1e-5)
     cvxopt.solvers.options['reltol'] = float(1e-5)
     #cvxopt.solvers.options['show_progress'] = True
-    #vals = S.get_five_values()
-    #print vals
-    good = np.array([1.0000000895503431, 2.5283253619689754, 2.977455214593435, \
-            2.9997454690478249, 2.9999999897950529])
-    #print np.sum(np.abs(vals-good))
-    #a = S.unified_primal(True)
-    #b = S.lovasz_theta(True)
-    #print a['t'], b['t']
-    #xx = (np.tensordot(b['T'], a['x_to_T'].conj(), axes=4) + np.tensordot(b['rho'], a['x_to_rhotf'].conj(), axes=2)).real
-    #T = b['T']
-    #rho = b['rho']
 
     #w = S.szegedy(False)
     #print w
@@ -723,8 +734,10 @@ if __name__ == "__main__":
     #print a['t']
     #print a['t'] - w
 
-    print S.unified_dual(S.Y_basis_dh, [], [], False)
-    b = S.szegedy(False, long_return=True)
+    #t_honly = S.unified_dual(S.Y_basis_dh, [], [], False)
+    #print 'hermit only:', t_honly
+
+    b = S.szegedy(True, long_return=True)
     #b = S.lovasz_theta(long_return=True)
     locals().update(b)
     print t
@@ -732,7 +745,6 @@ if __name__ == "__main__":
     zs1 = mat_real_to_cplx(np.array(sdp_stats['zs'][1])).reshape(n,n,n,n) * 2
     zs2 = mat_real_to_cplx(np.array(sdp_stats['zs'][2])).reshape(n,n,n,n) * 2
     #zs3 = mat_real_to_cplx(np.array(sdp_stats['zs'][3])).reshape(n,n,n,n) * 2
-    print T.trace().trace()+1 - t
+    print (T-TZ_sum).trace().trace()+1 - t
     w=[np.tensordot(x, y.conj(), axes=([],[])).transpose((0, 2, 1, 3)) for x in S.S_basis for y in S.S_basis]
-    q=T+zs2.transpose(0,2,1,3)
-    print np.max([linalg.norm(np.tensordot(q, (x + x.transpose(1,0,3,2).conj()).conj(), axes=4)) for x in w])
+    print np.max([linalg.norm(np.tensordot(T, (x + x.transpose(1,0,3,2).conj()).conj(), axes=4)) for x in w])

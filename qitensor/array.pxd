@@ -47,6 +47,7 @@ cdef class HilbertArray:
     cpdef eig(self, w_space=*, hermit=*)
     cpdef eigvals(self, hermit=*)
     cpdef eigvalsh(self)
+    cpdef eigproj(self, hermit=*, grouping_tol=*)
     cpdef sqrt(self)
     cpdef entropy(self, normalize=*, checks=*)
     cpdef purity(self, normalize=*, checks=*)

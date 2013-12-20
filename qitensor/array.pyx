@@ -6,6 +6,7 @@ numpy.array.  HilbertArray's are to be created using the
 :meth:`HilbertSpace.array` method.
 """
 
+from collections import defaultdict
 import numpy as np
 cimport cpython
 cimport numpy as np
@@ -2370,6 +2371,85 @@ cdef class HilbertArray:
         Alias for eigvals(hermit=True).
         """
         return self.eigvals(hermit=True)
+
+    cpdef eigproj(self, hermit=False, grouping_tol=1e-9):
+        """
+        Decompose an operator into eigenspace projectors.
+
+        Returns a list of eigenvalues `(w_i)` and a list of projectors `(P_i)`
+        such that :math:`M = \sum_i w_i P_i`.
+
+        :param hermit: set this to `True` if the input is Hermitian.  The returned eigenvalues
+        will then be real.
+        :param grouping_tol: threshold for grouping similar eigenvalues.
+
+        >>> from qitensor import qudit
+        >>> ha = qudit('a', 5)
+        >>> hb = qudit('b', 2)
+        >>> U = ha.random_unitary() * hb.eye()
+        >>> (wl, Pl) = U.eigproj()
+        >>> np.all([ (P*P-P).norm() < 1e-12 for P in Pl ])
+        True
+        >>> np.all([ (P.H-P).norm() < 1e-12 for P in Pl ])
+        True
+        >>> (U - np.sum([ w*P for (w, P) in zip(wl, Pl) ])).norm() < 1e-12
+        True
+        """
+
+        # Tolerance for things that really should be zero (regardless of grouping_tol).
+        tol = 1e-12
+
+        if not self.space.is_symmetric():
+            raise HilbertError('bra space must be the same as ket space '+
+                '(space was '+repr(self.space)+')')
+
+        if (self*self.H - self.H*self).norm() > tol:
+            raise HilbertError('operator was not normal')
+
+        (ew_list, ev_list) = self.space.base_field.mat_eig(self.as_np_matrix(), hermit)
+
+        # sort eigenvalues in ascending order of real component
+        srt = np.argsort(ew_list)
+        ew_list = ew_list[srt]
+        ev_list = ev_list[:, srt]
+
+        # Make eigenvectors orthonormal.  The numpy documentation claims ew_list will be unitary if
+        # the input is normal, but this seems to not be the case.
+        for i in range(ev_list.shape[1]):
+            for j in range(i):
+                p = (ev_list[:,i].T * ev_list[:,j].conj()).item()
+                ev_list[:,i] -= p * ev_list[:,j]
+            ev_list[:,i] /= self.space.base_field.mat_norm(ev_list[:,i], 2)
+        #print np.dot(ev_list.conj().T, ev_list)
+
+        uniq_ew = []
+        indices_for_ew = defaultdict(list)
+
+        for (ew_idx, ew) in enumerate(ew_list):
+            u_idx = -1 if len(uniq_ew)==0 else np.argmin(np.abs(uniq_ew - ew))
+            if u_idx >= 0 and np.abs(uniq_ew - ew)[u_idx] > grouping_tol:
+                u_idx = -1
+            if u_idx < 0:
+                u_idx = len(uniq_ew)
+                uniq_ew.append(ew)
+            indices_for_ew[uniq_ew[u_idx]].append(ew_idx)
+
+        P_list = []
+        for ew in uniq_ew:
+            indices = indices_for_ew[ew]
+            P = np.sum([np.outer(ev_list[:,i], ev_list[:,i].conj()) for i in indices], axis=0)
+            P = self.space.reshaped_np_matrix(P)
+            assert (P*P - P).norm() < tol
+            assert (P.H - P).norm() < tol
+            P_list.append(P)
+
+        M = np.sum([ ew*P for (ew,P) in zip(uniq_ew, P_list) ], axis=0)
+        # Errors may have been introduced by the grouping of similar eigenvalues.  Hopefully
+        # the following threshold is enough.
+        final_tol = grouping_tol * np.sqrt(self.space.ket_space().dim()) * 2.0
+        assert (M - self).norm() < final_tol
+
+        return (uniq_ew, P_list)
 
     cpdef sqrt(self):
         """

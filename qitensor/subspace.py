@@ -185,6 +185,10 @@ class TensorSubspace(object):
         <TensorSubspace of dim 2 over space (3, 5)>
         >>> TensorSubspace.from_span(x)
         <TensorSubspace of dim 3 over space (5,)>
+        >>> [0,1,-1] in TensorSubspace.from_span([[1,1,0], [1,0,1]])
+        True
+        >>> [0,1,1]  in TensorSubspace.from_span([[1,1,0], [1,0,1]])
+        False
         """
 
         # The input must either be a numpy array or be convertible to a list.
@@ -212,6 +216,11 @@ class TensorSubspace(object):
         X = np.array(X, dtype=dtype)
         if dtype is None:
             dtype = X.dtype
+
+        # Minimum type is float (i.e. avoid integer types)
+        dtype = np.find_common_type([dtype], [np.float32])
+        X = X.astype(dtype)
+
         assert len(X.shape) >= 2
 
         # First axis of X enumerates the basis elements, remaining axes belong to the basis
@@ -568,6 +577,7 @@ class TensorSubspace(object):
                 assert x.space == self._hilb_space
                 return self.to_basis(x.nparray)
 
+        x = np.array(x)
         assert x.shape == self._col_shp
         nd = len(x.shape)
         return np.tensordot(self._basis.conjugate(), x, axes=(range(1, nd+1), range(nd)))

@@ -12,6 +12,7 @@
 	* Superoperator.H and CP_Map.H to create adjoint channel
 	* TensorSubspace multiplication and H
 	* better use of NotImplemented for array ops
+	* dtype fix in TensorSubspace
 
 === qitensor-0.11 (Dan Stahlke, 2013-05-11) ===
 	* superoperators module

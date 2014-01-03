@@ -425,7 +425,7 @@ class NoncommutativeGraph(object):
         Yb_len = Y_basis.shape[4]
 
         # x = [t, Y.A:Si * Y.A':i * Y.A':j, Z]
-        xvec_len = 1 + Yb_len + np.sum([ v['basis'].shape[-1] for v in extra_vars])
+        xvec_len = 1 + Yb_len + np.sum([ v['basis'].shape[-1] for v in extra_vars], dtype=int)
 
         idx = 1
         x_to_Y = np.zeros((n,n,n,n,xvec_len), dtype=complex)
@@ -596,7 +596,7 @@ class NoncommutativeGraph(object):
         rb_len = rhotf_basis.shape[2]
         assert rb_len == n*n-1
 
-        xvec_len = Tb_len + rb_len + np.sum([ v['basis'].shape[-1] for v in extra_vars])
+        xvec_len = Tb_len + rb_len + np.sum([ v['basis'].shape[-1] for v in extra_vars], dtype=int)
 
         idx = 0
         x_to_T = np.zeros((n,n,n,n,xvec_len), dtype=complex)

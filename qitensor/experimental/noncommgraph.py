@@ -253,12 +253,18 @@ class NoncommutativeGraph(object):
         Sb must be a Hermitian basis.
         """
 
+        (nS, n, _n) = Sb.shape
+        assert n == _n
+
+        if nS == 0:
+            return np.zeros((0, n, n, n, n), dtype=complex)
+
         out = []
         for (i, x) in enumerate(Sb):
             out.append( np.tensordot(x, x.conj(), axes=([],[])).transpose((0, 2, 1, 3)) )
             for (j, y) in enumerate(Sb):
                 if j >= i:
-                    continue;
+                    continue
                 xy = np.tensordot(x, y.conj(), axes=([],[])).transpose((0, 2, 1, 3))
                 yx = np.tensordot(y, x.conj(), axes=([],[])).transpose((0, 2, 1, 3))
                 out.append(xy+yx)

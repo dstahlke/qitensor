@@ -13,7 +13,7 @@ def random_channels(D=2, cnt=3000):
 
     accum = hb.O.array()
 
-    for idx in xrange(cnt):
+    for idx in range(cnt):
         K = (hb*hc*ha.H).random_isometry()
         U = ha.random_unitary()
         rho = U * ha.diag(np.random.rand(D)) * U.H
@@ -29,7 +29,7 @@ def orbit(D=2, cnt=50000):
     x = (ha*hb).random_unitary()
     y = (ha*hb).random_unitary()
 
-    for idx in xrange(cnt):
+    for idx in range(cnt):
         y *= x
 
     return y

@@ -281,7 +281,7 @@ class NoncommutativeGraph(object):
         A = TensorSubspace.from_span([ mat_cplx_to_real(Yb[:,:,:,:,i].reshape((n*n, n*n))) for i in range(Yb.shape[4]) ])
         B = TensorSubspace.from_span([ mat_cplx_to_real(Hb[:,:,:,:,i].reshape((n*n, n*n))) for i in range(Hb.shape[4]) ])
         C = A & B
-        print A,B,C
+        print(A,B,C)
         out = np.array([ mat_real_to_cplx(x).reshape((n,n,n,n)) for x in C ])
         for (i,c) in enumerate(np.rollaxis(Hb, -1)):
             x = c.reshape((n*n, n*n))
@@ -297,9 +297,9 @@ class NoncommutativeGraph(object):
         a = TensorSubspace.from_span([ mat_cplx_to_real(x.reshape(n*n,n*n)) for x in \
                 np.rollaxis(self.Y_basis_dh, -1) ])
         b = TensorSubspace.from_span([ mat_cplx_to_real(x.reshape(n*n,n*n)) for x in out ])
-        print a
-        print b
-        print a.equiv(b)
+        print(a)
+        print(b)
+        print(a.equiv(b))
         assert a.equiv(b)
 
     def _test_doubly_hermitian_basis(self):
@@ -309,7 +309,7 @@ class NoncommutativeGraph(object):
             return [(i,j,k,l), (j,i,l,k), (l,k,j,i), (k,l,i,j)]
 
         inds = set()
-        for (i,j,k,l) in itertools.product(range(n), repeat=4):
+        for (i,j,k,l) in itertools.product(list(range(n)), repeat=4):
             p = perms(i,j,k,l)
             if not np.any([ x in inds for x in p ]):
                 inds.add((i,j,k,l))
@@ -332,9 +332,9 @@ class NoncommutativeGraph(object):
         a = TensorSubspace.from_span([ mat_cplx_to_real(x.reshape(n*n,n*n)) for x in \
                 np.rollaxis(self.full_basis_dh, -1) ])
         b = TensorSubspace.from_span([ mat_cplx_to_real(x.reshape(n*n,n*n)) for x in ops ])
-        print a
-        print b
-        print a.equiv(b)
+        print(a)
+        print(b)
+        print(a.equiv(b))
         assert a.equiv(b)
 
     def lovasz_theta(self, long_return=False):
@@ -449,7 +449,7 @@ class NoncommutativeGraph(object):
         assert idx == xvec_len
 
         phi_phi = np.zeros((n,n, n,n), dtype=complex)
-        for (i, j) in itertools.product(range(n), repeat=2):
+        for (i, j) in itertools.product(list(range(n)), repeat=2):
             phi_phi[i, i, j, j] = 1
         phi_phi = phi_phi.reshape(n**2, n**2)
 
@@ -462,7 +462,7 @@ class NoncommutativeGraph(object):
         Fx_1 = -np.trace(x_to_Y, axis1=0, axis2=2)
         for xZ in x_to_Z:
             Fx_1 += np.trace(xZ, axis1=0, axis2=2)
-        for i in xrange(n):
+        for i in range(n):
             Fx_1[i, i, 0] = 1
         F0_1 = np.zeros((n, n))
 
@@ -515,43 +515,43 @@ class NoncommutativeGraph(object):
             verify_tol=1e-7
             if verify_tol:
                 err = linalg.eigvalsh((Y-Z_sum).reshape(n**2, n**2) - phi_phi)[0]
-                if err < -verify_tol: print "WARNING: phi_phi err =", err
+                if err < -verify_tol: print("WARNING: phi_phi err =", err)
 
                 for (i, (v, Z)) in enumerate(zip(extra_vars, Z_list)):
                     M = v['R'](Z) - v['0']
                     err = linalg.eigvalsh(M)[0]
-                    if err < -verify_tol: print "WARNING: R(Z%d) err = %g" % (i, err)
+                    if err < -verify_tol: print("WARNING: R(Z%d) err = %g" % (i, err))
 
                 for (i, v) in enumerate(extra_constraints):
                     M = v['R'](Y) - v['0']
                     err = linalg.eigvalsh(M)[0]
-                    if err < -verify_tol: print "WARNING: R(Y) err =", err
+                    if err < -verify_tol: print("WARNING: R(Y) err =", err)
 
                 maxeig = linalg.eigvalsh(np.trace(Y-Z_sum, axis1=0, axis2=2))[-1].real
                 err = abs(xvec[0] - maxeig)
-                if err > verify_tol: print "WARNING: t err =", err
+                if err > verify_tol: print("WARNING: t err =", err)
 
                 # make sure it is in S*L(A')
                 for mat in self.Sp_basis:
                     dp = np.tensordot(Y, mat.conjugate(), axes=[[0, 2], [0, 1]])
                     err = linalg.norm(dp)
-                    if err > 1e-10: print "S err:", err
+                    if err > 1e-10: print("S err:", err)
                     assert err < 1e-10
 
                 # Test the primal solution
                 for mat in np.rollaxis(Y_basis, -1):
                     dp = np.tensordot(T, mat.conjugate(), axes=4)
                     err = linalg.norm(dp)
-                    if err > verify_tol: print "T in Y_basis.perp() err:", err
+                    if err > verify_tol: print("T in Y_basis.perp() err:", err)
                 err = abs((T-TZ_sum).trace().trace() + 1 - t)
-                if err > verify_tol: print "WARNING: primal vs dual err =", err
+                if err > verify_tol: print("WARNING: primal vs dual err =", err)
                 T_plus_Irho = T - TZ_sum + I_ot_rho
                 err = linalg.eigvalsh(T_plus_Irho.reshape(n**2, n**2))[0]
-                if err < -verify_tol: print "WARNING: T_plus_Irho pos err =", err
+                if err < -verify_tol: print("WARNING: T_plus_Irho pos err =", err)
                 err = abs(np.trace(rho) - 1)
-                if err < -verify_tol: print "WARNING: Tr(rho) err =", err
+                if err < -verify_tol: print("WARNING: Tr(rho) err =", err)
                 err = linalg.eigvalsh(rho)[0]
-                if err < -verify_tol: print "WARNING: rho pos err =", err
+                if err < -verify_tol: print("WARNING: rho pos err =", err)
 
             if long_return:
                 ret = {}
@@ -748,11 +748,11 @@ if __name__ == "__main__":
     b = S.szegedy(True, long_return=True)
     #b = S.lovasz_theta(long_return=True)
     locals().update(b)
-    print t
+    print(t)
 
     zs1 = mat_real_to_cplx(np.array(sdp_stats['zs'][1])).reshape(n,n,n,n) * 2
     zs2 = mat_real_to_cplx(np.array(sdp_stats['zs'][2])).reshape(n,n,n,n) * 2
     #zs3 = mat_real_to_cplx(np.array(sdp_stats['zs'][3])).reshape(n,n,n,n) * 2
-    print (T-TZ_sum).trace().trace()+1 - t
+    print((T-TZ_sum).trace().trace()+1 - t)
     w=[np.tensordot(x, y.conj(), axes=([],[])).transpose((0, 2, 1, 3)) for x in S.S_basis for y in S.S_basis]
-    print np.max([linalg.norm(np.tensordot(T, (x + x.transpose(1,0,3,2).conj()).conj(), axes=4)) for x in w])
+    print(np.max([linalg.norm(np.tensordot(T, (x + x.transpose(1,0,3,2).conj()).conj(), axes=4)) for x in w]))

@@ -580,7 +580,7 @@ class TensorSubspace(object):
         x = np.array(x)
         assert x.shape == self._col_shp
         nd = len(x.shape)
-        return np.tensordot(self._basis.conjugate(), x, axes=(range(1, nd+1), range(nd)))
+        return np.tensordot(self._basis.conjugate(), x, axes=(list(range(1, nd+1)), list(range(nd))))
 
     def from_basis(self, v):
         """
@@ -802,7 +802,7 @@ class TensorSubspace(object):
         x_to_S_reduced_real = S_basis.reshape(2,n,n, n_indep)
         x_to_S_reduced = x_to_S_reduced_real[0] + 1j*x_to_S_reduced_real[1]
 
-        for i in xrange(n_indep):
+        for i in range(n_indep):
             s = x_to_S_reduced[:, :, i]
             sH = s.transpose().conjugate()
             assert linalg.norm(s - sH) < 1e-13
@@ -868,7 +868,7 @@ class TensorSubspace(object):
         # Compute tensor product and shuffle axes.
         def tp(a, b):
             products = np.tensordot(a, b, axes=([], []))
-            products = products.transpose([n] + range(n) + range(n+1, n+m))
+            products = products.transpose([n] + list(range(n)) + list(range(n+1, n+m)))
             products = products.reshape((products.shape[0]*products.shape[1],) + products.shape[2:])
             return products
 

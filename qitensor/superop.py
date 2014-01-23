@@ -701,7 +701,7 @@ class CP_Map(Superoperator):
             dc = len(nonzero)
         else:
             dc = da*db
-            nonzero = range(dc)
+            nonzero = list(range(dc))
 
         env_space = cls._make_environ_spc(espc_def, in_space.base_field, dc)
 

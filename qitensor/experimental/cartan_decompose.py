@@ -1,5 +1,5 @@
 import qitensor
-import cartan_decompose_impl
+from . import cartan_decompose_impl
 
 def unitary_to_cartan(U):
     """

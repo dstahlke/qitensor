@@ -66,9 +66,9 @@ class CartanTests(unittest.TestCase):
             assert np.allclose(UAB * Ud * VAB, U)
 
 def suite():
-    return unittest.TestSuite(map(unittest.TestLoader().loadTestsFromTestCase, [
+    return unittest.TestSuite(list(map(unittest.TestLoader().loadTestsFromTestCase, [
         CartanTests,
-    ]))
+    ])))
 
 if __name__ == "__main__":
     unittest.TextTestRunner().run(suite())

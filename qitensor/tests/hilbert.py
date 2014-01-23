@@ -196,11 +196,11 @@ class HilbertComplicatedTests(unittest.TestCase):
         self.failUnless( (U2-U).norm() < self.epsilon )
 
 def suite():
-    return unittest.TestSuite(map(unittest.TestLoader().loadTestsFromTestCase, [
+    return unittest.TestSuite(list(map(unittest.TestLoader().loadTestsFromTestCase, [
         HilbertBasicTests,
         HilbertOperTests,
         HilbertComplicatedTests,
-    ]))
+    ])))
 
 if __name__ == "__main__":
     unittest.TextTestRunner().run(suite())

@@ -186,9 +186,9 @@ def controlled_U(cspc, U):
         raise ValueError('unitaries list/dict was empty')
 
     U = None
-    U0 = Udict.itervalues().next()
+    U0 = next(iter(Udict.values()))
 
-    for U in Udict.itervalues():
+    for U in Udict.values():
         if U.space != U.H.space:
             raise HilbertError('not an operator: '+str(U.space))
         if U.space != U0.space:
@@ -197,7 +197,7 @@ def controlled_U(cspc, U):
 
 
     ret = (cspc.O * U0.space).eye()
-    for (v, U) in Udict.iteritems():
+    for (v, U) in Udict.items():
         ret[{ cspc: v, cspc.H: v }] = U
 
     return ret

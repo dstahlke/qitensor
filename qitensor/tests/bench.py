@@ -4,5 +4,5 @@ import qitensor.benchmark_cy as bc
 
 #print "random_channels"
 #bc.random_channels()
-print "orbit"
+print("orbit")
 bc.orbit()

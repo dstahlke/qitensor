@@ -98,13 +98,13 @@ def doctest():
         #qitensor.experimental.noncommgraph, \
     ]
 
-    print "\nRunning doctests..."
+    print("\nRunning doctests...")
     for m in doctest_modules:
-        print m.__name__, ('.'*(45-len(m.__name__))), doctest.testmod(m)
+        print(m.__name__, ('.'*(45-len(m.__name__))), doctest.testmod(m))
 
     # FIXME - these tests are probably obsoleted by the doctests.  It might not
     # be worth keeping them around.
-    print "\nRunning unit tests..."
+    print("\nRunning unit tests...")
     import unittest
     suite = unittest.TestSuite([
         qitensor.tests.hilbert.suite(),

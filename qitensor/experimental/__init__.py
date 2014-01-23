@@ -1,3 +1,3 @@
-import cartan_decompose
-import stabilizers
-import noncommgraph
+from . import cartan_decompose
+from . import stabilizers
+from . import noncommgraph

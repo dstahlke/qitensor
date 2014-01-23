@@ -615,7 +615,7 @@ cdef class HilbertArray:
             HilbertSpace._assert_nodup_space(to_spaces, "an output space was listed twice")
             mapping = dict(zip(from_spaces, to_spaces))
 
-        for (k,v) in mapping.iteritems():
+        for (k,v) in mapping.items():
             assert isinstance(k, HilbertAtom)
             assert isinstance(v, HilbertAtom)
             if not k in self.space.bra_ket_set:
@@ -1076,15 +1076,15 @@ cdef class HilbertArray:
         Traceback (most recent call last):
             ...
         HilbertIndexError: 'Wrong number of indices given (1 for |a,b><a|)'
-        >>> sorted(list(y._index_key_to_map((1,2,3)).iteritems()))
+        >>> sorted(y._index_key_to_map((1,2,3)).items())
         [(|a>, 1), (<a|, 3), (|b>, 2)]
-        >>> sorted(list(y._index_key_to_map([1,2,3]).iteritems()))
+        >>> sorted(y._index_key_to_map([1,2,3]).items())
         [(|a>, 1), (<a|, 3), (|b>, 2)]
         >>> y._index_key_to_map((1,2,3,4))
         Traceback (most recent call last):
             ...
         HilbertIndexError: 'Wrong number of indices given (4 for |a,b><a|)'
-        >>> sorted(list(y._index_key_to_map({ ha: 1, ha.H: 2}).iteritems()))
+        >>> sorted(y._index_key_to_map({ ha: 1, ha.H: 2}).items())
         [(|a>, 1), (<a|, 2)]
         >>> y._index_key_to_map({ ha: 1, hb.H: 2})
         Traceback (most recent call last):
@@ -1094,7 +1094,7 @@ cdef class HilbertArray:
 
         index_map = {}
         if isinstance(key, dict):
-            for (k, v) in key.iteritems():
+            for (k, v) in key.items():
                 if not isinstance(k, HilbertSpace):
                     raise TypeError('not a HilbertSpace: '+repr(k))
                 if not isinstance(v, list) and not isinstance(v, tuple):
@@ -1133,7 +1133,7 @@ cdef class HilbertArray:
             else:
                 index_map[self.axes[0]] = key
 
-        for (spc, idx) in index_map.iteritems():
+        for (spc, idx) in index_map.items():
             if not isinstance(spc, HilbertSpace):
                 raise TypeError('not a HilbertSpace: '+repr(spc))
             if not spc in self.axes:
@@ -1896,21 +1896,21 @@ cdef class HilbertArray:
 
         assert isinstance(axes, dict)
 
-        HilbertSpace._assert_nodup_space(axes.keys()+axes.values(), "a space was listed twice")
+        HilbertSpace._assert_nodup_space(list(axes.keys())+list(axes.values()), "a space was listed twice")
 
-        for (k, v) in axes.iteritems():
+        for (k, v) in axes.items():
             if not k in self.space.bra_ket_set:
                 raise HilbertError("not in this array's space: "+repr(k))
             if not v in self.space.bra_ket_set:
                 raise HilbertError("not in this array's space: "+repr(v))
 
         # The full trace is handled specially here, for efficiency.
-        if frozenset(axes.keys()+axes.values()) == self.space.bra_ket_set:
+        if frozenset(list(axes.keys())+list(axes.values())) == self.space.bra_ket_set:
             return np.trace( self.as_np_matrix() )
 
         working = self
 
-        for (s1, s2) in axes.iteritems():
+        for (s1, s2) in axes.items():
             axis1 = working.get_dim(s1)
             axis2 = working.get_dim(s2)
 

@@ -54,7 +54,7 @@ cpdef _atom_factory(base_field, label, latex_label, indices, group_op):
 
     cdef tuple key = (_label, _latex_label, _indices, group_op, base_field)
 
-    if not _atom_cache.has_key(key):
+    if not key in _atom_cache:
         atom = HilbertAtom(_label, _latex_label, _indices, \
             group_op, base_field, None)
         _atom_cache[key] = atom
@@ -79,7 +79,7 @@ cpdef _assert_all_compatible(collection):
 
     for x in collection:
         assert isinstance(x, HilbertAtom)
-        if not by_label.has_key(x.label):
+        if not x.label in by_label:
             by_label[x.label] = []
         by_label[x.label].append(x)
 

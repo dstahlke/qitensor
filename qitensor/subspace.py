@@ -733,8 +733,8 @@ class TensorSubspace(object):
         nd = len(self._col_shp)
         if nd % 2 != 0:
             return False
-        shp = self._col_shp[:nd/2]
-        if shp != self._col_shp[nd/2:]:
+        shp = self._col_shp[:nd//2]
+        if shp != self._col_shp[nd//2:]:
             return False
 
         if self._hilb_space or len(self._col_shp) > 2:

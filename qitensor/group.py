@@ -36,6 +36,9 @@ class GroupElement(object):
     def __div__(self, other):
         return self * other.inv()
 
+    def __truediv__(self, other):
+        return self * other.inv()
+
     def inv(self): return self.group.itab[self.idx]
 
 class Group(object):

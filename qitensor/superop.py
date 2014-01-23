@@ -69,7 +69,7 @@ class Superoperator(object):
         >>> F = pickle.loads(pickle.dumps(E))
         >>> F
         Superoperator( |a><a| to |a><a| )
-        >>> (E(rho) - F(rho)).norm > 1e-14
+        >>> (E(rho) - F(rho)).norm() < 1e-14
         True
         """
 
@@ -396,7 +396,7 @@ class CP_Map(Superoperator):
         >>> F = pickle.loads(pickle.dumps(E))
         >>> F
         CP_Map( |a><a| to |a><a| )
-        >>> (E(rho) - F(rho)).norm > 1e-14
+        >>> (E(rho) - F(rho)).norm() < 1e-14
         True
         """
 

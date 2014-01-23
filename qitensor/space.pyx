@@ -79,7 +79,7 @@ cpdef _space_factory(frozenset ket_set, frozenset bra_set):
 
     cdef tuple key = (ket_set, bra_set)
 
-    if not _space_cache.has_key(key):
+    if not key in _space_cache:
         spc = HilbertSpace(ket_set, bra_set)
         _space_cache[key] = spc
 
@@ -129,9 +129,9 @@ cpdef create_space2(frozenset ket_set, frozenset bra_set):
     if not ket_set and not bra_set:
         raise HilbertError('tried to create empty HilbertSpace')
     elif len(ket_set) == 1 and not bra_set:
-        return ket_set.__iter__().next()
+        return next(iter(ket_set))
     elif not ket_set and len(bra_set) == 1:
-        return bra_set.__iter__().next()
+        return next(iter(bra_set))
     else:
         return _space_factory(ket_set, bra_set)
 
@@ -560,12 +560,8 @@ cdef class HilbertSpace:
         return create_space1(
             self.bra_ket_set | other.bra_ket_set)
 
-    def __div__(self, other):
-#        """
-#        Returns a HilbertSpace ``ret`` with the property that ``other*ret==self``.
-#        An error is thrown if such a relation is not possible.
-#        """
-
+    # FIXME - make sure this is the right way to do div in python2/3
+    def _mydiv(self, other):
         if not isinstance(self, HilbertSpace) or not isinstance(other, HilbertSpace):
             return NotImplemented
 
@@ -575,13 +571,21 @@ cdef class HilbertSpace:
             raise MismatchedSpaceError(repr(self)+" doesn't contain "+repr(other))
         return create_space1(self.bra_ket_set - other.bra_ket_set)
 
+    def __div__(self, other):
+#        """
+#        Returns a HilbertSpace ``ret`` with the property that ``other*ret==self``.
+#        An error is thrown if such a relation is not possible.
+#        """
+
+        return self._mydiv(other)
+
     def __truediv__(self, other):
         """
         Returns a HilbertSpace ``ret`` with the property that ``other*ret==self``.
         An error is thrown if such a relation is not possible.
         """
 
-        return self.__div__(other)
+        return self._mydiv(other)
 
     cpdef HilbertArray diag(self, v):
         """

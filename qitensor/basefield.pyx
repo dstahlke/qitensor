@@ -31,7 +31,7 @@ cpdef _factory(dtype):
     if not isinstance(dtype, type):
         return None
 
-    if not _base_field_cache.has_key(dtype):
+    if not dtype in _base_field_cache:
         _base_field_cache[dtype] = HilbertBaseField(dtype, repr(dtype))
     return _base_field_cache[dtype]
 

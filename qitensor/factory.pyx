@@ -48,7 +48,7 @@ cpdef GroupOpCyclic_factory(D):
     >>> g.op(2, 7)
     4
     """
-    if not _op_cyclic_cache.has_key(D):
+    if not D in _op_cyclic_cache:
         _op_cyclic_cache[D] = GroupOpCyclic_impl(D)
     return _op_cyclic_cache[D]
 

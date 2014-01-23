@@ -100,7 +100,10 @@ def doctest():
 
     print("\nRunning doctests...")
     for m in doctest_modules:
-        print(m.__name__, ('.'*(45-len(m.__name__))), doctest.testmod(m))
+        # python2 and python3 write the exceptions differently, so ignore details
+        opt = doctest.IGNORE_EXCEPTION_DETAIL
+        result = doctest.testmod(m, optionflags=opt)
+        print(m.__name__, ('.'*(45-len(m.__name__))), result)
 
     # FIXME - these tests are probably obsoleted by the doctests.  It might not
     # be worth keeping them around.

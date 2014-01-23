@@ -940,20 +940,20 @@ cdef class HilbertArray:
         return self
 
     def __div__(self, other):
-        """
-        Divide by a scalar.
-
-        >>> from qitensor import qubit
-        >>> ha = qubit('a')
-        >>> x = ha.random_array()
-        >>> (x/2).closeto(x*0.5)
-        True
-        >>> # the following exception may be thrown from within numpy
-        >>> x / x
-        Traceback (most recent call last):
-            ...
-        TypeError: unsupported operand type(s) for /: 'qitensor.array.HilbertArray' and 'qitensor.array.HilbertArray'
-        """
+#        """
+#        Divide by a scalar.
+#
+#        >>> from qitensor import qubit
+#        >>> ha = qubit('a')
+#        >>> x = ha.random_array()
+#        >>> (x/2).closeto(x*0.5)
+#        True
+#        >>> # the following exception may be thrown from within numpy
+#        >>> x / x
+#        Traceback (most recent call last):
+#            ...
+#        TypeError: unsupported operand type(s) for /: 'qitensor.array.HilbertArray' and 'qitensor.array.HilbertArray'
+#        """
 
         # Cython calls arithmetic methods with arguments reversed instead of __r*__ methods
         if not isinstance(self, HilbertArray):
@@ -970,22 +970,22 @@ cdef class HilbertArray:
         return ret
 
     def __idiv__(self, other):
-        """
-        In-place division by a scalar.
-
-        >>> from qitensor import qubit
-        >>> ha = qubit('a')
-        >>> x = ha.random_array()
-        >>> x_copy = x.copy()
-        >>> x_ref  = x
-        >>> x /= 2
-        >>> x is x_ref
-        True
-        >>> x is x_copy
-        False
-        >>> x.closeto(x_copy*0.5)
-        True
-        """
+#        """
+#        In-place division by a scalar.
+#
+#        >>> from qitensor import qubit
+#        >>> ha = qubit('a')
+#        >>> x = ha.random_array()
+#        >>> x_copy = x.copy()
+#        >>> x_ref  = x
+#        >>> x /= 2
+#        >>> x is x_ref
+#        True
+#        >>> x is x_copy
+#        False
+#        >>> x.closeto(x_copy*0.5)
+#        True
+#        """
 
         cast_fn = self.space.base_field.input_cast_function()
         try:

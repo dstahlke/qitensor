@@ -8,6 +8,7 @@ multiplication operator to HilbertAtoms or other HilbertSpaces.
 import numpy as np
 import itertools
 import operator
+import functools
 
 #import weakref
 
@@ -146,7 +147,7 @@ cpdef long _shape_product(l):
     """
 
     # faster than np.prod(l, dtype=int)
-    return reduce(operator.mul, l, 1)
+    return functools.reduce(operator.mul, l, 1)
 
 ########################################
 
@@ -560,10 +561,10 @@ cdef class HilbertSpace:
             self.bra_ket_set | other.bra_ket_set)
 
     def __div__(self, other):
-        """
-        Returns a HilbertSpace ``ret`` with the property that ``other*ret==self``.
-        An error is thrown if such a relation is not possible.
-        """
+#        """
+#        Returns a HilbertSpace ``ret`` with the property that ``other*ret==self``.
+#        An error is thrown if such a relation is not possible.
+#        """
 
         if not isinstance(self, HilbertSpace) or not isinstance(other, HilbertSpace):
             return NotImplemented

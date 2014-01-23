@@ -163,7 +163,8 @@ cdef class HilbertAtom(HilbertSpace):
         """
 
         assert isinstance(other, HilbertAtom)
-        return cmp(self.key, other.key)
+        #return cmp(self.key, other.key)
+        return (self.key > other.key) - (self.key < other.key)
 
     cpdef _assert_compatible(self, HilbertAtom other):
         """

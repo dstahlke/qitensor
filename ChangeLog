@@ -1,4 +1,5 @@
 === qitensor-0.12dev (Dan Stahlke, ongoing) ===
+	* Support python 3
 	* API change: eigenvalues in ascending order, to match numpy convention
 	* HilbertArray.fidelity
 	* HilbertArray.tensor

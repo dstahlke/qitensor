@@ -939,21 +939,21 @@ cdef class HilbertArray:
         self.nparray -= other.nparray
         return self
 
-    def __div__(self, other):
-#        """
-#        Divide by a scalar.
-#
-#        >>> from qitensor import qubit
-#        >>> ha = qubit('a')
-#        >>> x = ha.random_array()
-#        >>> (x/2).closeto(x*0.5)
-#        True
-#        >>> # the following exception may be thrown from within numpy
-#        >>> x / x
-#        Traceback (most recent call last):
-#            ...
-#        TypeError: unsupported operand type(s) for /: 'qitensor.array.HilbertArray' and 'qitensor.array.HilbertArray'
-#        """
+    def _mydiv(self, other):
+        """
+        Divide by a scalar.
+
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> x = ha.random_array()
+        >>> (x/2).closeto(x*0.5)
+        True
+        >>> # the following exception may be thrown from within numpy
+        >>> x / x
+        Traceback (most recent call last):
+            ...
+        TypeError: unsupported operand type(s) for /: 'qitensor.array.HilbertArray' and 'qitensor.array.HilbertArray'
+        """
 
         # Cython calls arithmetic methods with arguments reversed instead of __r*__ methods
         if not isinstance(self, HilbertArray):
@@ -969,60 +969,13 @@ cdef class HilbertArray:
         ret /= x
         return ret
 
-    def __idiv__(self, other):
-#        """
-#        In-place division by a scalar.
-#
-#        >>> from qitensor import qubit
-#        >>> ha = qubit('a')
-#        >>> x = ha.random_array()
-#        >>> x_copy = x.copy()
-#        >>> x_ref  = x
-#        >>> x /= 2
-#        >>> x is x_ref
-#        True
-#        >>> x is x_copy
-#        False
-#        >>> x.closeto(x_copy*0.5)
-#        True
-#        """
-
-        cast_fn = self.space.base_field.input_cast_function()
-        try:
-            x = cast_fn(other)
-        except TypeError:
-            return NotImplemented
-
-        self.nparray /= x
-        return self
+    def __div__(self, other):
+        return self._mydiv(other)
 
     def __truediv__(self, other):
-        """
-        Divide by a scalar.
+        return self._mydiv(other)
 
-        >>> from qitensor import qubit
-        >>> ha = qubit('a')
-        >>> x = ha.random_array()
-        >>> (x/2).closeto(x*0.5)
-        True
-        >>> # the following exception is thrown from within numpy
-        >>> x / x
-        Traceback (most recent call last):
-            ...
-        TypeError: unsupported operand type(s) for /: 'qitensor.array.HilbertArray' and 'qitensor.array.HilbertArray'
-        """
-
-        cast_fn = self.space.base_field.input_cast_function()
-        try:
-            x = cast_fn(other)
-        except TypeError:
-            return NotImplemented
-
-        ret = self.copy()
-        ret.__itruediv__(x)
-        return ret
-
-    def __itruediv__(self, other):
+    def _myidiv(self, other):
         """
         In-place division by a scalar.
 
@@ -1046,8 +999,14 @@ cdef class HilbertArray:
         except TypeError:
             return NotImplemented
 
-        self.nparray.__itruediv__(x)
+        self.nparray /= x
         return self
+
+    def __idiv__(self, other):
+        return self._myidiv(other)
+
+    def __itruediv__(self, other):
+        return self._myidiv(other)
 
     def __pow__(self, other, mod):
         assert mod is None

@@ -115,8 +115,8 @@ cpdef base_field_lookup(dtype):
         default complex
 
     >>> from qitensor import base_field_lookup
-    >>> base_field_lookup(complex).__class__
-    <type 'qitensor.basefield.HilbertBaseField'>
+    >>> base_field_lookup(complex).__class__.__name__
+    'HilbertBaseField'
     """
 
     if isinstance(dtype, HilbertBaseField):

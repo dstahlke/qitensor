@@ -560,8 +560,12 @@ cdef class HilbertSpace:
         return create_space1(
             self.bra_ket_set | other.bra_ket_set)
 
-    # FIXME - make sure this is the right way to do div in python2/3
     def _mydiv(self, other):
+        """
+        Returns a HilbertSpace ``ret`` with the property that ``other*ret==self``.
+        An error is thrown if such a relation is not possible.
+        """
+
         if not isinstance(self, HilbertSpace) or not isinstance(other, HilbertSpace):
             return NotImplemented
 
@@ -572,19 +576,9 @@ cdef class HilbertSpace:
         return create_space1(self.bra_ket_set - other.bra_ket_set)
 
     def __div__(self, other):
-#        """
-#        Returns a HilbertSpace ``ret`` with the property that ``other*ret==self``.
-#        An error is thrown if such a relation is not possible.
-#        """
-
         return self._mydiv(other)
 
     def __truediv__(self, other):
-        """
-        Returns a HilbertSpace ``ret`` with the property that ``other*ret==self``.
-        An error is thrown if such a relation is not possible.
-        """
-
         return self._mydiv(other)
 
     cpdef HilbertArray diag(self, v):

@@ -29,8 +29,8 @@ def mat_cplx_to_real(cmat):
 #ss=mat_real_to_cplx(np.array(ret['sdp_stats']['ss'][1]))
 #zs=mat_real_to_cplx(np.array(ret['sdp_stats']['zs'][1]))
 def mat_real_to_cplx(rmat):
-    w = rmat.shape[0]/2
-    h = rmat.shape[1]/2
+    w = rmat.shape[0] // 2
+    h = rmat.shape[1] // 2
     return (rmat[:w,:h] + 1j*rmat[w:,:h]) * np.sqrt(2)
 
 def make_F_real(Fx_list, F0_list):

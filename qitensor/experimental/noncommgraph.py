@@ -6,6 +6,8 @@ import itertools
 import cvxopt.base
 import cvxopt.solvers
 
+from qitensor import qudit
+from qitensor.superop import CP_Map
 from qitensor.subspace import TensorSubspace
 
 # This is the only thing that is exported.
@@ -699,6 +701,38 @@ class NoncommutativeGraph(object):
         else:
             raise Exception('cvxopt.sdp returned error: '+sdp_stats['status'])
 
+    def make_channel(self):
+        """
+        Makes a CPTP map whose confusibility graph is equal to `self`.
+        """
+
+        S = self.S
+        assert S._hilb_space is not None
+        spc = S._hilb_space
+        assert S.is_hermitian()
+        assert spc.eye() in S
+
+        if S.dim() == 1:
+            return CP_Map.identity(spc)
+
+        B = (S - spc.eye().span()).hermitian_basis()
+        B = [ b - spc.eye() * b.eigvalsh()[0] for b in B ]
+        m = np.sum(B).eigvalsh()[-1]
+        B = [ b/m for b in B ]
+        B += [ spc.eye() - np.sum(B) ]
+        J = [ b.sqrt() for b in B ]
+        J = [ j.svd()[0].H * j for j in J ]
+
+        hk = qudit('k', len(J))
+        J = [ hk.ket(k) * j for (k,j) in enumerate(J) ]
+
+        Kspc = TensorSubspace.from_span(J)
+        assert S.equiv(Kspc.H * Kspc)
+
+        chan = CP_Map.from_kraus(J)
+        assert chan.is_cptp()
+
+        return chan
 
 #if __name__ == "__main__":
 #    cvxopt.solvers.options['show_progress'] = False

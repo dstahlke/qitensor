@@ -704,8 +704,8 @@ class TensorSubspace(object):
         else:
             nd = len(self._col_shp)
             assert nd % 2 == 0
-            shp = self._col_shp[:nd/2]
-            assert shp == self._col_shp[nd/2:]
+            shp = self._col_shp[:nd//2]
+            assert shp == self._col_shp[nd//2:]
             shp = np.product(shp)
             return self.reshape((shp, shp))
 

@@ -350,7 +350,7 @@ class NoncommutativeGraph(object):
 
         return self.unified_dual(self.Y_basis, [], [], long_return)
 
-    def schrijver(self, ppt, long_return=False):
+    def schrijver(self, cone, long_return=False):
         """
         My non-commutative generalization of Schrijver's number.
 
@@ -359,18 +359,23 @@ class NoncommutativeGraph(object):
             Y \in S \ot \mathcal{L}
             Y-Z (-Z2) \succeq \Phi
             R(Z) \succeq 0
-            optional: R(Z2) \in PPT
+            optional: R(Z2) \in cone
 
         If the long_return option is True, then some extra status and internal
         quantities are returned (such as the optimal Y operator).
         """
 
-        v = [self.cond_psd]
-        if ppt:
-            v.append(self.cond_ppt)
+        v = {
+            False: [self.cond_psd],
+            True:  [self.cond_psd, self.cond_ppt],
+            'psd': [self.cond_psd],
+            'psd&ppt': [self.cond_psd, self.cond_ppt],
+            'ppt': [self.cond_ppt],
+        }[cone]
+
         return self.unified_dual(self.Y_basis, [], v, long_return)
 
-    def szegedy(self, ppt, long_return=False):
+    def szegedy(self, cone, long_return=False):
         """
         My non-commutative generalization of Schrijver's number.
 
@@ -379,17 +384,21 @@ class NoncommutativeGraph(object):
             Y \in S \ot \mathcal{L}
             Y \succeq \Phi
             R(Y) \succeq 0
-            optional: R(Y) \in PPT
+            optional: R(Y) \in cone
 
         If the long_return option is True, then some extra status and internal
         quantities are returned (such as the optimal Y operator).
         """
 
-        v = [self.cond_psd]
-        if ppt:
-            v.append(self.cond_ppt)
-        return self.unified_dual(self.Y_basis_dh, v, [], long_return)
+        v = {
+            False: [self.cond_psd],
+            True:  [self.cond_psd, self.cond_ppt],
+            'psd': [self.cond_psd],
+            'psd&ppt': [self.cond_psd, self.cond_ppt],
+            'ppt': [self.cond_ppt],
+        }[cone]
 
+        return self.unified_dual(self.Y_basis_dh, v, [], long_return)
 
     def get_five_values(self):
         """
@@ -497,12 +506,7 @@ class NoncommutativeGraph(object):
 
         (xvec, sdp_stats) = call_sdp(c, Fx_list, F0_list)
 
-        if sdp_stats['status'] == 'optimal':
-            t = xvec[0]
-            Y = np.dot(x_to_Y, xvec)
-            Z_list = [ np.dot(xZ, xvec) for xZ in x_to_Z ]
-            Z_sum = np.sum(Z_list, axis=0)
-
+        if sdp_stats['status'] in ['optimal', 'primal infeasible']:
             rho = mat_real_to_cplx(np.array(sdp_stats['zs'][0]))
             I_ot_rho = np.tensordot(np.eye(n), rho, axes=0).transpose(0,2,1,3)
             zs1 = mat_real_to_cplx(np.array(sdp_stats['zs'][1])).reshape(n,n,n,n)
@@ -516,6 +520,31 @@ class NoncommutativeGraph(object):
             # some sanity checks to make sure the output makes sense
             verify_tol=1e-7
             if verify_tol:
+                # Test the primal solution
+                for mat in np.rollaxis(Y_basis, -1):
+                    dp = np.tensordot(T, mat.conjugate(), axes=4)
+                    err = linalg.norm(dp)
+                    if err > verify_tol: print("T in Y_basis.perp() err:", err)
+                T_plus_Irho = T - TZ_sum + I_ot_rho
+                err = linalg.eigvalsh(T_plus_Irho.reshape(n**2, n**2))[0]
+                if err < -verify_tol: print("WARNING: T_plus_Irho pos err =", err)
+                err = abs(np.trace(rho) - 1)
+                if err < -verify_tol: print("WARNING: Tr(rho) err =", err)
+                err = linalg.eigvalsh(rho)[0]
+                if err < -verify_tol: print("WARNING: rho pos err =", err)
+
+        if sdp_stats['status'] == 'optimal':
+            t = xvec[0]
+            Y = np.dot(x_to_Y, xvec)
+            Z_list = [ np.dot(xZ, xvec) for xZ in x_to_Z ]
+            Z_sum = np.sum(Z_list, axis=0)
+
+            # some sanity checks to make sure the output makes sense
+            verify_tol=1e-7
+            if verify_tol:
+                err = abs((T-TZ_sum).trace().trace() + 1 - t)
+                if err > verify_tol: print("WARNING: primal vs dual err =", err)
+
                 err = linalg.eigvalsh((Y-Z_sum).reshape(n**2, n**2) - phi_phi)[0]
                 if err < -verify_tol: print("WARNING: phi_phi err =", err)
 
@@ -540,21 +569,6 @@ class NoncommutativeGraph(object):
                     if err > 1e-10: print("S err:", err)
                     assert err < 1e-10
 
-                # Test the primal solution
-                for mat in np.rollaxis(Y_basis, -1):
-                    dp = np.tensordot(T, mat.conjugate(), axes=4)
-                    err = linalg.norm(dp)
-                    if err > verify_tol: print("T in Y_basis.perp() err:", err)
-                err = abs((T-TZ_sum).trace().trace() + 1 - t)
-                if err > verify_tol: print("WARNING: primal vs dual err =", err)
-                T_plus_Irho = T - TZ_sum + I_ot_rho
-                err = linalg.eigvalsh(T_plus_Irho.reshape(n**2, n**2))[0]
-                if err < -verify_tol: print("WARNING: T_plus_Irho pos err =", err)
-                err = abs(np.trace(rho) - 1)
-                if err < -verify_tol: print("WARNING: Tr(rho) err =", err)
-                err = linalg.eigvalsh(rho)[0]
-                if err < -verify_tol: print("WARNING: rho pos err =", err)
-
             if long_return:
                 ret = {}
                 for key in [
@@ -572,7 +586,8 @@ class NoncommutativeGraph(object):
                 ret = {}
                 for key in [
                         'n', 'x_to_Y', 'x_to_Z',
-                        'phi_phi', 'c', 't', 'xvec', 'sdp_stats'
+                        'phi_phi', 'c', 't', 'xvec', 'sdp_stats',
+                        'T', 'rho', 'T_plus_Irho', 'TZ_list', 'TZ_sum',
                     ]:
                         ret[key] = locals()[key]
                 return ret

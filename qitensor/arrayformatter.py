@@ -24,6 +24,8 @@ class HilbertArrayFormatter(object):
         """
 
         self.str_use_sage = False
+        # FIXME - make this undocumented option public (requires publishing np_colorizer)
+        self.str_use_colorize = False
         self.zero_color_latex = 'Silver'
         self.zero_color_html = '#cccccc'
         self.use_latex_label_in_html = True
@@ -47,7 +49,7 @@ class HilbertArrayFormatter(object):
         if data.dtype == complex:
             (suppress, suppress_thresh) = self._get_suppress()
             precision = np.get_printoptions()['precision']
-            return np.core.arrayprint.ComplexFormat( \
+            return np.core.arrayprint.ComplexFormat(
                 data, precision=precision, suppress_small=suppress)
         else:
             return str
@@ -79,25 +81,28 @@ class HilbertArrayFormatter(object):
         else:
             return lambda x: sympy.latex(x)
 
+    def _get_arr_obj(self, arr):
+        if self.str_use_sage:
+            return arr.sage_block_matrix()
+        elif self.str_use_colorize:
+            import np_colorizer
+            return np_colorizer.colorize(arr.nparray)
+        else:
+            return arr.nparray
+
     def array_str(self, arr):
         """
         Creates string for HilbertArray.
         """
 
-        if self.str_use_sage:
-            return str(arr.space)+'\n'+str(arr.sage_block_matrix())
-        else:
-            return str(arr.space)+'\n'+str(arr.nparray)
+        return str(arr.space)+'\n'+str(self._get_arr_obj(arr))
 
     def array_repr(self, arr):
         """
         Creates repr for HilbertArray.
         """
 
-        if self.str_use_sage:
-            return 'HilbertArray('+repr(arr.space)+',\n'+repr(arr.sage_block_matrix())+')'
-        else:
-            return 'HilbertArray('+repr(arr.space)+',\n'+repr(arr.nparray)+')'
+        return 'HilbertArray('+repr(arr.space)+',\n'+repr(self._get_arr_obj(arr))+')'
 
     def array_latex_block_table(self, arr, use_hline=False):
         """

@@ -354,6 +354,8 @@ class NoncommutativeGraph(object):
         """
         My non-commutative generalization of Schrijver's number.
 
+        # FIXME - is this right?  Or is it Z \in cone?
+        # FIXME - make it match the paper (primal and dual)
         min t s.t.
             tI - Tr_A (Y-Z) \succeq 0
             Y \in S \ot \mathcal{L}
@@ -379,6 +381,7 @@ class NoncommutativeGraph(object):
         """
         My non-commutative generalization of Schrijver's number.
 
+        # FIXME - make it match the paper (primal and dual)
         min t s.t.
             tI - Tr_A Y \succeq 0
             Y \in S \ot \mathcal{L}

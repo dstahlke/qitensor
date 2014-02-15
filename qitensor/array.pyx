@@ -2090,20 +2090,20 @@ cdef class HilbertArray:
 
         x.svd_list() returns a tuple (U, S, V) such that:
 
-        * U is a list of arrays in the space defined by the ``row_space``
-          parameter (by default the bra space of the input)
-        * V is a list of arrays in the space defined by the ``col_space``
+        * U is a list of arrays in the space defined by the ``col_space``
           parameter (by default the ket space of the input)
+        * V is a list of arrays in the space defined by the ``row_space``
+          parameter (by default the bra space of the input)
         * S is a 1-d numpy array of positive numbers (the singular values)
         * :math:`x = \sum_i S_i U_i \otimes V_i`
         * The U are orthonormal, as are the V
 
-        :param row_space: the HilbertSpace to use for U, default is the bra
-            space of the input array.
-        :type row_space: HilbertSpace, list, or tuple
-        :param col_space: the HilbertSpace to use for V, default is the ket
+        :param col_space: the HilbertSpace to use for U, default is the ket
             space of the input array.
         :type col_space: HilbertSpace, list, or tuple
+        :param row_space: the HilbertSpace to use for V, default is the bra
+            space of the input array.
+        :type row_space: HilbertSpace, list, or tuple
         :param thresh: threshold below which singular values will be
             considered to be zero and discarded (default is to keep all
             singular values)

@@ -16,6 +16,7 @@ __all__ = ['NoncommutativeGraph']
 ### Some helper functions for cvxopt ###
 
 def mat_cplx_to_real(cmat):
+    # FIXME - use bmat
     rmat = np.zeros((2, cmat.shape[0], 2, cmat.shape[1]))
     rmat[0, :, 0, :] = cmat.real
     rmat[1, :, 1, :] = cmat.real
@@ -25,15 +26,10 @@ def mat_cplx_to_real(cmat):
     rmat /= np.sqrt(2)
     return rmat.reshape(cmat.shape[0]*2, cmat.shape[1]*2)
 
-# This could help for extracting the dual solution for the solver.  But I haven't yet figured
-# out how to interpret the things that cvxopt returns.
-#ret=NoncommutativeGraph(S).lovasz_theta(long_return=True)
-#ss=mat_real_to_cplx(np.array(ret['sdp_stats']['ss'][1]))
-#zs=mat_real_to_cplx(np.array(ret['sdp_stats']['zs'][1]))
 def mat_real_to_cplx(rmat):
     w = rmat.shape[0] // 2
     h = rmat.shape[1] // 2
-    return (rmat[:w,:h] + 1j*rmat[w:,:h]) * np.sqrt(2)
+    return (rmat[:w,:h] + rmat[w:,h:] + 1j*rmat[w:,:h] - 1j*rmat[:w,h:]) / np.sqrt(2)
 
 def make_F_real(Fx_list, F0_list):
     '''
@@ -81,6 +77,9 @@ def call_sdp(c, Fx_list, F0_list):
 
     sol = cvxopt.solvers.sdp(cvxopt.base.matrix(c), Gs=Gs, hs=hs)
     xvec = np.array(sol['x']).flatten()
+
+    sol['Gs'] = Gs
+    sol['hs'] = hs
 
     if sol['status'] == 'optimal':
         for (G, h) in zip(Gs, hs):
@@ -531,7 +530,7 @@ class NoncommutativeGraph(object):
             if verify_tol:
                 # Test the primal solution
                 for mat in np.rollaxis(Y_basis, -1):
-                    dp = np.tensordot(T+L_sum, mat.conjugate(), axes=4)
+                    dp = np.tensordot(T+L_sum, mat.conj(), axes=4)
                     err = linalg.norm(dp)
                     if err > verify_tol: print("WARNING T+L_sum in Y_basis.perp() err =", err)
                 T_plus_Irho = T + I_ot_rho
@@ -550,6 +549,8 @@ class NoncommutativeGraph(object):
                 # FIXME - doesn't pass
                 for (i, v) in enumerate(extra_vars):
                     M = v['R'](T) - v['0']
+                    # FIXME - wherever eigvalsh used, also test Hermitian
+                    print('Herm:', linalg.norm(M - M.conj().T))
                     err = linalg.eigvalsh(M)[0]
                     if err < -verify_tol: print("WARNING: R(T) [%d] err = %g" % (i, err))
 
@@ -584,7 +585,7 @@ class NoncommutativeGraph(object):
 
                 # make sure it is in S*L(A')
                 for mat in self.Sp_basis:
-                    dp = np.tensordot(Y, mat.conjugate(), axes=[[0, 2], [0, 1]])
+                    dp = np.tensordot(Y, mat.conj(), axes=[[0, 2], [0, 1]])
                     err = linalg.norm(dp)
                     if err > verify_tol: print("WARNING: Y in S \ot L(A') err =", err)
 
@@ -714,16 +715,25 @@ class NoncommutativeGraph(object):
             T_plus_Irho = np.dot(x_to_sum, xvec) + np.eye(n*n).reshape(n,n,n,n) / n
 
             # FIXME
+            print(sdp_stats['zs'])
             zs0 = mat_real_to_cplx(np.array(sdp_stats['zs'][0]))
             zs1 = mat_real_to_cplx(np.array(sdp_stats['zs'][1])).reshape(n,n,n,n)
+            zs_idx = 2
+
+            C_list = []
+            for (i,v) in enumerate(extra_vars):
+                zsi = mat_real_to_cplx(np.array(sdp_stats['zs'][zs_idx]))
+                zs_idx += 1
+                C_list.append(v['R*'](zsi))
 
             Z_list = []
-            # FIXME - aren't Fx_evars before Fx_econs?
-            # FIXME - get both Fx_evars and Fx_econs?
             for (i,v) in enumerate(extra_constraints):
-                zsi = mat_real_to_cplx(np.array(sdp_stats['zs'][2+i]))
+                zsi = mat_real_to_cplx(np.array(sdp_stats['zs'][zs_idx]))
+                zs_idx += 1
                 Z_list.append(v['R*'](zsi))
             Z_sum = np.sum(Z_list, axis=0)
+
+            assert zs_idx == len(sdp_stats['zs'])
 
             J = np.zeros((n,n, n,n), dtype=complex)
             for (i, j) in itertools.product(list(range(n)), repeat=2):
@@ -731,8 +741,25 @@ class NoncommutativeGraph(object):
 
             Y = zs1 + J
 
-            for r in [J, zs1]+Z_list:
-                print(np.tensordot(r, self.T_basis.conjugate(), axes=4))
+            # FIXME
+            foo = (
+                np.tensordot(zs0, x_to_rhotf.conj(), axes=2) +
+                np.tensordot(Y, x_to_sum.conj(), axes=4)
+            )
+            for (a, b) in zip(C_list, x_to_L):
+                foo += np.tensordot(a, b.conj(), axes=4)
+            if len(Z_list):
+                foo += np.tensordot(Z_sum, x_to_W.conj(), axes=4)
+            print('**', linalg.norm(foo))
+
+            print('**', linalg.norm(np.tensordot(Y+Z_sum, T_basis.conj(), axes=4)))
+            print('**', linalg.norm(np.tensordot(-Y+C_list[0], x_to_L[0].conj(), axes=4)))
+
+            #for r in [J, zs1]+Z_list:
+            #    print(np.tensordot(r, T_basis.conj(), axes=4))
+
+            # Project onto T_basis.perp()
+            #Y -= np.dot(T_basis, np.tensordot(Y, T_basis.conj(), axes=4))
 
             verify_tol=1e-7
             if verify_tol:
@@ -743,7 +770,7 @@ class NoncommutativeGraph(object):
                 if err > verify_tol: print("WARNING: primal value err =", err)
 
                 for mat in self.S_basis:
-                    dp = np.tensordot(W, mat.conjugate(), axes=[[0, 2], [0, 1]])
+                    dp = np.tensordot(W, mat.conj(), axes=[[0, 2], [0, 1]])
                     err = linalg.norm(dp)
                     if err > verify_tol: print("WARNING: T+L in S^\perp \ot L(A') err =", err)
 
@@ -765,10 +792,17 @@ class NoncommutativeGraph(object):
                     if err < -verify_tol: print("WARNING: R(T) [%d] err = %g" % (i, err))
 
                 # Test the dual solution
+                err_Y_space = 0
                 for mat in self.Sp_basis:
-                    dp = np.tensordot(Y, mat.conjugate(), axes=[[0, 2], [0, 1]])
-                    err = linalg.norm(dp)
-                    if err > verify_tol: print("WARNING: Y in S \ot L(A') err =", err)
+                    # FIXME - rather Y-Z
+                    dp = np.tensordot(Y + Z_sum, mat.conj(), axes=[[0, 2], [0, 1]])
+                    err_Y_space += linalg.norm(dp)
+                if err_Y_space > verify_tol: print("WARNING: Y+Z in S \ot L(A') err =", err_Y_space)
+                # FIXME - or this?
+                # FIXME - rather Y-Z
+                dp = np.tensordot(Y + Z_sum, T_basis.conj(), axes=4)
+                err = linalg.norm(dp)
+                if err > verify_tol: print("WARNING: Y+Z in S \ot L(A') err =", err)
 
                 for (i, v) in enumerate(extra_vars):
                     M = v['R'](Y) - v['0']
@@ -780,6 +814,9 @@ class NoncommutativeGraph(object):
                     err = linalg.eigvalsh(M)[0]
                     if err < -verify_tol: print("WARNING: R(Z%d) err = %g" % (i, err))
 
+                err = linalg.eigvalsh((Y-J).reshape(n*n, n*n))[0]
+                if err < -verify_tol: print("WARNING: Y-J pos err =", err)
+
                 err = abs(t - linalg.eigvalsh(Y.trace(axis1=0, axis2=2))[-1])
                 if err > verify_tol: print("WARNING: dual value err =", err)
 
@@ -787,15 +824,16 @@ class NoncommutativeGraph(object):
             # FIXME - test primal and dual solutions
 
             if long_return:
-                ret = {}
-                for key in [
-                    'Fx_list', 'F0_list',
-                    'n', 'x_to_W', 'x_to_rhotf', 'T_plus_Irho',
-                    'c', 't', 'W', 'L_list', 'T', 'rho', 'xvec', 'sdp_stats',
-                    'zs0', 'zs1', 'Y', 'Z_sum', 'Z_list', 'extra_vars', 'extra_constraints', 'J' # FIXME
-                ]:
-                    ret[key] = locals()[key]
-                return ret
+                return locals()
+                #ret = {}
+                #for key in [
+                #    'Fx_list', 'F0_list',
+                #    'n', 'x_to_W', 'x_to_rhotf', 'T_plus_Irho',
+                #    'c', 't', 'W', 'L_list', 'T', 'rho', 'xvec', 'sdp_stats',
+                #    'zs0', 'zs1', 'Y', 'Z_sum', 'Z_list', 'extra_vars', 'extra_constraints', 'J', 'C_list', 'x_to_sum' # FIXME
+                #]:
+                #    ret[key] = locals()[key]
+                #return ret
             else:
                 return t
         elif sdp_stats['status'] == 'primal infeasible':
@@ -883,17 +921,30 @@ if __name__ == "__main__":
     #a = S.unified_primal(S.T_basis, [], [], True)
     #print('th primal:', a['t'])
 
-    print('thp dual:  ', S.szegedy('psd'))
-    a = S.unified_primal(S.T_basis, [], [S.cond_psd], True)
-    print('thp primal:', a['t'])
+    #a = S.szegedy('psd', long_return=True)
+    #print('thp dual:  ', a['t'])
+    #print('---------')
+    b = S.unified_primal(S.T_basis, [], [S.cond_psd], True)
+    print('thp primal:', b['t'])
 
     print('---------')
 
-    #print('thm dual:  ', S.schrijver('psd&ppt'))
-    #a = S.unified_primal(S.T_basis_dh, [S.cond_psd, S.cond_ppt], [], True)
-    #print('thm primal:', a['t'])
+    #a = S.schrijver('psd&ppt', long_return=True)
+    #print('thm dual:  ', a['t'])
+    #print('---------')
+    #b = S.unified_primal(S.T_basis_dh, [S.cond_psd, S.cond_ppt], [], True)
+    #print('thm primal:', b['t'])
 
-    locals().update(a)
+    print('---------')
+
+    locals().update(b)
+
+    #zG_list = []
+    #for (z, G) in zip(sdp_stats['zs'], sdp_stats['Gs']):
+    #    v = np.array(z).reshape(z.size[0]**2)
+    #    zG = np.dot(np.array(G).T, v)
+    #    zG_list.append(zG)
+    #print(linalg.norm(np.sum(zG_list, axis=0) + c))
 
     #t_honly = S.unified_dual(S.Y_basis_dh, [], [], False)
     #print('hermit only:', t_honly)

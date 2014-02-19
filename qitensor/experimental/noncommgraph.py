@@ -1,7 +1,7 @@
 # Noncommutative graphs as defined by Duan, Severini, Winter in arXiv:1002.2514.
 
 import numpy as np
-import numpy.linalg as linalg
+import scipy.linalg as linalg
 import itertools
 import cvxopt.base
 import cvxopt.solvers
@@ -138,6 +138,11 @@ class NoncommutativeGraph(object):
             'R*': lambda Z: Z.reshape(n,n,n,n).transpose((2,0,1,3)),
             '0': np.zeros((n**2, n**2), dtype=complex),
         }
+
+        for c in [self.cond_psd, self.cond_ppt]:
+            m = np.random.random((n**2, n**2))
+            m2 = c['R'](c['R*'](m))
+            assert linalg.norm(m-m2) < 1e-10
 
     def __str__(self):
         return '<NoncommutativeGraph of '+self.S._str_inner()+'>'
@@ -521,7 +526,7 @@ class NoncommutativeGraph(object):
             L_sum = np.sum(L_list, axis=0)
             T = zs1 - I_ot_rho
 
-            # some sanity checks to make sure the output makes sense
+            # Verify dual solution (or part of it; more is done below)
             verify_tol=1e-7
             if verify_tol:
                 # Test the primal solution
@@ -540,13 +545,13 @@ class NoncommutativeGraph(object):
                 for (i, (v, L)) in enumerate(zip(extra_constraints, L_list)):
                     M = v['R'](L) - v['0']
                     err = linalg.eigvalsh(M)[0]
-                    if err < -verify_tol: print("WARNING: R(L%d) err = %g" % (i, err))
+                    if err < -verify_tol: print("WARNING: R(L_%d) err = %g" % (i, err))
 
                 # FIXME - doesn't pass
                 for (i, v) in enumerate(extra_vars):
                     M = v['R'](T) - v['0']
                     err = linalg.eigvalsh(M)[0]
-                    if err < -verify_tol: print("WARNING: R(T) err =", err)
+                    if err < -verify_tol: print("WARNING: R(T) [%d] err = %g" % (i, err))
 
         if sdp_stats['status'] == 'optimal':
             t = xvec[0]
@@ -554,7 +559,7 @@ class NoncommutativeGraph(object):
             Z_list = [ np.dot(xZ, xvec) for xZ in x_to_Z ]
             Z_sum = np.sum(Z_list, axis=0)
 
-            # some sanity checks to make sure the output makes sense
+            # Verify primal/dual solution
             verify_tol=1e-7
             if verify_tol:
                 err = abs(T.trace().trace() + 1 - t)
@@ -566,12 +571,12 @@ class NoncommutativeGraph(object):
                 for (i, (v, Z)) in enumerate(zip(extra_vars, Z_list)):
                     M = v['R'](Z) - v['0']
                     err = linalg.eigvalsh(M)[0]
-                    if err < -verify_tol: print("WARNING: R(Z%d) err = %g" % (i, err))
+                    if err < -verify_tol: print("WARNING: R(Z_%d) err = %g" % (i, err))
 
                 for (i, v) in enumerate(extra_constraints):
                     M = v['R'](Y) - v['0']
                     err = linalg.eigvalsh(M)[0]
-                    if err < -verify_tol: print("WARNING: R(Y) err =", err)
+                    if err < -verify_tol: print("WARNING: R(Y) [%d] err = %g" %(i, err))
 
                 maxeig = linalg.eigvalsh(np.trace(Y-Z_sum, axis1=0, axis2=2))[-1].real
                 err = abs(xvec[0] - maxeig)
@@ -581,8 +586,7 @@ class NoncommutativeGraph(object):
                 for mat in self.Sp_basis:
                     dp = np.tensordot(Y, mat.conjugate(), axes=[[0, 2], [0, 1]])
                     err = linalg.norm(dp)
-                    if err > 1e-10: print("WARNING: Y in S \ot L(A') err =", err)
-                    assert err < 1e-10
+                    if err > verify_tol: print("WARNING: Y in S \ot L(A') err =", err)
 
             if long_return:
                 ret = {}
@@ -611,6 +615,7 @@ class NoncommutativeGraph(object):
         else:
             raise Exception('cvxopt.sdp returned error: '+sdp_stats['status'])
 
+    # FIXME - test primal vs. dual using both vars and constraints
     def unified_primal(self, T_basis, extra_constraints, extra_vars, long_return=False):
         r"""
         FIXME - only Lovasz for now
@@ -711,10 +716,10 @@ class NoncommutativeGraph(object):
             # FIXME
             zs0 = mat_real_to_cplx(np.array(sdp_stats['zs'][0]))
             zs1 = mat_real_to_cplx(np.array(sdp_stats['zs'][1])).reshape(n,n,n,n)
-            zs2 = mat_real_to_cplx(np.array(sdp_stats['zs'][2])).reshape(n,n,n,n)
 
             Z_list = []
-            # FIXME - both Fx_evars and Fx_econs?
+            # FIXME - aren't Fx_evars before Fx_econs?
+            # FIXME - get both Fx_evars and Fx_econs?
             for (i,v) in enumerate(extra_constraints):
                 zsi = mat_real_to_cplx(np.array(sdp_stats['zs'][2+i]))
                 Z_list.append(v['R*'](zsi))
@@ -725,6 +730,9 @@ class NoncommutativeGraph(object):
                 J[i, i, j, j] = 1
 
             Y = zs1 + J
+
+            for r in [J, zs1]+Z_list:
+                print(np.tensordot(r, self.T_basis.conjugate(), axes=4))
 
             verify_tol=1e-7
             if verify_tol:
@@ -754,7 +762,7 @@ class NoncommutativeGraph(object):
                 for (i, v) in enumerate(extra_constraints):
                     M = v['R'](T) - v['0']
                     err = linalg.eigvalsh(M)[0]
-                    if err < -verify_tol: print("WARNING: R(T) err =", err)
+                    if err < -verify_tol: print("WARNING: R(T) [%d] err = %g" % (i, err))
 
                 # Test the dual solution
                 for mat in self.Sp_basis:
@@ -765,12 +773,15 @@ class NoncommutativeGraph(object):
                 for (i, v) in enumerate(extra_vars):
                     M = v['R'](Y) - v['0']
                     err = linalg.eigvalsh(M)[0]
-                    if err < -verify_tol: print("WARNING: R(Y) err =", err)
+                    if err < -verify_tol: print("WARNING: R(Y) [%d] err = %g" % (i, err))
 
                 for (i, (v, Z)) in enumerate(zip(extra_constraints, Z_list)):
                     M = v['R'](Z) - v['0']
                     err = linalg.eigvalsh(M)[0]
                     if err < -verify_tol: print("WARNING: R(Z%d) err = %g" % (i, err))
+
+                err = abs(t - linalg.eigvalsh(Y.trace(axis1=0, axis2=2))[-1])
+                if err > verify_tol: print("WARNING: dual value err =", err)
 
             # FIXME - construct dual solution
             # FIXME - test primal and dual solutions
@@ -781,7 +792,7 @@ class NoncommutativeGraph(object):
                     'Fx_list', 'F0_list',
                     'n', 'x_to_W', 'x_to_rhotf', 'T_plus_Irho',
                     'c', 't', 'W', 'L_list', 'T', 'rho', 'xvec', 'sdp_stats',
-                    'zs0', 'zs1', 'zs2', 'Y', 'Z_sum', 'Z_list', 'extra_vars', 'extra_constraints', 'J' # FIXME
+                    'zs0', 'zs1', 'Y', 'Z_sum', 'Z_list', 'extra_vars', 'extra_constraints', 'J' # FIXME
                 ]:
                     ret[key] = locals()[key]
                 return ret
@@ -875,12 +886,14 @@ if __name__ == "__main__":
     print('thp dual:  ', S.szegedy('psd'))
     a = S.unified_primal(S.T_basis, [], [S.cond_psd], True)
     print('thp primal:', a['t'])
-    locals().update(a)
 
-    #print('thm dual:  ', S.schrijver('psd'))
-    #a = S.unified_primal(S.T_basis_dh, [S.cond_psd], [], True)
+    print('---------')
+
+    #print('thm dual:  ', S.schrijver('psd&ppt'))
+    #a = S.unified_primal(S.T_basis_dh, [S.cond_psd, S.cond_ppt], [], True)
     #print('thm primal:', a['t'])
-    #locals().update(a)
+
+    locals().update(a)
 
     #t_honly = S.unified_dual(S.Y_basis_dh, [], [], False)
     #print('hermit only:', t_honly)

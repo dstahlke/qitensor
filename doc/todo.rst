@@ -15,3 +15,4 @@ BUGS/FEATURES
     * printing large array is slow (time taken in array_html_block_table)
     * row_space option for expm, logm, det, pinv, etc.
     * use HilbertArray.closeto() instead of np.allclose()
+    * use scipy.linalg rather than numpy.linalg

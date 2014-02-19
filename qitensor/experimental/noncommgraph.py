@@ -513,28 +513,40 @@ class NoncommutativeGraph(object):
             rho = mat_real_to_cplx(np.array(sdp_stats['zs'][0]))
             I_ot_rho = np.tensordot(np.eye(n), rho, axes=0).transpose(0,2,1,3)
             zs1 = mat_real_to_cplx(np.array(sdp_stats['zs'][1])).reshape(n,n,n,n)
-            TZ_list = []
+            # FIXME - aren't Fx_evars before Fx_econs?
+            L_list = []
             for (i,v) in enumerate(extra_constraints):
                 zsi = mat_real_to_cplx(np.array(sdp_stats['zs'][2+i]))
-                TZ_list.append(v['R*'](zsi))
-            TZ_sum = np.sum(TZ_list, axis=0)
-            T = zs1 - I_ot_rho + TZ_sum
+                L_list.append(v['R*'](zsi))
+            L_sum = np.sum(L_list, axis=0)
+            T = zs1 - I_ot_rho
 
             # some sanity checks to make sure the output makes sense
             verify_tol=1e-7
             if verify_tol:
                 # Test the primal solution
                 for mat in np.rollaxis(Y_basis, -1):
-                    dp = np.tensordot(T, mat.conjugate(), axes=4)
+                    dp = np.tensordot(T+L_sum, mat.conjugate(), axes=4)
                     err = linalg.norm(dp)
-                    if err > verify_tol: print("T in Y_basis.perp() err:", err)
-                T_plus_Irho = T - TZ_sum + I_ot_rho
+                    if err > verify_tol: print("WARNING T+L_sum in Y_basis.perp() err =", err)
+                T_plus_Irho = T + I_ot_rho
                 err = linalg.eigvalsh(T_plus_Irho.reshape(n**2, n**2))[0]
                 if err < -verify_tol: print("WARNING: T_plus_Irho pos err =", err)
                 err = abs(np.trace(rho) - 1)
                 if err < -verify_tol: print("WARNING: Tr(rho) err =", err)
                 err = linalg.eigvalsh(rho)[0]
                 if err < -verify_tol: print("WARNING: rho pos err =", err)
+
+                for (i, (v, L)) in enumerate(zip(extra_constraints, L_list)):
+                    M = v['R'](L) - v['0']
+                    err = linalg.eigvalsh(M)[0]
+                    if err < -verify_tol: print("WARNING: R(L%d) err = %g" % (i, err))
+
+                # FIXME - doesn't pass
+                for (i, v) in enumerate(extra_vars):
+                    M = v['R'](T) - v['0']
+                    err = linalg.eigvalsh(M)[0]
+                    if err < -verify_tol: print("WARNING: R(T) err =", err)
 
         if sdp_stats['status'] == 'optimal':
             t = xvec[0]
@@ -545,7 +557,7 @@ class NoncommutativeGraph(object):
             # some sanity checks to make sure the output makes sense
             verify_tol=1e-7
             if verify_tol:
-                err = abs((T-TZ_sum).trace().trace() + 1 - t)
+                err = abs(T.trace().trace() + 1 - t)
                 if err > verify_tol: print("WARNING: primal vs dual err =", err)
 
                 err = linalg.eigvalsh((Y-Z_sum).reshape(n**2, n**2) - phi_phi)[0]
@@ -569,7 +581,7 @@ class NoncommutativeGraph(object):
                 for mat in self.Sp_basis:
                     dp = np.tensordot(Y, mat.conjugate(), axes=[[0, 2], [0, 1]])
                     err = linalg.norm(dp)
-                    if err > 1e-10: print("S err:", err)
+                    if err > 1e-10: print("WARNING: Y in S \ot L(A') err =", err)
                     assert err < 1e-10
 
             if long_return:
@@ -577,7 +589,7 @@ class NoncommutativeGraph(object):
                 for key in [
                     'n', 'x_to_Y', 'x_to_Z',
                     'phi_phi', 'c', 't', 'Y', 'Z_list', 'xvec', 'sdp_stats',
-                    'T', 'rho', 'T_plus_Irho', 'TZ_list', 'TZ_sum',
+                    'T', 'rho', 'T_plus_Irho', 'L_list', 'L_sum',
                 ]:
                     ret[key] = locals()[key]
                 return ret
@@ -590,7 +602,7 @@ class NoncommutativeGraph(object):
                 for key in [
                     'n', 'x_to_Y', 'x_to_Z',
                     'phi_phi', 'c', 't', 'xvec', 'sdp_stats',
-                    'T', 'rho', 'T_plus_Irho', 'TZ_list', 'TZ_sum',
+                    'T', 'rho', 'T_plus_Irho', 'L_list', 'L_sum',
                 ]:
                     ret[key] = locals()[key]
                 return ret
@@ -604,13 +616,15 @@ class NoncommutativeGraph(object):
         FIXME - only Lovasz for now
         Compute Lovasz/Schrijver/Szegedy type quantities.
 
-        max <\Phi|T-Z + I \ot \rho|\Phi> s.t.
+        max <\Phi|T + I \ot \rho|\Phi> s.t.
             \rho \succeq 0, \Tr(\rho)=1
-            T-Z + I \ot \rho \succeq 0
-            T \in S^\perp \ot \mathcal{L}
-            R(Z) \in \sum( extra_vars )
-            R(T) \in \cap( extra_constraints )
+            T + I \ot \rho \succeq 0
+            T+L \in S^\perp \ot \mathcal{L}
+            R(L) \in \sum( extra_vars )
+            R(T+L) \in \cap( extra_constraints )
         """
+
+        # Note: for this code we define W = T + L.
 
         n = self.n
 
@@ -625,35 +639,35 @@ class NoncommutativeGraph(object):
         xvec_len = Tb_len + rb_len + np.sum([ v['basis'].shape[-1] for v in extra_vars], dtype=int)
 
         idx = 0
-        x_to_T = np.zeros((n,n,n,n,xvec_len), dtype=complex)
-        x_to_T[:,:,:,:,idx:idx+Tb_len] = T_basis
+        x_to_W = np.zeros((n,n,n,n,xvec_len), dtype=complex)
+        x_to_W[:,:,:,:,idx:idx+Tb_len] = T_basis
         idx += Tb_len
 
         x_to_rhotf = np.zeros((n,n,xvec_len), dtype=complex)
         x_to_rhotf[:,:,idx:idx+rb_len] = rhotf_basis
         idx += rb_len
 
-        x_to_Z = []
+        x_to_L = []
         for v in extra_vars:
-            xZ = np.zeros((n,n,n,n,xvec_len), dtype=complex)
-            Zb_len = v['basis'].shape[-1]
-            xZ[:,:,:,:,idx:idx+Zb_len] = v['basis']
-            idx += Zb_len
-            x_to_Z.append(xZ)
+            xL = np.zeros((n,n,n,n,xvec_len), dtype=complex)
+            Lb_len = v['basis'].shape[-1]
+            xL[:,:,:,:,idx:idx+Lb_len] = v['basis']
+            idx += Lb_len
+            x_to_L.append(xL)
 
         assert idx == xvec_len
 
-        # T + I \ot rhotf
-        x_to_sum = x_to_T + \
+        # W-L + I \ot rhotf
+        x_to_sum = x_to_W + \
                 np.tensordot(np.eye(n), x_to_rhotf, axes=0).transpose((0,2,1,3,4))
-        for xZ in x_to_Z:
-            x_to_sum -= xZ
+        for xL in x_to_L:
+            x_to_sum -= xL
 
         # rho \succeq 0
         Fx_1 = x_to_rhotf
         F0_1 = -np.eye(n)/n
 
-        # T + I \ot rho \succeq 0
+        # W-L + I \ot rho \succeq 0
         Fx_2 = x_to_sum.reshape(n**2, n**2, xvec_len)
         for i in range(Fx_2.shape[2]):
             assert linalg.norm(Fx_2[:,:,i] - Fx_2[:,:,i].conj().T) < 1e-10
@@ -663,8 +677,8 @@ class NoncommutativeGraph(object):
 
         Fx_evars = []
         F0_evars = []
-        for (xZ, v) in zip(x_to_Z, extra_vars):
-            Fx = np.array([ v['R'](z) for z in np.rollaxis(xZ, -1) ], dtype=complex)
+        for (xL, v) in zip(x_to_L, extra_vars):
+            Fx = np.array([ v['R'](z) for z in np.rollaxis(xL, -1) ], dtype=complex)
             Fx = np.rollaxis(Fx, 0, len(Fx.shape))
             F0 = v['0']
             Fx_evars.append(Fx)
@@ -673,7 +687,7 @@ class NoncommutativeGraph(object):
         Fx_econs = []
         F0_econs = []
         for v in extra_constraints:
-            Fx = np.array([ v['R'](y) for y in np.rollaxis(x_to_T, -1) ], dtype=complex)
+            Fx = np.array([ v['R'](y) for y in np.rollaxis(x_to_W, -1) ], dtype=complex)
             Fx = np.rollaxis(Fx, 0, len(Fx.shape))
             F0 = v['0']
             Fx_econs.append(Fx)
@@ -686,9 +700,77 @@ class NoncommutativeGraph(object):
 
         if sdp_stats['status'] == 'optimal':
             t = -np.dot(c, xvec) + 1
-            T = np.dot(x_to_T, xvec)
-            the_sum = np.dot(x_to_sum, xvec)
+            W = np.dot(x_to_W, xvec)
+            L_list = [ np.dot(xL, xvec) for xL in x_to_L ]
+            L_sum = np.sum(L_list, axis=0)
+            T = W - L_sum
             rho = np.dot(x_to_rhotf, xvec) + np.eye(n)/n
+            I_rho = np.tensordot(np.eye(n), rho, axes=0).transpose(0,2,1,3)
+            T_plus_Irho = np.dot(x_to_sum, xvec) + np.eye(n*n).reshape(n,n,n,n) / n
+
+            # FIXME
+            zs0 = mat_real_to_cplx(np.array(sdp_stats['zs'][0]))
+            zs1 = mat_real_to_cplx(np.array(sdp_stats['zs'][1])).reshape(n,n,n,n)
+            zs2 = mat_real_to_cplx(np.array(sdp_stats['zs'][2])).reshape(n,n,n,n)
+
+            Z_list = []
+            # FIXME - both Fx_evars and Fx_econs?
+            for (i,v) in enumerate(extra_constraints):
+                zsi = mat_real_to_cplx(np.array(sdp_stats['zs'][2+i]))
+                Z_list.append(v['R*'](zsi))
+            Z_sum = np.sum(Z_list, axis=0)
+
+            J = np.zeros((n,n, n,n), dtype=complex)
+            for (i, j) in itertools.product(list(range(n)), repeat=2):
+                J[i, i, j, j] = 1
+
+            Y = zs1 + J
+
+            verify_tol=1e-7
+            if verify_tol:
+                # Test the primal solution
+                err = linalg.norm(T + I_rho - T_plus_Irho)
+                if err > verify_tol: print("WARNING: T + I \ot rho err =", err)
+                err = abs(t - T_plus_Irho.trace(axis1=0, axis2=1).trace(axis1=0, axis2=1))
+                if err > verify_tol: print("WARNING: primal value err =", err)
+
+                for mat in self.S_basis:
+                    dp = np.tensordot(W, mat.conjugate(), axes=[[0, 2], [0, 1]])
+                    err = linalg.norm(dp)
+                    if err > verify_tol: print("WARNING: T+L in S^\perp \ot L(A') err =", err)
+
+                err = linalg.eigvalsh(T_plus_Irho.reshape(n**2, n**2))[0]
+                if err < -verify_tol: print("WARNING: T_plus_Irho pos err =", err)
+                err = abs(np.trace(rho) - 1)
+                if err < -verify_tol: print("WARNING: Tr(rho) err =", err)
+                err = linalg.eigvalsh(rho)[0]
+                if err < -verify_tol: print("WARNING: rho pos err =", err)
+
+                for (i, (v, L)) in enumerate(zip(extra_vars, L_list)):
+                    M = v['R'](L) - v['0']
+                    err = linalg.eigvalsh(M)[0]
+                    if err < -verify_tol: print("WARNING: R(L%d) err = %g" % (i, err))
+
+                for (i, v) in enumerate(extra_constraints):
+                    M = v['R'](T) - v['0']
+                    err = linalg.eigvalsh(M)[0]
+                    if err < -verify_tol: print("WARNING: R(T) err =", err)
+
+                # Test the dual solution
+                for mat in self.Sp_basis:
+                    dp = np.tensordot(Y, mat.conjugate(), axes=[[0, 2], [0, 1]])
+                    err = linalg.norm(dp)
+                    if err > verify_tol: print("WARNING: Y in S \ot L(A') err =", err)
+
+                for (i, v) in enumerate(extra_vars):
+                    M = v['R'](Y) - v['0']
+                    err = linalg.eigvalsh(M)[0]
+                    if err < -verify_tol: print("WARNING: R(Y) err =", err)
+
+                for (i, (v, Z)) in enumerate(zip(extra_constraints, Z_list)):
+                    M = v['R'](Z) - v['0']
+                    err = linalg.eigvalsh(M)[0]
+                    if err < -verify_tol: print("WARNING: R(Z%d) err = %g" % (i, err))
 
             # FIXME - construct dual solution
             # FIXME - test primal and dual solutions
@@ -697,8 +779,9 @@ class NoncommutativeGraph(object):
                 ret = {}
                 for key in [
                     'Fx_list', 'F0_list',
-                    'n', 'x_to_T', 'x_to_rhotf', 'the_sum',
-                    'c', 't', 'T', 'rho', 'xvec', 'sdp_stats'
+                    'n', 'x_to_W', 'x_to_rhotf', 'T_plus_Irho',
+                    'c', 't', 'W', 'L_list', 'T', 'rho', 'xvec', 'sdp_stats',
+                    'zs0', 'zs1', 'zs2', 'Y', 'Z_sum', 'Z_list', 'extra_vars', 'extra_constraints', 'J' # FIXME
                 ]:
                     ret[key] = locals()[key]
                 return ret
@@ -709,8 +792,8 @@ class NoncommutativeGraph(object):
             if long_return:
                 ret = {}
                 for key in [
-                    'n', 'x_to_T', 'x_to_rhotf',
-                    'c', 't', 'T', 'rho', 'xvec', 'sdp_stats'
+                    'n', 'x_to_W', 'x_to_rhotf',
+                    'c', 't', 'W', 'rho', 'xvec', 'sdp_stats'
                 ]:
                     ret[key] = locals()[key]
                 return ret
@@ -777,22 +860,27 @@ if __name__ == "__main__":
 
     # seed=5 NoncommutativeGraph.random(4, 5) gives gap between Szegedy with positive and with
     # just Hermitian.
-    n = 4
-    np.random.seed(5)
-    S = NoncommutativeGraph.random(n, 12)
+    n = 3
+    np.random.seed(2)
+    S = NoncommutativeGraph.random(n, 3)
     # FIXME - Unfortunately, Schrijver doesn't converge well.
     cvxopt.solvers.options['abstol'] = float(1e-5)
     cvxopt.solvers.options['reltol'] = float(1e-5)
     #cvxopt.solvers.options['show_progress'] = True
 
-    w = S.szegedy('psd')
-    print(w)
-    v = []
-    v.append(S.cond_psd)
-    #v.append(S.cond_ppt)
-    a = S.unified_primal(S.T_basis_dh, [], v, True)
-    print(a['t'])
-    print(a['t'] - w)
+    #print('th dual:  ', S.lovasz_theta())
+    #a = S.unified_primal(S.T_basis, [], [], True)
+    #print('th primal:', a['t'])
+
+    print('thp dual:  ', S.szegedy('psd'))
+    a = S.unified_primal(S.T_basis, [], [S.cond_psd], True)
+    print('thp primal:', a['t'])
+    locals().update(a)
+
+    #print('thm dual:  ', S.schrijver('psd'))
+    #a = S.unified_primal(S.T_basis_dh, [S.cond_psd], [], True)
+    #print('thm primal:', a['t'])
+    #locals().update(a)
 
     #t_honly = S.unified_dual(S.Y_basis_dh, [], [], False)
     #print('hermit only:', t_honly)
@@ -805,6 +893,6 @@ if __name__ == "__main__":
     #zs1 = mat_real_to_cplx(np.array(sdp_stats['zs'][1])).reshape(n,n,n,n) * 2
     #zs2 = mat_real_to_cplx(np.array(sdp_stats['zs'][2])).reshape(n,n,n,n) * 2
     ##zs3 = mat_real_to_cplx(np.array(sdp_stats['zs'][3])).reshape(n,n,n,n) * 2
-    #print((T-TZ_sum).trace().trace()+1 - t)
+    #print(T.trace().trace()+1 - t)
     #w=[np.tensordot(x, y.conj(), axes=([],[])).transpose((0, 2, 1, 3)) for x in S.S_basis for y in S.S_basis]
     #print(np.max([linalg.norm(np.tensordot(T, (x + x.transpose(1,0,3,2).conj()).conj(), axes=4)) for x in w]))

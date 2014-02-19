@@ -296,8 +296,8 @@ class NoncommutativeGraph(object):
         for (i,c) in enumerate(C):
             x = mat_real_to_cplx(c)
             assert linalg.norm(x - x.conj().T) < 1e-10
-        a = TensorSubspace.from_span([ mat_cplx_to_real(x.reshape(n*n,n*n)) for x in \
-                np.rollaxis(self.Y_basis_dh, -1) ])
+        a = TensorSubspace.from_span([ mat_cplx_to_real(x.reshape(n*n,n*n)) for x in
+            np.rollaxis(self.Y_basis_dh, -1) ])
         b = TensorSubspace.from_span([ mat_cplx_to_real(x.reshape(n*n,n*n)) for x in out ])
         print(a)
         print(b)
@@ -331,8 +331,8 @@ class NoncommutativeGraph(object):
             if np.sum(np.abs(a)) > 1e-6:
                 ops.append(a)
 
-        a = TensorSubspace.from_span([ mat_cplx_to_real(x.reshape(n*n,n*n)) for x in \
-                np.rollaxis(self.full_basis_dh, -1) ])
+        a = TensorSubspace.from_span([ mat_cplx_to_real(x.reshape(n*n,n*n)) for x in
+            np.rollaxis(self.full_basis_dh, -1) ])
         b = TensorSubspace.from_span([ mat_cplx_to_real(x.reshape(n*n,n*n)) for x in ops ])
         print(a)
         print(b)
@@ -575,11 +575,11 @@ class NoncommutativeGraph(object):
             if long_return:
                 ret = {}
                 for key in [
-                        'n', 'x_to_Y', 'x_to_Z',
-                        'phi_phi', 'c', 't', 'Y', 'Z_list', 'xvec', 'sdp_stats',
-                        'T', 'rho', 'T_plus_Irho', 'TZ_list', 'TZ_sum',
-                    ]:
-                        ret[key] = locals()[key]
+                    'n', 'x_to_Y', 'x_to_Z',
+                    'phi_phi', 'c', 't', 'Y', 'Z_list', 'xvec', 'sdp_stats',
+                    'T', 'rho', 'T_plus_Irho', 'TZ_list', 'TZ_sum',
+                ]:
+                    ret[key] = locals()[key]
                 return ret
             else:
                 return t
@@ -588,11 +588,11 @@ class NoncommutativeGraph(object):
             if long_return:
                 ret = {}
                 for key in [
-                        'n', 'x_to_Y', 'x_to_Z',
-                        'phi_phi', 'c', 't', 'xvec', 'sdp_stats',
-                        'T', 'rho', 'T_plus_Irho', 'TZ_list', 'TZ_sum',
-                    ]:
-                        ret[key] = locals()[key]
+                    'n', 'x_to_Y', 'x_to_Z',
+                    'phi_phi', 'c', 't', 'xvec', 'sdp_stats',
+                    'T', 'rho', 'T_plus_Irho', 'TZ_list', 'TZ_sum',
+                ]:
+                    ret[key] = locals()[key]
                 return ret
             else:
                 return t
@@ -696,11 +696,11 @@ class NoncommutativeGraph(object):
             if long_return:
                 ret = {}
                 for key in [
-                        'Fx_list', 'F0_list',
-                        'n', 'x_to_T', 'x_to_rhotf', 'the_sum',
-                        'c', 't', 'T', 'rho', 'xvec', 'sdp_stats'
-                    ]:
-                        ret[key] = locals()[key]
+                    'Fx_list', 'F0_list',
+                    'n', 'x_to_T', 'x_to_rhotf', 'the_sum',
+                    'c', 't', 'T', 'rho', 'xvec', 'sdp_stats'
+                ]:
+                    ret[key] = locals()[key]
                 return ret
             else:
                 return t
@@ -709,10 +709,10 @@ class NoncommutativeGraph(object):
             if long_return:
                 ret = {}
                 for key in [
-                        'n', 'x_to_T', 'x_to_rhotf',
-                        'c', 't', 'T', 'rho', 'xvec', 'sdp_stats'
-                    ]:
-                        ret[key] = locals()[key]
+                    'n', 'x_to_T', 'x_to_rhotf',
+                    'c', 't', 'T', 'rho', 'xvec', 'sdp_stats'
+                ]:
+                    ret[key] = locals()[key]
                 return ret
             else:
                 return t
@@ -758,11 +758,11 @@ class NoncommutativeGraph(object):
 #    cvxopt.solvers.options['abstol'] = float(1e-5)
 #
 #    S = NoncommutativeGraph.random(3, 3)
-#    print S
+#    print(S)
 #
 #    vals = S.get_five_values()
 #    for v in vals:
-#        print v
+#        print(v)
 
 # If this module is run from the command line, run the doctests.
 if __name__ == "__main__":
@@ -770,7 +770,7 @@ if __name__ == "__main__":
     cvxopt.solvers.options['show_progress'] = False
 
 # FIXME
-#    print "Running doctests."
+#    print("Running doctests.")
 #
 #    import doctest
 #    doctest.testmod()
@@ -785,26 +785,26 @@ if __name__ == "__main__":
     cvxopt.solvers.options['reltol'] = float(1e-5)
     #cvxopt.solvers.options['show_progress'] = True
 
-    #w = S.szegedy(False)
-    #print w
-    #v = []
-    #v.append(S.cond_psd)
-    ##v.append(S.cond_ppt)
-    #a = S.unified_primal(S.T_basis_dh, [], v, True)
-    #print a['t']
-    #print a['t'] - w
+    w = S.szegedy('psd')
+    print(w)
+    v = []
+    v.append(S.cond_psd)
+    #v.append(S.cond_ppt)
+    a = S.unified_primal(S.T_basis_dh, [], v, True)
+    print(a['t'])
+    print(a['t'] - w)
 
     #t_honly = S.unified_dual(S.Y_basis_dh, [], [], False)
-    #print 'hermit only:', t_honly
+    #print('hermit only:', t_honly)
 
-    b = S.szegedy(True, long_return=True)
-    #b = S.lovasz_theta(long_return=True)
-    locals().update(b)
-    print(t)
+    #b = S.szegedy(True, long_return=True)
+    ##b = S.lovasz_theta(long_return=True)
+    #locals().update(b)
+    #print(t)
 
-    zs1 = mat_real_to_cplx(np.array(sdp_stats['zs'][1])).reshape(n,n,n,n) * 2
-    zs2 = mat_real_to_cplx(np.array(sdp_stats['zs'][2])).reshape(n,n,n,n) * 2
-    #zs3 = mat_real_to_cplx(np.array(sdp_stats['zs'][3])).reshape(n,n,n,n) * 2
-    print((T-TZ_sum).trace().trace()+1 - t)
-    w=[np.tensordot(x, y.conj(), axes=([],[])).transpose((0, 2, 1, 3)) for x in S.S_basis for y in S.S_basis]
-    print(np.max([linalg.norm(np.tensordot(T, (x + x.transpose(1,0,3,2).conj()).conj(), axes=4)) for x in w]))
+    #zs1 = mat_real_to_cplx(np.array(sdp_stats['zs'][1])).reshape(n,n,n,n) * 2
+    #zs2 = mat_real_to_cplx(np.array(sdp_stats['zs'][2])).reshape(n,n,n,n) * 2
+    ##zs3 = mat_real_to_cplx(np.array(sdp_stats['zs'][3])).reshape(n,n,n,n) * 2
+    #print((T-TZ_sum).trace().trace()+1 - t)
+    #w=[np.tensordot(x, y.conj(), axes=([],[])).transpose((0, 2, 1, 3)) for x in S.S_basis for y in S.S_basis]
+    #print(np.max([linalg.norm(np.tensordot(T, (x + x.transpose(1,0,3,2).conj()).conj(), axes=4)) for x in w]))

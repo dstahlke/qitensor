@@ -6,7 +6,7 @@ import itertools
 import cvxopt.base
 import cvxopt.solvers
 
-from qitensor import qudit
+from qitensor import qudit, HilbertSpace
 from qitensor.superop import CP_Map
 from qitensor.subspace import TensorSubspace
 
@@ -16,15 +16,15 @@ __all__ = ['NoncommutativeGraph']
 ### Some helper functions for cvxopt ###
 
 def mat_cplx_to_real(cmat):
-    # FIXME - use bmat
-    rmat = np.zeros((2, cmat.shape[0], 2, cmat.shape[1]))
-    rmat[0, :, 0, :] = cmat.real
-    rmat[1, :, 1, :] = cmat.real
-    rmat[0, :, 1, :] = -cmat.imag
-    rmat[1, :, 0, :] = cmat.imag
-    # preserve the norm
-    rmat /= np.sqrt(2)
-    return rmat.reshape(cmat.shape[0]*2, cmat.shape[1]*2)
+    #rmat = np.zeros((2, cmat.shape[0], 2, cmat.shape[1]))
+    #rmat[0, :, 0, :] = cmat.real
+    #rmat[1, :, 1, :] = cmat.real
+    #rmat[0, :, 1, :] = -cmat.imag
+    #rmat[1, :, 0, :] = cmat.imag
+    ## preserve the norm
+    #rmat /= np.sqrt(2)
+    #return rmat.reshape(cmat.shape[0]*2, cmat.shape[1]*2)
+    return np.bmat([[cmat.real, -cmat.imag], [cmat.imag, cmat.real]]) / np.sqrt(2)
 
 def mat_real_to_cplx(rmat):
     w = rmat.shape[0] // 2
@@ -71,6 +71,7 @@ def call_sdp(c, Fx_list, F0_list):
             assert linalg.norm(Fx[:,:,i] - Fx[:,:,i].conj().T) < 1e-10
 
     # Note: Fx and F0 must be negated when passed to cvxopt.sdp.
+    # FIXME - move this negation outwards, to avoid confusion
     (Fx_list, F0_list) = make_F_real(Fx_list, F0_list)
     Gs = [cvxopt.base.matrix(-Fx.reshape(Fx.shape[0]**2, Fx.shape[2])) for Fx in Fx_list]
     hs = [cvxopt.base.matrix(-F0) for F0 in F0_list]
@@ -94,11 +95,17 @@ def check_psd(M):
     """
     By how much does M fail to be PSD?
     """
+
+    if isinstance(M, HilbertArray):
+        M = M.nparray
+
     if len(M.shape) == 4:
         M = M.reshape(M.shape[0]*M.shape[1], M.shape[2]*M.shape[3])
+
     err_H = linalg.norm(M - M.T.conj())
     err_P = linalg.eigvalsh(M + M.T.conj())[0]
     err_P = 0 if err_P > 0 else -err_P
+
     return err_H + err_P
 
 def project_dh(M):
@@ -144,6 +151,7 @@ class NoncommutativeGraph(object):
         self.full_basis_dh = self._basis_doubly_hermit(TensorSubspace.full((n,n)).hermitian_basis())
 
         self.cond_psd = {
+            'name': 'psd',
             'basis': self.full_basis_dh,
             'R':  lambda Z: Z.transpose((0,2,1,3)).reshape(n**2, n**2),
             'R*': lambda Z: Z.reshape(n,n,n,n).transpose((0,2,1,3)),
@@ -151,6 +159,7 @@ class NoncommutativeGraph(object):
         }
 
         self.cond_ppt = {
+            'name': 'ppt',
             'basis': self.full_basis_dh,
             'R':  lambda Z: Z.transpose((1,2,0,3)).reshape(n**2, n**2),
             'R*': lambda Z: Z.reshape(n,n,n,n).transpose((2,0,1,3)),
@@ -236,12 +245,24 @@ class NoncommutativeGraph(object):
         return G
 
     @classmethod
-    def random(cls, n, num_seeds):
+    def random(cls, spc, num_seeds):
+        if isinstance(spc, HilbertSpace):
+            spc.assert_ket_space()
+            n = spc.dim()
+        else:
+            assert isinstance(spc, int)
+            n = spc
+            spc = None
+
         S = TensorSubspace.from_span([ np.eye(n, dtype=complex) ])
         for i in range(num_seeds):
             M = np.random.standard_normal(size=(n,n)) + \
                 np.random.standard_normal(size=(n,n))*1j
             S |= TensorSubspace.from_span([ M + M.conj().T ])
+
+        if spc is not None:
+            S = S.map(lambda x: spc.O.array(x, reshape=True))
+
         return NoncommutativeGraph(S)
 
     def _get_S_ot_L_basis(self, Sb):
@@ -377,7 +398,7 @@ class NoncommutativeGraph(object):
 
     def szegedy(self, cone, long_return=False):
         """
-        My non-commutative generalization of Schrijver's number.
+        My non-commutative generalization of Szegedy's number.
 
         # FIXME - make it match the paper (primal and dual)
         min t s.t.
@@ -405,9 +426,8 @@ class NoncommutativeGraph(object):
         """
         >>> np.random.seed(1)
         >>> S = NoncommutativeGraph.random(3, 5)
-        >>> # FIXME - Unfortunately, Schrijver doesn't converge well.
-        >>> cvxopt.solvers.options['abstol'] = float(1e-5)
-        >>> cvxopt.solvers.options['reltol'] = float(1e-5)
+        >>> cvxopt.solvers.options['abstol'] = float(1e-7)
+        >>> cvxopt.solvers.options['reltol'] = float(1e-7)
         >>> vals = S.get_five_values()
         >>> good = np.array([1.0000000895503431, 2.5283253619689754, 2.977455214593435, \
                     2.9997454690478249, 2.9999999897950529])
@@ -620,6 +640,13 @@ class NoncommutativeGraph(object):
             T^\ddag = T
             R(T) \in cones
 
+        min ||Tr_A(Y)|| s.t.
+            Y \succeq |\Phi><\Phi|
+            Y+L-X \in S \djp S
+            R(L) \in cones^*
+            X^\ddag = -X
+            X^\dag = X
+
         If the long_return option is True, then some extra status and internal
         quantities are returned (such as the optimal Y operator).
         """
@@ -734,6 +761,10 @@ class NoncommutativeGraph(object):
             L_sum = np.sum(L_list, axis=0)
             X = Y - project_dh(Y)
 
+            # FIXME - is X guaranteed Hermitian?
+            # Should I require the cones to be doubly hermit?
+            print(linalg.norm(X - X.transpose(2,3,0,1).conj()))
+
             verify_tol=1e-7
             if verify_tol:
                 # Test the primal solution
@@ -767,9 +798,6 @@ class NoncommutativeGraph(object):
                         dp = np.tensordot(Y+L_sum-X, xy.conj(), axes=4)
                         err_Y_space += abs(dp)
                 if err_Y_space > verify_tol: print("WARNING: Y+L-X in S \djp S err =", err_Y_space)
-                #dp = np.tensordot(Y + L_sum, Tbas.conj(), axes=4)
-                #err = linalg.norm(dp)
-                #if err > verify_tol: print("WARNING2: Y+L+X in S \djp S err =", err) # FIXME - label
 
                 for (i, (v, L)) in enumerate(zip(cones, L_list)):
                     M = v['R'](L) - v['0']
@@ -783,23 +811,19 @@ class NoncommutativeGraph(object):
                 if err > verify_tol: print("WARNING: dual value err =", err)
 
             if long_return:
-                # FIXME
-                return locals()
-                #ret = {}
-                #for key in [
-                #]:
-                #    ret[key] = locals()[key]
-                #return ret
-            else:
-                return t
-        elif sdp_stats['status'] == 'primal infeasible':
-            # FIXME - construct certificate
-            t = np.inf
-            if long_return:
+                if self.S._hilb_space is not None:
+                    ha = self.S._hilb_space.ket_space()
+                    hb = ha.prime # FIXME
+                rho = hb.O.array(rho)
+                T = (ha*hb).O.array(T)
+                Y = (ha*hb).O.array(Y)
+                L_map = { C['name']: (ha*hb).O.array(L) for (C, L) in zip(cones, L_list) }
+                #L_sum = (ha*hb).O.array(L_sum)
+                X = (ha*hb).O.array(X)
+                #return locals()
                 ret = {}
                 for key in [
-                    'n', 'x_to_T', 'x_to_rhotf',
-                    'c', 't', 'T', 'rho', 'xvec', 'sdp_stats'
+                    't', 'T', 'rho', 'Y', 'L_map', 'X', 'ha', 'hb'
                 ]:
                     ret[key] = locals()[key]
                 return ret
@@ -841,6 +865,112 @@ class NoncommutativeGraph(object):
 
         return chan
 
+### Validation code ####################
+
+def test_schrijver():
+    ha = qudit('a', 3)
+    np.random.seed(2)
+    G = NoncommutativeGraph.random(ha, 3)
+
+    cvxopt.solvers.options['abstol'] = float(1e-7)
+    cvxopt.solvers.options['reltol'] = float(1e-7)
+
+    info = G.schrijver('psd&ppt', True)
+    ret = schrijver_feasibility(G, frozenset(['psd','ppt']), *[ info[x] for x in 'ha,hb,t,rho,T,Y,L_map,X'.split(',') ])
+    return ret
+
+def schrijver_feasibility(G, used_cones, ha, hb, t, rho, T, Y, L_map, X):
+    r"""
+    Verify Schrijver solution.
+
+    t = max <\Phi|T + I \ot \rho|\Phi> s.t.
+        \rho \succeq 0, \Tr(\rho)=1
+        T + I \ot \rho \succeq 0
+        T \in S^\perp \ot S^\perp
+        T^\ddag = T
+        R(T) \in cones
+
+    t = min ||Tr_A(Y)|| s.t.
+        Y \succeq |\Phi><\Phi|
+        Y+L-X \in S \djp S
+        R(L) \in cones^*
+        X^\ddag = -X
+        X^\dag = X
+    """
+
+    S = G.S
+    err = {}
+
+    assert S._hilb_space == ha.O
+    assert rho.space == hb.O
+    assert T.space == (ha*hb).O
+    assert Y.space == (ha*hb).O
+    for L in L_map.values():
+        assert L.space == (ha*hb).O
+    assert X.space == (ha*hb).O
+    assert L_map.keys() == used_cones
+
+    def R(x):
+        return x.relabel({ hb: ha.H, ha.H: hb })
+
+    def ddag(x):
+        ret = x.relabel({ ha: hb, hb: ha, ha.H: hb.H, hb.H: ha.H }).conj()
+        assert (ret - R(R(x).H)).norm() < 1e-12
+        return ret
+
+    Phi = ha.eye().relabel({ ha.H: hb })
+    J = Phi.O
+
+    ### Verify primal
+
+    err[r'primal val'] = abs(t - (1 + Phi.H * T * Phi))
+    err[r'trace(rho)'] = abs(1 - rho.trace())
+    err[r'rho PSD'] = check_psd(rho)
+    err[r'T + I \ot rho PSD'] = check_psd(T + ha.eye()*rho)
+    err[r'T^\ddag - T'] = (T - ddag(T)).norm()
+
+    for C in used_cones:
+        if C == 'psd':
+            err[r'T_PSD'] = check_psd(R(T))
+        elif C == 'ppt':
+            err[r'T_PPT'] = check_psd(R(T).transpose(ha))
+        else:
+            assert 0
+
+    # FIXME - T \in S^\perp \ot S^\perp
+
+    ### Verify dual
+
+    err[r'dual val'] = abs(t - Y.trace(ha).eigvalsh()[-1])
+    err[r'Y \succeq J'] = check_psd(Y - J)
+
+    # FIXME - Y+L-X \in S \djp S
+
+    for C in used_cones:
+        L = L_map[C]
+        if C == 'psd':
+            err[r'L_PSD'] = check_psd(R(L))
+        elif C == 'ppt':
+            err[r'L_PPT'] = check_psd(R(L).transpose(ha))
+        else:
+            assert 0
+
+    err[r'X^\ddag + X'] = (X + ddag(X)).norm()
+    err[r'X^\dag - X'] = (X - X.H).norm()
+
+    ### Tally and report
+
+    assert min(err.values()) >= 0
+
+    for (k, v) in err.items():
+        if v > 1e-7:
+            print('err[%s] = %g' % (k, v))
+
+    print('total err:', sum(err.values()))
+
+    # FIXME
+    return locals()
+
 #if __name__ == "__main__":
 #    cvxopt.solvers.options['show_progress'] = False
 #    # Unfortunately, Schrijver doesn't converge well.
@@ -864,14 +994,12 @@ if __name__ == "__main__":
 #    import doctest
 #    doctest.testmod()
 
+    locals().update(test_schrijver())
+
     # seed=5 NoncommutativeGraph.random(4, 5) gives gap between Szegedy with positive and with
     # just Hermitian.
-    n = 3
-    np.random.seed(2)
-    S = NoncommutativeGraph.random(n, 3)
-    # FIXME - Unfortunately, Schrijver doesn't converge well.
-    cvxopt.solvers.options['abstol'] = float(1e-5)
-    cvxopt.solvers.options['reltol'] = float(1e-5)
+    #cvxopt.solvers.options['abstol'] = float(1e-7)
+    #cvxopt.solvers.options['reltol'] = float(1e-7)
     #cvxopt.solvers.options['show_progress'] = True
 
     #print('th dual:  ', S.lovasz_theta())
@@ -884,20 +1012,18 @@ if __name__ == "__main__":
     #b = S.unified_primal(S.T_basis, [], [S.cond_psd], True)
     #print('thp primal:', b['t'])
 
-    print('---------')
-
     #a = S.schrijver('psd&ppt', long_return=True)
     #print('thm dual:  ', a['t'])
     #print('---------')
-    b = S.schrijver([S.cond_psd, S.cond_ppt], True)
-    print('---------')
-    b = S.schrijver([S.cond_psd], True)
-    print('---------')
-    b = S.schrijver([S.cond_ppt], True)
-    print('---------')
-    print('thm primal:', b['t'])
+    #b = S.schrijver([S.cond_psd, S.cond_ppt], True)
+    #print('---------')
+    #b = S.schrijver([S.cond_ppt], True)
+    #print('---------')
+    #b = S.schrijver([S.cond_psd], True)
+    #print('---------')
+    #print('thm primal:', b['t'])
 
-    locals().update(b)
+    #locals().update(b)
 
     #zG_list = []
     #for (z, G) in zip(sdp_stats['zs'], sdp_stats['Gs']):

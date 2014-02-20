@@ -6,7 +6,7 @@ import itertools
 import cvxopt.base
 import cvxopt.solvers
 
-from qitensor import qudit, HilbertSpace
+from qitensor import qudit, HilbertSpace, HilbertArray
 from qitensor.superop import CP_Map
 from qitensor.subspace import TensorSubspace
 
@@ -629,6 +629,18 @@ class NoncommutativeGraph(object):
         else:
             raise Exception('cvxopt.sdp returned error: '+sdp_stats['status'])
 
+    def _get_cone_set(self, cones):
+        if isinstance(cones, list):
+            return cones
+        else:
+            assert isinstance(cones, str)
+            return {
+                'hermit': [],
+                'psd': [self.cond_psd],
+                'psd&ppt': [self.cond_psd, self.cond_ppt],
+                'ppt': [self.cond_ppt],
+            }[cones]
+
     def schrijver(self, cones, long_return=False):
         r"""
         My non-commutative generalization of Schrijver's number.
@@ -651,14 +663,7 @@ class NoncommutativeGraph(object):
         quantities are returned (such as the optimal Y operator).
         """
 
-        if not isinstance(cones, list):
-            assert isinstance(cones, str)
-            cones = {
-                'hermit': [],
-                'psd': [self.cond_psd],
-                'psd&ppt': [self.cond_psd, self.cond_ppt],
-                'ppt': [self.cond_ppt],
-            }[cones]
+        cones = self._get_cone_set(cones)
 
         for C in cones:
             assert 'R' in C
@@ -763,7 +768,7 @@ class NoncommutativeGraph(object):
 
             # FIXME - is X guaranteed Hermitian?
             # Should I require the cones to be doubly hermit?
-            print(linalg.norm(X - X.transpose(2,3,0,1).conj()))
+            #print(linalg.norm(X - X.transpose(2,3,0,1).conj()))
 
             verify_tol=1e-7
             if verify_tol:
@@ -869,19 +874,27 @@ class NoncommutativeGraph(object):
 
 def test_schrijver():
     ha = qudit('a', 3)
-    np.random.seed(2)
+    np.random.seed(3)
     G = NoncommutativeGraph.random(ha, 3)
 
-    cvxopt.solvers.options['abstol'] = float(1e-7)
-    cvxopt.solvers.options['reltol'] = float(1e-7)
+    cvxopt.solvers.options['show_progress'] = False
+    cvxopt.solvers.options['abstol'] = float(1e-8)
+    cvxopt.solvers.options['reltol'] = float(1e-8)
 
-    info = G.schrijver('psd&ppt', True)
-    ret = schrijver_feasibility(G, frozenset(['psd','ppt']), *[ info[x] for x in 'ha,hb,t,rho,T,Y,L_map,X'.split(',') ])
+    # FIXME - are the first two and last two always the same?
+    for cone in ('hermit', 'psd', 'ppt', 'psd&ppt'):
+        print('--- Schrijver with', cone)
+        info = G.schrijver(cone, True)
+        print('t =', info['t'])
+        ret = check_schrijver_solution(G, cone, *[ info[x] for x in 'ha,hb,t,rho,T,Y,L_map,X'.split(',') ])
+
     return ret
 
-def schrijver_feasibility(G, used_cones, ha, hb, t, rho, T, Y, L_map, X):
+def check_schrijver_solution(G, cones, ha, hb, t, rho, T, Y, L_map, X):
     r"""
     Verify Schrijver solution.
+
+    # FIXME - conj on second S
 
     t = max <\Phi|T + I \ot \rho|\Phi> s.t.
         \rho \succeq 0, \Tr(\rho)=1
@@ -898,17 +911,17 @@ def schrijver_feasibility(G, used_cones, ha, hb, t, rho, T, Y, L_map, X):
         X^\dag = X
     """
 
-    S = G.S
-    err = {}
+    cones = G._get_cone_set(cones)
+    cone_names = frozenset(C['name'] for C in cones)
 
-    assert S._hilb_space == ha.O
+    assert G.S._hilb_space == ha.O
     assert rho.space == hb.O
     assert T.space == (ha*hb).O
     assert Y.space == (ha*hb).O
     for L in L_map.values():
         assert L.space == (ha*hb).O
     assert X.space == (ha*hb).O
-    assert L_map.keys() == used_cones
+    assert L_map.keys() == cone_names
 
     def R(x):
         return x.relabel({ hb: ha.H, ha.H: hb })
@@ -918,8 +931,13 @@ def schrijver_feasibility(G, used_cones, ha, hb, t, rho, T, Y, L_map, X):
         assert (ret - R(R(x).H)).norm() < 1e-12
         return ret
 
+    S = G.S
+    Sb = S.map(lambda x: x.relabel({ ha: hb, ha.H: hb.H }).conj())
+
     Phi = ha.eye().relabel({ ha.H: hb })
     J = Phi.O
+
+    err = {}
 
     ### Verify primal
 
@@ -929,7 +947,7 @@ def schrijver_feasibility(G, used_cones, ha, hb, t, rho, T, Y, L_map, X):
     err[r'T + I \ot rho PSD'] = check_psd(T + ha.eye()*rho)
     err[r'T^\ddag - T'] = (T - ddag(T)).norm()
 
-    for C in used_cones:
+    for C in cone_names:
         if C == 'psd':
             err[r'T_PSD'] = check_psd(R(T))
         elif C == 'ppt':
@@ -937,16 +955,21 @@ def schrijver_feasibility(G, used_cones, ha, hb, t, rho, T, Y, L_map, X):
         else:
             assert 0
 
-    # FIXME - T \in S^\perp \ot S^\perp
+    Sp_ot_Sp = S.perp() * Sb.perp()
+    err['T \in S^\perp \ot S^\perp'] = linalg.norm(Sp_ot_Sp.perp().to_basis(T))
 
     ### Verify dual
 
     err[r'dual val'] = abs(t - Y.trace(ha).eigvalsh()[-1])
     err[r'Y \succeq J'] = check_psd(Y - J)
 
-    # FIXME - Y+L-X \in S \djp S
+    S_djp_S = S * hb.O.full_space() | ha.O.full_space() * Sb
+    YLX = Y - X
+    if len(cone_names):
+        YLX += np.sum(list(L_map.values()))
+    err['Y+L-X \in S \djp S'] = linalg.norm(S_djp_S.perp().to_basis(YLX))
 
-    for C in used_cones:
+    for C in cone_names:
         L = L_map[C]
         if C == 'psd':
             err[r'L_PSD'] = check_psd(R(L))

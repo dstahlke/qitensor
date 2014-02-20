@@ -275,6 +275,8 @@ class NoncommutativeGraph(object):
                 yx = np.tensordot(y, x.conj(), axes=([],[])).transpose((0, 2, 1, 3))
                 out.append(xy+yx)
 
+        out = [ x / linalg.norm(x) for x in out ]
+
         ret = np.array(out).transpose((1, 2, 3, 4, 0))
 
         # [ |a>, |a'>, <a|, <a'| ; idx ]
@@ -549,7 +551,7 @@ class NoncommutativeGraph(object):
                 # FIXME - doesn't pass
                 for (i, v) in enumerate(extra_vars):
                     M = v['R'](T) - v['0']
-                    # FIXME - wherever eigvalsh used, also test Hermitian
+                    # FIXME - wherever eigvalsh used, also test Hermitian (check_psd)
                     print('Herm:', linalg.norm(M - M.conj().T))
                     err = linalg.eigvalsh(M)[0]
                     if err < -verify_tol: print("WARNING: R(T) [%d] err = %g" % (i, err))
@@ -753,13 +755,17 @@ class NoncommutativeGraph(object):
             print('**', linalg.norm(foo))
 
             print('**', linalg.norm(np.tensordot(Y+Z_sum, T_basis.conj(), axes=4)))
-            print('**', linalg.norm(np.tensordot(-Y+C_list[0], x_to_L[0].conj(), axes=4)))
+            for (C, xL) in zip(C_list, x_to_L):
+                print('**', linalg.norm(np.tensordot(-Y+C, xL.conj(), axes=4)))
 
             #for r in [J, zs1]+Z_list:
             #    print(np.tensordot(r, T_basis.conj(), axes=4))
 
+            # FIXME
             # Project onto T_basis.perp()
             #Y -= np.dot(T_basis, np.tensordot(Y, T_basis.conj(), axes=4))
+            # Project onto dh
+            Y = np.dot(self.full_basis_dh, np.tensordot(Y, self.full_basis_dh.conj(), axes=4))
 
             verify_tol=1e-7
             if verify_tol:
@@ -851,6 +857,15 @@ class NoncommutativeGraph(object):
         else:
             raise Exception('cvxopt.sdp returned error: '+sdp_stats['status'])
 
+    @classmethod
+    def check_psd(cls, M):
+        if len(M.shape) == 4:
+            M = M.reshape(M.shape[0]*M.shape[1], M.shape[2]*M.shape[3])
+        err_H = linalg.norm(M - M.T.conj())
+        err_P = linalg.eigvalsh(M + M.T.conj())[0]
+        err_P = 0 if err_P > 0 else -err_P
+        return err_H + err_P
+
     def make_channel(self):
         """
         Makes a CPTP map whose confusibility graph is equal to `self`.
@@ -911,7 +926,7 @@ if __name__ == "__main__":
     # just Hermitian.
     n = 3
     np.random.seed(2)
-    S = NoncommutativeGraph.random(n, 3)
+    S = NoncommutativeGraph.random(n, 6)
     # FIXME - Unfortunately, Schrijver doesn't converge well.
     cvxopt.solvers.options['abstol'] = float(1e-5)
     cvxopt.solvers.options['reltol'] = float(1e-5)
@@ -921,7 +936,7 @@ if __name__ == "__main__":
     #a = S.unified_primal(S.T_basis, [], [], True)
     #print('th primal:', a['t'])
 
-    #a = S.szegedy('psd', long_return=True)
+    #a = S.szegedy('psd&ppt', long_return=True)
     #print('thp dual:  ', a['t'])
     #print('---------')
     b = S.unified_primal(S.T_basis, [], [S.cond_psd], True)

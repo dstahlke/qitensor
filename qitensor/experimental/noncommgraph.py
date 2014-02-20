@@ -90,6 +90,25 @@ def call_sdp(c, Fx_list, F0_list):
 
     return (xvec, sol)
 
+def check_psd(M):
+    """
+    By how much does M fail to be PSD?
+    """
+    if len(M.shape) == 4:
+        M = M.reshape(M.shape[0]*M.shape[1], M.shape[2]*M.shape[3])
+    err_H = linalg.norm(M - M.T.conj())
+    err_P = linalg.eigvalsh(M + M.T.conj())[0]
+    err_P = 0 if err_P > 0 else -err_P
+    return err_H + err_P
+
+def project_dh(M):
+    """
+    Get doubly Hermitian component.
+    """
+    M = (M + M.transpose(1,0,3,2).conj()) / 2
+    M = (M + M.transpose(2,3,0,1).conj()) / 2
+    return M
+
 ### The main code ######################
 
 class NoncommutativeGraph(object):
@@ -356,33 +375,6 @@ class NoncommutativeGraph(object):
 
         return self.unified_dual(self.Y_basis, [], [], long_return)
 
-    def schrijver(self, cone, long_return=False):
-        """
-        My non-commutative generalization of Schrijver's number.
-
-        # FIXME - is this right?  Or is it Z \in cone?
-        # FIXME - make it match the paper (primal and dual)
-        min t s.t.
-            tI - Tr_A (Y-Z) \succeq 0
-            Y \in S \ot \mathcal{L}
-            Y-Z (-Z2) \succeq \Phi
-            R(Z) \succeq 0
-            optional: R(Z2) \in cone
-
-        If the long_return option is True, then some extra status and internal
-        quantities are returned (such as the optimal Y operator).
-        """
-
-        v = {
-            False: [self.cond_psd],
-            True:  [self.cond_psd, self.cond_ppt],
-            'psd': [self.cond_psd],
-            'psd&ppt': [self.cond_psd, self.cond_ppt],
-            'ppt': [self.cond_ppt],
-        }[cone]
-
-        return self.unified_dual(self.Y_basis, [], v, long_return)
-
     def szegedy(self, cone, long_return=False):
         """
         My non-commutative generalization of Schrijver's number.
@@ -536,24 +528,23 @@ class NoncommutativeGraph(object):
                     err = linalg.norm(dp)
                     if err > verify_tol: print("WARNING T+L_sum in Y_basis.perp() err =", err)
                 T_plus_Irho = T + I_ot_rho
-                err = linalg.eigvalsh(T_plus_Irho.reshape(n**2, n**2))[0]
+                err = check_psd(T_plus_Irho.reshape(n**2, n**2))
                 if err < -verify_tol: print("WARNING: T_plus_Irho pos err =", err)
                 err = abs(np.trace(rho) - 1)
                 if err < -verify_tol: print("WARNING: Tr(rho) err =", err)
-                err = linalg.eigvalsh(rho)[0]
+                err = check_psd(rho)
                 if err < -verify_tol: print("WARNING: rho pos err =", err)
 
                 for (i, (v, L)) in enumerate(zip(extra_constraints, L_list)):
                     M = v['R'](L) - v['0']
-                    err = linalg.eigvalsh(M)[0]
+                    err = check_psd(M)
                     if err < -verify_tol: print("WARNING: R(L_%d) err = %g" % (i, err))
 
                 # FIXME - doesn't pass
                 for (i, v) in enumerate(extra_vars):
                     M = v['R'](T) - v['0']
-                    # FIXME - wherever eigvalsh used, also test Hermitian (check_psd)
                     print('Herm:', linalg.norm(M - M.conj().T))
-                    err = linalg.eigvalsh(M)[0]
+                    err = check_psd(M)
                     if err < -verify_tol: print("WARNING: R(T) [%d] err = %g" % (i, err))
 
         if sdp_stats['status'] == 'optimal':
@@ -568,17 +559,17 @@ class NoncommutativeGraph(object):
                 err = abs(T.trace().trace() + 1 - t)
                 if err > verify_tol: print("WARNING: primal vs dual err =", err)
 
-                err = linalg.eigvalsh((Y-Z_sum).reshape(n**2, n**2) - phi_phi)[0]
+                err = check_psd((Y-Z_sum).reshape(n**2, n**2) - phi_phi)
                 if err < -verify_tol: print("WARNING: phi_phi err =", err)
 
                 for (i, (v, Z)) in enumerate(zip(extra_vars, Z_list)):
                     M = v['R'](Z) - v['0']
-                    err = linalg.eigvalsh(M)[0]
+                    err = check_psd(M)
                     if err < -verify_tol: print("WARNING: R(Z_%d) err = %g" % (i, err))
 
                 for (i, v) in enumerate(extra_constraints):
                     M = v['R'](Y) - v['0']
-                    err = linalg.eigvalsh(M)[0]
+                    err = check_psd(M)
                     if err < -verify_tol: print("WARNING: R(Y) [%d] err = %g" %(i, err))
 
                 maxeig = linalg.eigvalsh(np.trace(Y-Z_sum, axis1=0, axis2=2))[-1].real
@@ -618,25 +609,37 @@ class NoncommutativeGraph(object):
         else:
             raise Exception('cvxopt.sdp returned error: '+sdp_stats['status'])
 
-    # FIXME - test primal vs. dual using both vars and constraints
-    def unified_primal(self, T_basis, extra_constraints, extra_vars, long_return=False):
+    def schrijver(self, cones, long_return=False):
         r"""
-        FIXME - only Lovasz for now
-        Compute Lovasz/Schrijver/Szegedy type quantities.
+        My non-commutative generalization of Schrijver's number.
 
         max <\Phi|T + I \ot \rho|\Phi> s.t.
             \rho \succeq 0, \Tr(\rho)=1
             T + I \ot \rho \succeq 0
-            T+L \in S^\perp \ot \mathcal{L}
-            R(L) \in \sum( extra_vars )
-            R(T+L) \in \cap( extra_constraints )
+            T \in S^\perp \ot S^\perp
+            T^\ddag = T
+            R(T) \in cones
+
+        If the long_return option is True, then some extra status and internal
+        quantities are returned (such as the optimal Y operator).
         """
 
-        # Note: for this code we define W = T + L.
+        if not isinstance(cones, list):
+            assert isinstance(cones, str)
+            cones = {
+                'hermit': [],
+                'psd': [self.cond_psd],
+                'psd&ppt': [self.cond_psd, self.cond_ppt],
+                'ppt': [self.cond_ppt],
+            }[cones]
+
+        for C in cones:
+            assert 'R' in C
 
         n = self.n
 
-        Tb_len = T_basis.shape[4]
+        Tbas = self.T_basis_dh
+        Tb_len = Tbas.shape[4]
 
         # rhotf is the trace-free component of the actual rho
         rhotf_basis = TensorSubspace.from_span([np.eye(n)]).perp(). \
@@ -644,38 +647,28 @@ class NoncommutativeGraph(object):
         rb_len = rhotf_basis.shape[2]
         assert rb_len == n*n-1
 
-        xvec_len = Tb_len + rb_len + np.sum([ v['basis'].shape[-1] for v in extra_vars], dtype=int)
+        xvec_len = Tb_len + rb_len
 
         idx = 0
-        x_to_W = np.zeros((n,n,n,n,xvec_len), dtype=complex)
-        x_to_W[:,:,:,:,idx:idx+Tb_len] = T_basis
+        x_to_T = np.zeros((n,n,n,n,xvec_len), dtype=complex)
+        x_to_T[:,:,:,:,idx:idx+Tb_len] = Tbas
         idx += Tb_len
 
         x_to_rhotf = np.zeros((n,n,xvec_len), dtype=complex)
         x_to_rhotf[:,:,idx:idx+rb_len] = rhotf_basis
         idx += rb_len
 
-        x_to_L = []
-        for v in extra_vars:
-            xL = np.zeros((n,n,n,n,xvec_len), dtype=complex)
-            Lb_len = v['basis'].shape[-1]
-            xL[:,:,:,:,idx:idx+Lb_len] = v['basis']
-            idx += Lb_len
-            x_to_L.append(xL)
-
         assert idx == xvec_len
 
-        # W-L + I \ot rhotf
-        x_to_sum = x_to_W + \
+        # T + I \ot rhotf
+        x_to_sum = x_to_T + \
                 np.tensordot(np.eye(n), x_to_rhotf, axes=0).transpose((0,2,1,3,4))
-        for xL in x_to_L:
-            x_to_sum -= xL
 
         # rho \succeq 0
         Fx_1 = x_to_rhotf
         F0_1 = -np.eye(n)/n
 
-        # W-L + I \ot rho \succeq 0
+        # T + I \ot rho \succeq 0
         Fx_2 = x_to_sum.reshape(n**2, n**2, xvec_len)
         for i in range(Fx_2.shape[2]):
             assert linalg.norm(Fx_2[:,:,i] - Fx_2[:,:,i].conj().T) < 1e-10
@@ -683,89 +676,63 @@ class NoncommutativeGraph(object):
 
         c = -np.trace(np.trace(x_to_sum)).real
 
-        Fx_evars = []
-        F0_evars = []
-        for (xL, v) in zip(x_to_L, extra_vars):
-            Fx = np.array([ v['R'](z) for z in np.rollaxis(xL, -1) ], dtype=complex)
-            Fx = np.rollaxis(Fx, 0, len(Fx.shape))
-            F0 = v['0']
-            Fx_evars.append(Fx)
-            F0_evars.append(F0)
-
         Fx_econs = []
         F0_econs = []
-        for v in extra_constraints:
-            Fx = np.array([ v['R'](y) for y in np.rollaxis(x_to_W, -1) ], dtype=complex)
+        for v in cones:
+            Fx = np.array([ v['R'](y) for y in np.rollaxis(x_to_T, -1) ], dtype=complex)
             Fx = np.rollaxis(Fx, 0, len(Fx.shape))
             F0 = v['0']
             Fx_econs.append(Fx)
             F0_econs.append(F0)
 
-        Fx_list = [Fx_1, Fx_2] + Fx_evars + Fx_econs
-        F0_list = [F0_1, F0_2] + F0_evars + F0_econs
+        Fx_list = [Fx_1, Fx_2] + Fx_econs
+        F0_list = [F0_1, F0_2] + F0_econs
 
         (xvec, sdp_stats) = call_sdp(c, Fx_list, F0_list)
 
         if sdp_stats['status'] == 'optimal':
             t = -np.dot(c, xvec) + 1
-            W = np.dot(x_to_W, xvec)
-            L_list = [ np.dot(xL, xvec) for xL in x_to_L ]
-            L_sum = np.sum(L_list, axis=0)
-            T = W - L_sum
+            T = np.dot(x_to_T, xvec)
             rho = np.dot(x_to_rhotf, xvec) + np.eye(n)/n
             I_rho = np.tensordot(np.eye(n), rho, axes=0).transpose(0,2,1,3)
             T_plus_Irho = np.dot(x_to_sum, xvec) + np.eye(n*n).reshape(n,n,n,n) / n
-
-            # FIXME
-            print(sdp_stats['zs'])
-            zs0 = mat_real_to_cplx(np.array(sdp_stats['zs'][0]))
-            zs1 = mat_real_to_cplx(np.array(sdp_stats['zs'][1])).reshape(n,n,n,n)
-            zs_idx = 2
-
-            C_list = []
-            for (i,v) in enumerate(extra_vars):
-                zsi = mat_real_to_cplx(np.array(sdp_stats['zs'][zs_idx]))
-                zs_idx += 1
-                C_list.append(v['R*'](zsi))
-
-            Z_list = []
-            for (i,v) in enumerate(extra_constraints):
-                zsi = mat_real_to_cplx(np.array(sdp_stats['zs'][zs_idx]))
-                zs_idx += 1
-                Z_list.append(v['R*'](zsi))
-            Z_sum = np.sum(Z_list, axis=0)
-
-            assert zs_idx == len(sdp_stats['zs'])
 
             J = np.zeros((n,n, n,n), dtype=complex)
             for (i, j) in itertools.product(list(range(n)), repeat=2):
                 J[i, i, j, j] = 1
 
-            Y = zs1 + J
+            # FIXME - zs0 appears to always be zero.  But is it ever needed for constructing
+            # the dual solution?
+            zs0 = mat_real_to_cplx(np.array(sdp_stats['zs'][0]))
+            Y = J + mat_real_to_cplx(np.array(sdp_stats['zs'][1])).reshape(n,n,n,n)
+            zs_idx = 2
 
-            # FIXME
-            foo = (
-                np.tensordot(zs0, x_to_rhotf.conj(), axes=2) +
-                np.tensordot(Y, x_to_sum.conj(), axes=4)
-            )
-            for (a, b) in zip(C_list, x_to_L):
-                foo += np.tensordot(a, b.conj(), axes=4)
-            if len(Z_list):
-                foo += np.tensordot(Z_sum, x_to_W.conj(), axes=4)
-            print('**', linalg.norm(foo))
+            L_list = []
+            for (i,v) in enumerate(cones):
+                zsi = mat_real_to_cplx(np.array(sdp_stats['zs'][zs_idx]))
+                zs_idx += 1
+                L_list.append(v['R*'](zsi))
+            # FIXME - redefined below
+            L_sum = np.sum(L_list, axis=0)
 
-            print('**', linalg.norm(np.tensordot(Y+Z_sum, T_basis.conj(), axes=4)))
-            for (C, xL) in zip(C_list, x_to_L):
-                print('**', linalg.norm(np.tensordot(-Y+C, xL.conj(), axes=4)))
+            assert zs_idx == len(sdp_stats['zs'])
 
-            #for r in [J, zs1]+Z_list:
-            #    print(np.tensordot(r, T_basis.conj(), axes=4))
+            # cvxopt guarantees the dual to give zero here
+            #foo = (
+            #    np.tensordot(zs0, x_to_rhotf.conj(), axes=2) +
+            #    np.tensordot(Y, x_to_sum.conj(), axes=4)
+            #)
+            #if len(L_list):
+            #    foo += np.tensordot(L_sum, x_to_T.conj(), axes=4)
+            #print('**', linalg.norm(foo))
 
-            # FIXME
-            # Project onto T_basis.perp()
-            #Y -= np.dot(T_basis, np.tensordot(Y, T_basis.conj(), axes=4))
-            # Project onto dh
-            Y = np.dot(self.full_basis_dh, np.tensordot(Y, self.full_basis_dh.conj(), axes=4))
+            # Extract rot-antihermit portion of L and put it in Y.
+            # Copy rot-antihermit portion of Y to X.
+            Ldh_list = [ project_dh(L) for L in L_list ]
+            Y += np.sum(Ldh_list, axis=0) - np.sum(L_list, axis=0)
+            L_list = Ldh_list
+            L_sum = np.sum(L_list, axis=0)
+            X = Y - project_dh(Y)
 
             verify_tol=1e-7
             if verify_tol:
@@ -776,79 +743,63 @@ class NoncommutativeGraph(object):
                 if err > verify_tol: print("WARNING: primal value err =", err)
 
                 for mat in self.S_basis:
-                    dp = np.tensordot(W, mat.conj(), axes=[[0, 2], [0, 1]])
+                    dp = np.tensordot(T, mat.conj(), axes=[[0, 2], [0, 1]])
                     err = linalg.norm(dp)
-                    if err > verify_tol: print("WARNING: T+L in S^\perp \ot L(A') err =", err)
+                    if err > verify_tol: print("WARNING: T in S^\perp \ot S^\perp err =", err)
 
-                err = linalg.eigvalsh(T_plus_Irho.reshape(n**2, n**2))[0]
+                err = check_psd(T_plus_Irho.reshape(n**2, n**2))
                 if err < -verify_tol: print("WARNING: T_plus_Irho pos err =", err)
                 err = abs(np.trace(rho) - 1)
                 if err < -verify_tol: print("WARNING: Tr(rho) err =", err)
-                err = linalg.eigvalsh(rho)[0]
+                err = check_psd(rho)
                 if err < -verify_tol: print("WARNING: rho pos err =", err)
 
-                for (i, (v, L)) in enumerate(zip(extra_vars, L_list)):
-                    M = v['R'](L) - v['0']
-                    err = linalg.eigvalsh(M)[0]
-                    if err < -verify_tol: print("WARNING: R(L%d) err = %g" % (i, err))
-
-                for (i, v) in enumerate(extra_constraints):
+                for (i, v) in enumerate(cones):
                     M = v['R'](T) - v['0']
-                    err = linalg.eigvalsh(M)[0]
+                    err = check_psd(M)
                     if err < -verify_tol: print("WARNING: R(T) [%d] err = %g" % (i, err))
 
                 # Test the dual solution
                 err_Y_space = 0
-                for mat in self.Sp_basis:
-                    # FIXME - rather Y-Z
-                    dp = np.tensordot(Y + Z_sum, mat.conj(), axes=[[0, 2], [0, 1]])
-                    err_Y_space += linalg.norm(dp)
-                if err_Y_space > verify_tol: print("WARNING: Y+Z in S \ot L(A') err =", err_Y_space)
-                # FIXME - or this?
-                # FIXME - rather Y-Z
-                dp = np.tensordot(Y + Z_sum, T_basis.conj(), axes=4)
-                err = linalg.norm(dp)
-                if err > verify_tol: print("WARNING: Y+Z in S \ot L(A') err =", err)
+                for matA in self.Sp_basis:
+                    for matB in self.Sp_basis:
+                        xy = np.tensordot(matA, matB.conj(), axes=([],[])).transpose((0, 2, 1, 3))
+                        dp = np.tensordot(Y+L_sum-X, xy.conj(), axes=4)
+                        err_Y_space += abs(dp)
+                if err_Y_space > verify_tol: print("WARNING: Y+L-X in S \djp S err =", err_Y_space)
+                #dp = np.tensordot(Y + L_sum, Tbas.conj(), axes=4)
+                #err = linalg.norm(dp)
+                #if err > verify_tol: print("WARNING2: Y+L+X in S \djp S err =", err) # FIXME - label
 
-                for (i, v) in enumerate(extra_vars):
-                    M = v['R'](Y) - v['0']
-                    err = linalg.eigvalsh(M)[0]
-                    if err < -verify_tol: print("WARNING: R(Y) [%d] err = %g" % (i, err))
+                for (i, (v, L)) in enumerate(zip(cones, L_list)):
+                    M = v['R'](L) - v['0']
+                    err = check_psd(M)
+                    if err < -verify_tol: print("WARNING: R(L%d) err = %g" % (i, err))
 
-                for (i, (v, Z)) in enumerate(zip(extra_constraints, Z_list)):
-                    M = v['R'](Z) - v['0']
-                    err = linalg.eigvalsh(M)[0]
-                    if err < -verify_tol: print("WARNING: R(Z%d) err = %g" % (i, err))
-
-                err = linalg.eigvalsh((Y-J).reshape(n*n, n*n))[0]
+                err = check_psd((Y-J).reshape(n*n, n*n))
                 if err < -verify_tol: print("WARNING: Y-J pos err =", err)
 
                 err = abs(t - linalg.eigvalsh(Y.trace(axis1=0, axis2=2))[-1])
                 if err > verify_tol: print("WARNING: dual value err =", err)
 
-            # FIXME - construct dual solution
-            # FIXME - test primal and dual solutions
-
             if long_return:
+                # FIXME
                 return locals()
                 #ret = {}
                 #for key in [
-                #    'Fx_list', 'F0_list',
-                #    'n', 'x_to_W', 'x_to_rhotf', 'T_plus_Irho',
-                #    'c', 't', 'W', 'L_list', 'T', 'rho', 'xvec', 'sdp_stats',
-                #    'zs0', 'zs1', 'Y', 'Z_sum', 'Z_list', 'extra_vars', 'extra_constraints', 'J', 'C_list', 'x_to_sum' # FIXME
                 #]:
                 #    ret[key] = locals()[key]
                 #return ret
             else:
                 return t
         elif sdp_stats['status'] == 'primal infeasible':
+            # FIXME - construct certificate
             t = np.inf
             if long_return:
                 ret = {}
                 for key in [
-                    'n', 'x_to_W', 'x_to_rhotf',
-                    'c', 't', 'W', 'rho', 'xvec', 'sdp_stats'
+                    'n', 'x_to_T', 'x_to_rhotf',
+                    'c', 't', 'T', 'rho', 'xvec', 'sdp_stats'
                 ]:
                     ret[key] = locals()[key]
                 return ret
@@ -856,15 +807,6 @@ class NoncommutativeGraph(object):
                 return t
         else:
             raise Exception('cvxopt.sdp returned error: '+sdp_stats['status'])
-
-    @classmethod
-    def check_psd(cls, M):
-        if len(M.shape) == 4:
-            M = M.reshape(M.shape[0]*M.shape[1], M.shape[2]*M.shape[3])
-        err_H = linalg.norm(M - M.T.conj())
-        err_P = linalg.eigvalsh(M + M.T.conj())[0]
-        err_P = 0 if err_P > 0 else -err_P
-        return err_H + err_P
 
     def make_channel(self):
         """
@@ -926,7 +868,7 @@ if __name__ == "__main__":
     # just Hermitian.
     n = 3
     np.random.seed(2)
-    S = NoncommutativeGraph.random(n, 6)
+    S = NoncommutativeGraph.random(n, 3)
     # FIXME - Unfortunately, Schrijver doesn't converge well.
     cvxopt.solvers.options['abstol'] = float(1e-5)
     cvxopt.solvers.options['reltol'] = float(1e-5)
@@ -939,18 +881,21 @@ if __name__ == "__main__":
     #a = S.szegedy('psd&ppt', long_return=True)
     #print('thp dual:  ', a['t'])
     #print('---------')
-    b = S.unified_primal(S.T_basis, [], [S.cond_psd], True)
-    print('thp primal:', b['t'])
+    #b = S.unified_primal(S.T_basis, [], [S.cond_psd], True)
+    #print('thp primal:', b['t'])
 
     print('---------')
 
     #a = S.schrijver('psd&ppt', long_return=True)
     #print('thm dual:  ', a['t'])
     #print('---------')
-    #b = S.unified_primal(S.T_basis_dh, [S.cond_psd, S.cond_ppt], [], True)
-    #print('thm primal:', b['t'])
-
+    b = S.schrijver([S.cond_psd, S.cond_ppt], True)
     print('---------')
+    b = S.schrijver([S.cond_psd], True)
+    print('---------')
+    b = S.schrijver([S.cond_ppt], True)
+    print('---------')
+    print('thm primal:', b['t'])
 
     locals().update(b)
 

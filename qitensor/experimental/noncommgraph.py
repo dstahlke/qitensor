@@ -549,23 +549,23 @@ class NoncommutativeGraph(object):
                     if err > verify_tol: print("WARNING T+L_sum in Y_basis.perp() err =", err)
                 T_plus_Irho = T + I_ot_rho
                 err = check_psd(T_plus_Irho.reshape(n**2, n**2))
-                if err < -verify_tol: print("WARNING: T_plus_Irho pos err =", err)
+                if err > verify_tol: print("WARNING: T_plus_Irho pos err =", err)
                 err = abs(np.trace(rho) - 1)
-                if err < -verify_tol: print("WARNING: Tr(rho) err =", err)
+                if err > verify_tol: print("WARNING: Tr(rho) err =", err)
                 err = check_psd(rho)
-                if err < -verify_tol: print("WARNING: rho pos err =", err)
+                if err > verify_tol: print("WARNING: rho pos err =", err)
 
                 for (i, (v, L)) in enumerate(zip(extra_constraints, L_list)):
                     M = v['R'](L) - v['0']
                     err = check_psd(M)
-                    if err < -verify_tol: print("WARNING: R(L_%d) err = %g" % (i, err))
+                    if err > verify_tol: print("WARNING: R(L_%d) err = %g" % (i, err))
 
                 # FIXME - doesn't pass
                 for (i, v) in enumerate(extra_vars):
                     M = v['R'](T) - v['0']
                     print('Herm:', linalg.norm(M - M.conj().T))
                     err = check_psd(M)
-                    if err < -verify_tol: print("WARNING: R(T) [%d] err = %g" % (i, err))
+                    if err > verify_tol: print("WARNING: R(T) [%d] err = %g" % (i, err))
 
         if sdp_stats['status'] == 'optimal':
             t = xvec[0]
@@ -580,17 +580,17 @@ class NoncommutativeGraph(object):
                 if err > verify_tol: print("WARNING: primal vs dual err =", err)
 
                 err = check_psd((Y-Z_sum).reshape(n**2, n**2) - phi_phi)
-                if err < -verify_tol: print("WARNING: phi_phi err =", err)
+                if err > verify_tol: print("WARNING: phi_phi err =", err)
 
                 for (i, (v, Z)) in enumerate(zip(extra_vars, Z_list)):
                     M = v['R'](Z) - v['0']
                     err = check_psd(M)
-                    if err < -verify_tol: print("WARNING: R(Z_%d) err = %g" % (i, err))
+                    if err > verify_tol: print("WARNING: R(Z_%d) err = %g" % (i, err))
 
                 for (i, v) in enumerate(extra_constraints):
                     M = v['R'](Y) - v['0']
                     err = check_psd(M)
-                    if err < -verify_tol: print("WARNING: R(Y) [%d] err = %g" %(i, err))
+                    if err > verify_tol: print("WARNING: R(Y) [%d] err = %g" %(i, err))
 
                 maxeig = linalg.eigvalsh(np.trace(Y-Z_sum, axis1=0, axis2=2))[-1].real
                 err = abs(xvec[0] - maxeig)
@@ -761,59 +761,61 @@ class NoncommutativeGraph(object):
             # Extract rot-antihermit portion of L and put it in Y.
             # Copy rot-antihermit portion of Y to X.
             Ldh_list = [ project_dh(L) for L in L_list ]
-            Y += np.sum(Ldh_list, axis=0) - np.sum(L_list, axis=0)
+            if len(L_list):
+                L_slop = np.sum(Ldh_list, axis=0) - np.sum(L_list, axis=0)
+                # FIXME - needed rarely.  Only valid if cone is doubly hermit.
+                L_slop = (L_slop + L_slop.transpose(2,3,0,1).conj()) / 2
+                Y += L_slop
             L_list = Ldh_list
             L_sum = np.sum(L_list, axis=0)
             X = Y - project_dh(Y)
 
-            # FIXME - is X guaranteed Hermitian?
-            # Should I require the cones to be doubly hermit?
-            #print(linalg.norm(X - X.transpose(2,3,0,1).conj()))
-
             verify_tol=1e-7
             if verify_tol:
+                err = {}
+
                 # Test the primal solution
-                err = linalg.norm(T + I_rho - T_plus_Irho)
-                if err > verify_tol: print("WARNING: T + I \ot rho err =", err)
-                err = abs(t - T_plus_Irho.trace(axis1=0, axis2=1).trace(axis1=0, axis2=1))
-                if err > verify_tol: print("WARNING: primal value err =", err)
+                err['T + I \ot rho'] = linalg.norm(T + I_rho - T_plus_Irho)
+                err['primal value'] = abs(t - T_plus_Irho.trace(axis1=0, axis2=1).trace(axis1=0, axis2=1))
 
                 for mat in self.S_basis:
                     dp = np.tensordot(T, mat.conj(), axes=[[0, 2], [0, 1]])
-                    err = linalg.norm(dp)
-                    if err > verify_tol: print("WARNING: T in S^\perp \ot S^\perp err =", err)
+                    err['T in S^\perp \ot S^\perp'] = linalg.norm(dp)
 
-                err = check_psd(T_plus_Irho.reshape(n**2, n**2))
-                if err < -verify_tol: print("WARNING: T_plus_Irho pos err =", err)
-                err = abs(np.trace(rho) - 1)
-                if err < -verify_tol: print("WARNING: Tr(rho) err =", err)
-                err = check_psd(rho)
-                if err < -verify_tol: print("WARNING: rho pos err =", err)
+                err['T_plus_Irho PSD'] = check_psd(T_plus_Irho.reshape(n**2, n**2))
+                err['Tr(rho)'] = abs(np.trace(rho) - 1)
+                err['rho PSD'] = check_psd(rho)
 
                 for (i, v) in enumerate(cones):
                     M = v['R'](T) - v['0']
-                    err = check_psd(M)
-                    if err < -verify_tol: print("WARNING: R(T) [%d] err = %g" % (i, err))
+                    err['R(T) in '+v['name']] = check_psd(M)
 
                 # Test the dual solution
+                err['dual value'] = abs(t - linalg.eigvalsh(Y.trace(axis1=0, axis2=2))[-1])
+
                 err_Y_space = 0
                 for matA in self.Sp_basis:
                     for matB in self.Sp_basis:
                         xy = np.tensordot(matA, matB.conj(), axes=([],[])).transpose((0, 2, 1, 3))
                         dp = np.tensordot(Y+L_sum-X, xy.conj(), axes=4)
                         err_Y_space += abs(dp)
-                if err_Y_space > verify_tol: print("WARNING: Y+L-X in S \djp S err =", err_Y_space)
+                err['Y+L-X in S \djp S'] = err_Y_space
 
                 for (i, (v, L)) in enumerate(zip(cones, L_list)):
                     M = v['R'](L) - v['0']
-                    err = check_psd(M)
-                    if err < -verify_tol: print("WARNING: R(L%d) err = %g" % (i, err))
+                    err['R(L) in '+v['name']] = check_psd(M)
 
-                err = check_psd((Y-J).reshape(n*n, n*n))
-                if err < -verify_tol: print("WARNING: Y-J pos err =", err)
+                err['Y-J PSD'] = check_psd((Y-J).reshape(n*n, n*n))
 
-                err = abs(t - linalg.eigvalsh(Y.trace(axis1=0, axis2=2))[-1])
-                if err > verify_tol: print("WARNING: dual value err =", err)
+                # FIXME - is X guaranteed Hermitian?
+                # Should I require the cones to be doubly hermit?
+                err['X - X.H'] = linalg.norm(X - X.transpose(2,3,0,1).conj())
+                err['X + X^ddag'] = linalg.norm(X + X.transpose(1,0,3,2).conj())
+
+                assert min(err.values()) >= 0
+                for (k, v) in err.items():
+                    if v > verify_tol:
+                        print('WARRNING: err[%s] = %g' % (k, v))
 
             if long_return:
                 if self.S._hilb_space is not None:
@@ -828,7 +830,7 @@ class NoncommutativeGraph(object):
                 #return locals()
                 ret = {}
                 for key in [
-                    't', 'T', 'rho', 'Y', 'L_map', 'X', 'ha', 'hb'
+                    't', 'T', 'rho', 'Y', 'L_map', 'X', 'ha', 'hb', 'sdp_stats'
                 ]:
                     ret[key] = locals()[key]
                 return ret
@@ -888,7 +890,8 @@ def test_schrijver():
         print('t =', info['t'])
         ret = check_schrijver_solution(G, cone, *[ info[x] for x in 'ha,hb,t,rho,T,Y,L_map,X'.split(',') ])
 
-    return ret
+    info.update(ret) # FIXME
+    return info
 
 def check_schrijver_solution(G, cones, ha, hb, t, rho, T, Y, L_map, X):
     r"""
@@ -1018,6 +1021,16 @@ if __name__ == "__main__":
 #    doctest.testmod()
 
     locals().update(test_schrijver())
+    #A1 = (X + X.H) / 2
+    #A2 = X - A1
+    #A11 = (A1 + ddag(A1)) / 2
+    #A12 = A1 - A11
+    #A21 = (A2 + ddag(A2)) / 2
+    #A22 = A2 - A21
+    #print(A11.norm())
+    #print(A12.norm())
+    #print(A21.norm())
+    #print(A22.norm())
 
     # seed=5 NoncommutativeGraph.random(4, 5) gives gap between Szegedy with positive and with
     # just Hermitian.

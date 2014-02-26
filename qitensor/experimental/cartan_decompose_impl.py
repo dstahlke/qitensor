@@ -15,13 +15,15 @@
 # A much more complicated treatment, applicable to multiple qubits, is given in
 # http://arxiv.org/abs/quant-ph/0010100
 
+from __future__ import print_function
+
 import numpy as np
 # FIXME - why doesn't scipy work here?
 from numpy import linalg
 
 def bipartite_op_tensor_product(A, B):
     """Tensor product of two 2x2 matrices into a 4x4 matrix."""
-    return np.matrix(np.tensordot(A, B, axes=([],[])). \
+    return np.matrix(np.tensordot(A, B, axes=([],[])).
         transpose((0,2,1,3)).reshape(4, 4))
 
 def bipartite_state_tensor_product(A, B):
@@ -129,8 +131,8 @@ def locally_transform_to_magic_basis(psi):
     delta = delta[0,0]
 
     argmax3 = np.argmax(abs(psi_bar[:, 2]))
-    sign3 = psi_bar[argmax3, 2] / (1/np.sqrt(2)* \
-        (np.exp(1j*delta)*e_fperp[argmax3, 0] - \
+    sign3 = psi_bar[argmax3, 2] / (1/np.sqrt(2)*
+        (np.exp(1j*delta)*e_fperp[argmax3, 0] -
         np.exp(-1j*delta)*eperp_f[argmax3, 0]))
     #print "s3", sign3
     if abs(sign3-1) < tol:
@@ -143,9 +145,9 @@ def locally_transform_to_magic_basis(psi):
     assert np.allclose(psi_bar[:,0], 1/np.sqrt(2)*(e_f + eperp_fperp))
     assert np.allclose(psi_bar[:,1], (-1j)/np.sqrt(2)*(e_f - eperp_fperp))
     # These appear to be switched in the paper...
-    assert np.allclose(psi_bar[:,2], \
+    assert np.allclose(psi_bar[:,2],
         sign3/np.sqrt(2)*(np.exp(1j*delta)*e_fperp - np.exp(-1j*delta)*eperp_f))
-    assert np.allclose(psi_bar[:,3], \
+    assert np.allclose(psi_bar[:,3],
         (-1j)/np.sqrt(2)*(np.exp(1j*delta)*e_fperp + np.exp(-1j*delta)*eperp_f))
 
     UA = np.matrix(np.zeros((2, 2), dtype=complex))
@@ -276,3 +278,25 @@ def unitary_from_cartan(alpha):
         ) for i in range(3) ]
 
     return Ux * Uy * Uz
+
+if __name__ == "__main__":
+    M = np.array([
+        [1,0,0,0],
+        [0,1,0,0],
+        [0,0,0,1],
+        [0,0,1,0],
+    ])
+
+    (UA, UB, VA, VB, alpha) = unitary_to_cartan(M)
+
+    print('=== UA ===\n', UA)
+    print('=== UB ===\n', UB)
+    print('=== VA ===\n', VA)
+    print('=== VB ===\n', VB)
+    print('=== alpha/pi ===\n', alpha / np.pi)
+
+    Q = unitary_from_cartan(alpha)
+    Q = Q.A.reshape((2,2,2,2))
+    R = np.einsum('ab,cd,bdwy,wx,yz->acxz', UA, UB, Q, VA, VB)
+    R = R.reshape((4,4))
+    assert linalg.norm(R - M) < 1e-12

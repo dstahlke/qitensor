@@ -280,6 +280,9 @@ def unitary_from_cartan(alpha):
     return Ux * Uy * Uz
 
 if __name__ == "__main__":
+    # Round off numbers that are very close to zero when printing the results.
+    np.set_printoptions(suppress=True)
+
     M = np.array([
         [1,0,0,0],
         [0,1,0,0],

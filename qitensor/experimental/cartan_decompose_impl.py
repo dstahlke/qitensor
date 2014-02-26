@@ -295,8 +295,14 @@ if __name__ == "__main__":
     print('=== VB ===\n', VB)
     print('=== alpha/pi ===\n', alpha / np.pi)
 
+    # Test the answer to make sure it is correct.
+    # First, compute exp(-i alpha_k \sigma_k \ot \sigma_k)
     Q = unitary_from_cartan(alpha)
+    # Turn the 4x4 matrix into a 2x2x2x2 tensor.
     Q = Q.A.reshape((2,2,2,2))
+    # Compute (UA \ot UB) Q (VA \ot VB)
     R = np.einsum('ab,cd,bdwy,wx,yz->acxz', UA, UB, Q, VA, VB)
+    # Convert 2x2x2x2 tensor into 4x4
     R = R.reshape((4,4))
+    # Make sure this equals the original unitary
     assert linalg.norm(R - M) < 1e-12

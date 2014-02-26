@@ -18,17 +18,17 @@ def unitary_to_cartan(U):
     >>> (UA, UB, VA, VB, alpha) = unitary_to_cartan(U)
     >>> Ud = unitary_from_cartan(ha*hb, alpha)
     >>> # experimental module doesn't always work, so skip doctest
-    >>> (UA * UB * Ud * VA * VB - U).norm() < 1e-12 # doctest: +SKIP
+    >>> (UA * UB * Ud * VA * VB - U).norm() < 1e-12
     True
     """
 
     assert U.space == U.H.space
     assert len(U.space.ket_set) == 2
-    (ha, hb) = U.space.ket_set
+    (ha, hb) = U.space.ket_space().sorted_kets
     assert len(ha.indices) == 2
     assert len(hb.indices) == 2
 
-    (UA, UB, VA, VB, alpha) = cartan_decompose_impl.unitary_to_cartan( \
+    (UA, UB, VA, VB, alpha) = cartan_decompose_impl.unitary_to_cartan(
         U.as_np_matrix())
 
     UA = ha.O.array(UA)

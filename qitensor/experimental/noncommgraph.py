@@ -7,6 +7,7 @@ import cvxopt.base
 import cvxopt.solvers
 
 from qitensor import qudit, HilbertSpace, HilbertArray
+from qitensor.space import _shape_product
 from qitensor.superop import CP_Map
 from qitensor.subspace import TensorSubspace
 
@@ -91,6 +92,14 @@ def call_sdp(c, Fx_list, F0_list):
 
     return (xvec, sol)
 
+def tensor_to_matrix(M):
+    assert (len(M.shape) % 2 == 0)
+    l = len(M.shape) // 2
+    nr = _shape_product(M.shape[:l])
+    nc = _shape_product(M.shape[l:])
+    assert nr == nc
+    return M.reshape(nr, nc)
+
 def check_psd(M):
     """
     By how much does M fail to be PSD?
@@ -99,8 +108,7 @@ def check_psd(M):
     if isinstance(M, HilbertArray):
         M = M.nparray
 
-    if len(M.shape) == 4:
-        M = M.reshape(M.shape[0]*M.shape[1], M.shape[2]*M.shape[3])
+    M = tensor_to_matrix(M)
 
     err_H = linalg.norm(M - M.T.conj())
     err_P = linalg.eigvalsh(M + M.T.conj())[0]

@@ -302,6 +302,59 @@ class TensorSubspace(object):
 
         return cls.empty(col_shp, tol=tol, dtype=dtype).perp()
 
+    @classmethod
+    def create_random_hermitian(cls, spc, opspc_dim, tracefree=False):
+        """
+        Create an operator subspace :math:`S \subseteq \mathcal{L}(A)` such that :math:`S =
+        S^\dagger, I \perp S`.  The argument ``spc`` can either be an integer (the dimension of
+        ``A``) or a ``HilbertSpace``.  The argument ``opspc_dim`` sets the dimension of ``S``.
+        The ``tracefree`` parameter allows creation of a trace-free space.
+
+        >>> from qitensor import TensorSubspace, qudit
+        >>> S = TensorSubspace.create_random_hermitian(3, 4)
+        >>> S
+        <TensorSubspace of dim 4 over space (3, 3)>
+        >>> S.is_hermitian()
+        True
+        >>> np.eye(3) in S.perp() # we didn't specify tracefree
+        False
+        >>> ha = qudit('a', 4)
+        >>> T = TensorSubspace.create_random_hermitian(ha, 2, tracefree=True)
+        >>> T
+        <TensorSubspace of dim 2 over space (|a><a|)>
+        >>> T.is_hermitian()
+        True
+        >>> ha.eye() in T.perp()
+        True
+        """
+
+        if isinstance(spc, HilbertSpace):
+            spc.assert_ket_space()
+            n = spc.dim()
+            S = TensorSubspace.empty(spc.O)
+        else:
+            assert isinstance(spc, int)
+            n = spc
+            spc = None
+            S = TensorSubspace.empty((n, n))
+
+        ops = []
+        for i in range(opspc_dim):
+            M = np.random.standard_normal(size=(n,n)) + \
+                np.random.standard_normal(size=(n,n))*1j
+            M += M.conj().T
+            if tracefree:
+                M -= np.eye(n) * np.trace(M) / n
+            ops.append(M)
+        S = TensorSubspace.from_span(ops)
+
+        if spc is not None:
+            S = S.map(lambda x: spc.O.array(x, reshape=True))
+
+        assert S.dim() == opspc_dim
+
+        return S
+
     def basis(self):
         """
         Returns an orthonormal basis for this subspace.

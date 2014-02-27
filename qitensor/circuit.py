@@ -4,7 +4,7 @@ This module contains functions related to quantum circuits.
 
 import numpy as np
 from qitensor import HilbertAtom, HilbertArray, HilbertError, \
-        HilbertShapeError, MismatchedSpaceError
+    HilbertShapeError, MismatchedSpaceError
 
 __all__ = [
     'cphase', 'cnot', 'swap', 'controlled_U',
@@ -116,7 +116,7 @@ def cnot(h1, h2, left=True):
     if h1.dim() != h2.dim():
         raise HilbertShapeError(h1.dim(), h2.dim())
     if h1.indices != h2.indices:
-        raise HilbertError('spaces must have the same index set: ' + \
+        raise HilbertError('spaces must have the same index set: ' +
             str(h1.indices)+' vs. '+str(h2.indices))
     if h1.group_op != h2.group_op:
         raise HilbertError('spaces must have the same group_op')
@@ -194,7 +194,6 @@ def controlled_U(cspc, U):
         if U.space != U0.space:
             raise MismatchedSpaceError('operators act on different spaces: '+
                 str(U.space)+' vs. '+str(U0.space))
-
 
     ret = (cspc.O * U0.space).eye()
     for (v, U) in Udict.items():

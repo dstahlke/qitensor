@@ -169,7 +169,7 @@ class Superoperator(object):
         if isinstance(other, Superoperator):
             common_spc = self.in_space.ket_set & other.out_space.ket_set
             in_spc = (self.in_space.ket_set - common_spc) | other.in_space.ket_set
-            in_spc = create_space2(in_spc , frozenset())
+            in_spc = create_space2(in_spc, frozenset())
             return Superoperator.from_function(in_spc, lambda x: self(other(x)))
 
         if isinstance(other, HilbertArray):
@@ -201,8 +201,8 @@ class Superoperator(object):
 
         if self.in_space != other.in_space or self.out_space != other.out_space:
             raise MismatchedSpaceError("spaces do not match: "+
-                    repr(self.in_space)+" -> "+repr(self.out_space)+" vs. "+
-                    repr(other.in_space)+" -> "+repr(other.out_space))
+                repr(self.in_space)+" -> "+repr(self.out_space)+" vs. "+
+                repr(other.in_space)+" -> "+repr(other.out_space))
 
         return Superoperator(self.in_space, self.out_space, self._m + other._m)
 
@@ -591,8 +591,8 @@ class CP_Map(Superoperator):
 
         if self.in_space != other.in_space or self.out_space != other.out_space:
             raise MismatchedSpaceError("spaces do not match: "+
-                    repr(self.in_space)+" -> "+repr(self.out_space)+" vs. "+
-                    repr(other.in_space)+" -> "+repr(other.out_space))
+                repr(self.in_space)+" -> "+repr(self.out_space)+" vs. "+
+                repr(other.in_space)+" -> "+repr(other.out_space))
 
         ret_hc = direct_sum((self.env_space, other.env_space))
         ret_J = ret_hc.P[0]*self.J + ret_hc.P[1]*other.J

@@ -78,24 +78,24 @@ def doctest():
     #qitensor.tests.experimental, \
     #qitensor.tests.hilbert:
 
-    doctest_modules = [ \
-        qitensor.array, \
-        qitensor.arrayformatter, \
-        qitensor.atom, \
-        qitensor.basefield, \
-        qitensor.circuit, \
-        qitensor.exceptions, \
-        qitensor.factory, \
-        qitensor.space, \
-        qitensor.subspace, \
-        qitensor.superop, \
-        qitensor.group, \
-        qitensor.sympybasefield, \
-        qitensor.experimental.cartan_decompose, \
-        qitensor.experimental.cartan_decompose_impl, \
-        qitensor.experimental.stabilizers, \
+    doctest_modules = [
+        qitensor.array,
+        qitensor.arrayformatter,
+        qitensor.atom,
+        qitensor.basefield,
+        qitensor.circuit,
+        qitensor.exceptions,
+        qitensor.factory,
+        qitensor.space,
+        qitensor.subspace,
+        qitensor.superop,
+        qitensor.group,
+        qitensor.sympybasefield,
+        qitensor.experimental.cartan_decompose,
+        qitensor.experimental.cartan_decompose_impl,
+        qitensor.experimental.stabilizers,
         # Doctests are too slow:
-        #qitensor.experimental.noncommgraph, \
+        #qitensor.experimental.noncommgraph,
     ]
 
     print("\nRunning doctests...")

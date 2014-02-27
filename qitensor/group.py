@@ -90,12 +90,12 @@ class DihedralGroup_impl(Group):
         mtab = [[None for i in range(n*2)] for j in range(n*2)]
         for i in range(n):
             for j in range(n):
-                mtab[i  ][j  ] = r[(i+j)%n]
-                mtab[i  ][j+n] = s[(i+j)%n]
-                mtab[i+n][j  ] = s[(i-j)%n]
-                mtab[i+n][j+n] = r[(i-j)%n]
+                mtab[i  ][j  ] = r[(i+j) % n]
+                mtab[i  ][j+n] = s[(i+j) % n]
+                mtab[i+n][j  ] = s[(i-j) % n]
+                mtab[i+n][j+n] = r[(i-j) % n]
 
-        Group.__init__(self, 'S%d'%n, elements, mtab)
+        Group.__init__(self, 'S%d' % n, elements, mtab)
         self.r = self.elements[:n]
         self.s = self.elements[n:]
 

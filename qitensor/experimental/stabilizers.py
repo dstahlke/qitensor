@@ -60,10 +60,10 @@ def make_mostly_diagonal(mat):
     mat = np.array(sorted(mat, key=lambda x: np.argmax(abs(x) > epsilon)))
     return mat
 
-def continuous_stabilizers( \
-    psi, \
-    sl_spaces=[], su_spaces=[], pos_spaces=[], \
-    allow_phase=0, allow_scale=0 \
+def continuous_stabilizers(
+    psi,
+    sl_spaces=[], su_spaces=[], pos_spaces=[],
+    allow_phase=0, allow_scale=0
 ):
     psi.space.assert_ket_space()
 

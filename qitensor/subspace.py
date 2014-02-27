@@ -91,7 +91,7 @@ class TensorSubspace(object):
         # Convert input to an nparray of numbers (as opposed to a list of nparrays or a list of
         # HilbertArrays.
         def to_nparray(l):
-            return np.array([ x.nparray if isinstance(x, HilbertArray) else x \
+            return np.array([ x.nparray if isinstance(x, HilbertArray) else x
                     for x in l ], dtype=dtype)
         basis = to_nparray(basis)
         perp_basis = to_nparray(perp_basis)
@@ -158,12 +158,12 @@ class TensorSubspace(object):
         """
 
         return _unreduce_v1, (
-                self._basis,
-                self._perp_basis,
-                self._tol,
-                self._hilb_space,
-                self._dtype,
-                )
+            self._basis,
+            self._perp_basis,
+            self._tol,
+            self._hilb_space,
+            self._dtype,
+            )
 
     @classmethod
     def from_span(cls, X, tol=1e-10, hilb_space=None, dtype=None):

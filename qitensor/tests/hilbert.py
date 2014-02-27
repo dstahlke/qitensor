@@ -119,7 +119,7 @@ class HilbertOperTests(unittest.TestCase):
         # Spaces are not the same, but are the same size.  This is okay.
         (self.Ha.H * self.Hb).eye()
         self.assertRaises(HilbertShapeError, lambda: (self.Ha.H * self.Hx).eye())
-        
+
     def testInverse(self):
         H = self.Ha * self.Hx
         H2 = H * H.H
@@ -130,7 +130,7 @@ class HilbertOperTests(unittest.TestCase):
                 self.failUnless( (M*MI - H2.eye()).norm() < self.epsilon )
                 self.failUnless( (MI*M - H2.eye()).norm() < self.epsilon )
                 self.failUnless( abs(M.det() * MI.det() - 1) < self.epsilon )
-        
+
     def testTranspose(self):
         Ha = self.Ha
         Hb = self.Hb

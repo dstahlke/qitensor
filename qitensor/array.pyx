@@ -546,10 +546,10 @@ cdef class HilbertArray:
           atom is done using the same alphabetical sorting that is used when
           displaying the name of the space.  In this case, the other two ways of
           calling relabel would probably be clearer.
-        * You can pass a pair of tuples of HilbertAtoms.  In this case the first
+        * You can pass a pair of tuples of HilbertSpaces.  In this case the first
           space from the first list gets renamed to the first space from the second
           list, and so on.
-        * You can pass a dictionary of HilbertAtoms of the form {from_atom => to_atom, ...}.
+        * You can pass a dictionary of HilbertSpaces of the form {from_atom => to_atom, ...}.
 
         FIXME - does it return a view? should it?
 
@@ -591,7 +591,11 @@ cdef class HilbertArray:
         True
         >>> z == z1.relabel({ha.H: ha, hc.prime: hc.H})
         True
+        >>> z.relabel({ hb.H*hc.H: ha.H*hb.H }) == z.relabel({ hb.H: ha.H, hc.H: hb.H })
+        True
         """
+
+        ### Turn input into a mapping
 
         if isinstance(from_spaces, HilbertSpace):
             from_spaces = (from_spaces, )
@@ -607,19 +611,49 @@ cdef class HilbertArray:
             from_spaces = list(from_spaces)
             to_spaces = list(to_spaces)
 
+            for (a, b) in zip(from_spaces, to_spaces):
+                if not isinstance(a, HilbertSpace) or not isinstance(b, HilbertSpace):
+                    raise HilbertError("expected a HilbertSpace")
+                if a.dim() != b.dim():
+                    # dimension will be checked again below, but this guards against inputs
+                    # like ((a*b,c), (x,y*z)).
+                    raise HilbertShapeError(a.dim(), b.dim())
+
             from_spaces = HilbertSpace._expand_list_to_atoms(from_spaces)
             to_spaces   = HilbertSpace._expand_list_to_atoms(to_spaces)
 
-            assert len(from_spaces) == len(to_spaces)
+            if len(from_spaces) != len(to_spaces):
+                raise MismatchedSpaceError("Number of spaces does not match")
+
             HilbertSpace._assert_nodup_space(from_spaces, "an input space was listed twice")
             HilbertSpace._assert_nodup_space(to_spaces, "an output space was listed twice")
             mapping = dict(zip(from_spaces, to_spaces))
+
+        ### Split up any HilbertSpace in the mapping into HilbertAtoms
+
+        m2 = {}
+        for (k,v) in mapping.items():
+            if not isinstance(k, HilbertSpace) or not isinstance(v, HilbertSpace):
+                raise HilbertError("expected a HilbertSpace")
+            atoms_k = sorted(k.ket_set) + sorted(k.bra_set)
+            atoms_v = sorted(v.ket_set) + sorted(v.bra_set)
+            if len(atoms_k) != len(atoms_v):
+                raise MismatchedSpaceError("Number of spaces does not match")
+            for (ak,av) in zip(atoms_k, atoms_v):
+                m2[ak] = av
+        mapping = m2
+
+        ### Validate
 
         for (k,v) in mapping.items():
             assert isinstance(k, HilbertAtom)
             assert isinstance(v, HilbertAtom)
             if not k in self.space.bra_ket_set:
                 raise MismatchedSpaceError("not in input space: "+repr(k))
+            if k.dim() != v.dim():
+                raise HilbertShapeError(k.dim(), v.dim())
+
+        ### Produce the result
 
         xlate_list = [ mapping[x] if x in mapping else x for x in self.axes ]
         HilbertSpace._assert_nodup_space(xlate_list, "relabling would cause a duplicated space")

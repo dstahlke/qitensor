@@ -726,12 +726,12 @@ class NoncommutativeGraph(object):
                 err = {}
 
                 # Test the primal solution
-                err['T + I \ot rho'] = linalg.norm(T + I_rho - T_plus_Irho)
+                err[r'T + I \ot rho'] = linalg.norm(T + I_rho - T_plus_Irho)
                 err['primal value'] = abs(t - T_plus_Irho.trace(axis1=0, axis2=1).trace(axis1=0, axis2=1))
 
                 for mat in self.S_basis:
                     dp = np.tensordot(T, mat.conj(), axes=[[0, 2], [0, 1]])
-                    err['T in S^\perp \ot S^\perp'] = linalg.norm(dp)
+                    err[r'T in S^\perp \ot \bar{S}^\perp'] = linalg.norm(dp)
 
                 err['T_plus_Irho PSD'] = check_psd(T_plus_Irho.reshape(n**2, n**2))
                 err['Tr(rho)'] = abs(np.trace(rho) - 1)
@@ -750,7 +750,7 @@ class NoncommutativeGraph(object):
                         xy = np.tensordot(matA, matB.conj(), axes=([],[])).transpose((0, 2, 1, 3))
                         dp = np.tensordot(Y+L_sum-X, xy.conj(), axes=4)
                         err_Y_space += abs(dp)
-                err['Y+L-X in S \djp S'] = err_Y_space
+                err[r'Y+L-X in S \djp \bar{S}'] = err_Y_space
 
                 for (i, (v, L)) in enumerate(zip(cones, L_list)):
                     M = v['R'](L) - v['0']
@@ -832,7 +832,8 @@ class NoncommutativeGraph(object):
 def test_schrijver():
     ha = qudit('a', 3)
     np.random.seed(3)
-    G = NoncommutativeGraph.random(ha, 3)
+    S = TensorSubspace.create_random_hermitian(ha, 5, tracefree=True).perp()
+    G = NoncommutativeGraph(S)
 
     cvxopt.solvers.options['show_progress'] = False
     cvxopt.solvers.options['abstol'] = float(1e-8)
@@ -843,43 +844,52 @@ def test_schrijver():
         print('--- Schrijver with', cone)
         info = G.schrijver(cone, True)
         print('t =', info['t'])
-        ret = check_schrijver_solution(G, cone, *[ info[x] for x in 'ha,hb,t,rho,T,Y,L_map,X'.split(',') ])
+        (tp, errp) = check_schrijver_primal(S, cone, *[ info[x] for x in 'ha,hb,rho,T'.split(',') ], report=True)
+        (td, errd) = check_schrijver_dual(S, cone, *[ info[x] for x in 'ha,hb,Y,L_map,X'.split(',') ], report=True)
+        print('duality gap:', td-tp)
 
-    info.update(ret) # FIXME
     return info
 
-def check_schrijver_solution(G, cones, ha, hb, t, rho, T, Y, L_map, X):
+def check_schrijver_primal(S, cones, ha, hb, rho, T, report=False):
     r"""
-    Verify Schrijver solution.
-
-    # FIXME - conj on second S
+    Verify Schrijver primal solution.
+    Returns ``(t, err)`` where ``t`` is the value and ``err`` is the amount by which
+    feasibility constrains are violated.
 
     t = max <\Phi|T + I \ot \rho|\Phi> s.t.
         \rho \succeq 0, \Tr(\rho)=1
         T + I \ot \rho \succeq 0
-        T \in S^\perp \ot S^\perp
+        T \in S^\perp \ot \bar{S}^\perp
         T^\ddag = T
         R(T) \in cones
+    """
+
+    return _checking_routine(S, cones, ha, hb, { 'schrijver_primal': (rho, T) }, report)
+
+def check_schrijver_dual(S, cones, ha, hb, Y, L_map, X, report=False):
+    r"""
+    Verify Schrijver dual solution.
+    Returns ``(t, err)`` where ``t`` is the value and ``err`` is the amount by which
+    feasibility constrains are violated.
+
+    FIXME - and L=L^\dag?
 
     t = min ||Tr_A(Y)|| s.t.
         Y \succeq |\Phi><\Phi|
-        Y+L-X \in S \djp S
+        Y+L-X \in S \djp \bar{S}
         R(L) \in cones^*
         X^\ddag = -X
         X^\dag = X
     """
 
-    cones = G._get_cone_set(cones)
-    cone_names = frozenset(C['name'] for C in cones)
+    return _checking_routine(S, cones, ha, hb, { 'schrijver_dual': (Y, L_map, X) }, report)
 
-    assert G.S._hilb_space == ha.O
-    assert rho.space == hb.O
-    assert T.space == (ha*hb).O
-    assert Y.space == (ha*hb).O
-    for L in L_map.values():
-        assert L.space == (ha*hb).O
-    assert X.space == (ha*hb).O
-    assert L_map.keys() == cone_names
+def _checking_routine(S, cones, ha, hb, task, report):
+    assert S._hilb_space == ha.O
+    ncg = NoncommutativeGraph(S)
+
+    cones = ncg._get_cone_set(cones)
+    cone_names = frozenset(C['name'] for C in cones)
 
     def R(x):
         return x.relabel({ hb: ha.H, ha.H: hb })
@@ -889,7 +899,6 @@ def check_schrijver_solution(G, cones, ha, hb, t, rho, T, Y, L_map, X):
         assert (ret - R(R(x).H)).norm() < 1e-12
         return ret
 
-    S = G.S
     Sb = S.map(lambda x: x.relabel({ ha: hb, ha.H: hb.H }).conj())
 
     Phi = ha.eye().relabel({ ha.H: hb })
@@ -897,60 +906,65 @@ def check_schrijver_solution(G, cones, ha, hb, t, rho, T, Y, L_map, X):
 
     err = {}
 
-    ### Verify primal
+    if 'schrijver_primal' in task:
+        (rho, T) = task['schrijver_primal']
 
-    err[r'primal val'] = abs(t - (1 + Phi.H * T * Phi))
-    err[r'trace(rho)'] = abs(1 - rho.trace())
-    err[r'rho PSD'] = check_psd(rho)
-    err[r'T + I \ot rho PSD'] = check_psd(T + ha.eye()*rho)
-    err[r'T^\ddag - T'] = (T - ddag(T)).norm()
+        assert rho.space == hb.O
+        assert T.space == (ha*hb).O
+        val = 1 + (Phi.H * T * Phi).real
+        err[r'trace(rho)'] = abs(1 - rho.trace())
+        err[r'rho PSD'] = check_psd(rho)
+        err[r'T + I \ot rho PSD'] = check_psd(T + ha.eye()*rho)
+        err[r'T^\ddag - T'] = (T - ddag(T)).norm()
 
-    for C in cone_names:
-        if C == 'psd':
-            err[r'T_PSD'] = check_psd(R(T))
-        elif C == 'ppt':
-            err[r'T_PPT'] = check_psd(R(T).transpose(ha))
-        else:
-            assert 0
+        for C in cone_names:
+            if C == 'psd':
+                err[r'T_PSD'] = check_psd(R(T))
+            elif C == 'ppt':
+                err[r'T_PPT'] = check_psd(R(T).transpose(ha))
+            else:
+                assert 0
 
-    Sp_ot_Sp = S.perp() * Sb.perp()
-    err['T \in S^\perp \ot S^\perp'] = linalg.norm(Sp_ot_Sp.perp().to_basis(T))
+        Sp_ot_Sp = S.perp() * Sb.perp()
+        err[r'T \in S^\perp \ot \bar{S}^\perp'] = linalg.norm(Sp_ot_Sp.perp().to_basis(T))
 
-    ### Verify dual
+    if 'schrijver_dual' in task:
+        (Y, L_map, X) = task['schrijver_dual']
 
-    err[r'dual val'] = abs(t - Y.trace(ha).eigvalsh()[-1])
-    err[r'Y \succeq J'] = check_psd(Y - J)
+        val = Y.trace(ha).eigvalsh()[-1]
 
-    S_djp_S = S * hb.O.full_space() | ha.O.full_space() * Sb
-    YLX = Y - X
-    if len(cone_names):
-        YLX += np.sum(list(L_map.values()))
-    err['Y+L-X \in S \djp S'] = linalg.norm(S_djp_S.perp().to_basis(YLX))
+        err[r'Y \succeq J'] = check_psd(Y - J)
 
-    for C in cone_names:
-        L = L_map[C]
-        if C == 'psd':
-            err[r'L_PSD'] = check_psd(R(L))
-        elif C == 'ppt':
-            err[r'L_PPT'] = check_psd(R(L).transpose(ha))
-        else:
-            assert 0
+        S_djp_S = S * hb.O.full_space() | ha.O.full_space() * Sb
+        YLX = Y - X
+        if len(cone_names):
+            YLX += np.sum(list(L_map.values()))
+        err[r'Y+L-X \in S \djp \bar{S}'] = linalg.norm(S_djp_S.perp().to_basis(YLX))
 
-    err[r'X^\ddag + X'] = (X + ddag(X)).norm()
-    err[r'X^\dag - X'] = (X - X.H).norm()
+        for C in cone_names:
+            L = L_map[C]
+            if C == 'psd':
+                err[r'L_PSD'] = check_psd(R(L))
+            elif C == 'ppt':
+                err[r'L_PPT'] = check_psd(R(L).transpose(ha))
+            else:
+                assert 0
+
+        err[r'X^\ddag + X'] = (X + ddag(X)).norm()
+        err[r'X^\dag - X'] = (X - X.H).norm()
 
     ### Tally and report
 
     assert min(err.values()) >= 0
 
-    for (k, v) in err.items():
-        if v > 1e-7:
-            print('err[%s] = %g' % (k, v))
+    if report:
+        for (k, v) in err.items():
+            if v > 1e-7:
+                print('err[%s] = %g' % (k, v))
 
-    print('total err:', sum(err.values()))
+        print('total err:', sum(err.values()))
 
-    # FIXME
-    return locals()
+    return (val, err)
 
 #if __name__ == "__main__":
 #    cvxopt.solvers.options['show_progress'] = False

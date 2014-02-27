@@ -247,22 +247,12 @@ class NoncommutativeGraph(object):
     @classmethod
     def random(cls, spc, num_seeds):
         if isinstance(spc, HilbertSpace):
-            spc.assert_ket_space()
             n = spc.dim()
         else:
-            assert isinstance(spc, int)
             n = spc
-            spc = None
-
-        S = TensorSubspace.from_span([ np.eye(n, dtype=complex) ])
-        for i in range(num_seeds):
-            M = np.random.standard_normal(size=(n,n)) + \
-                np.random.standard_normal(size=(n,n))*1j
-            S |= TensorSubspace.from_span([ M + M.conj().T ])
-
-        if spc is not None:
-            S = S.map(lambda x: spc.O.array(x, reshape=True))
-
+        Sp = TensorSubspace.create_random_hermitian(spc, n**2 - num_seeds - 1, tracefree=True)
+        S = Sp.perp()
+        assert S.dim() == num_seeds+1
         return NoncommutativeGraph(S)
 
     def _get_S_ot_L_basis(self, Sb):
@@ -627,6 +617,8 @@ class NoncommutativeGraph(object):
         quantities are returned (such as the optimal Y operator).
         """
 
+        # FIXME - test with S being full-space
+
         cones = self._get_cone_set(cones)
 
         for C in cones:
@@ -777,15 +769,19 @@ class NoncommutativeGraph(object):
                         print('WARRNING: err[%s] = %g' % (k, v))
 
             if long_return:
+                L_map = { C['name']: L for (C, L) in zip(cones, L_list) }
                 if self.S._hilb_space is not None:
                     ha = self.S._hilb_space.ket_space()
                     hb = ha.prime # FIXME - what if ha=|a,a'>
-                rho = hb.O.array(rho)
-                T = (ha*hb).O.array(T)
-                Y = (ha*hb).O.array(Y)
-                L_map = { C['name']: (ha*hb).O.array(L) for (C, L) in zip(cones, L_list) }
-                #L_sum = (ha*hb).O.array(L_sum)
-                X = (ha*hb).O.array(X)
+                    rho = hb.O.array(rho, reshape=True)
+                    T = (ha*hb).O.array(T, reshape=True)
+                    Y = (ha*hb).O.array(Y, reshape=True)
+                    L_map = { k: (ha*hb).O.array(L_map[k], reshape=True) for k in L_map.keys() }
+                    #L_sum = (ha*hb).O.array(L_sum, reshape=True)
+                    X = (ha*hb).O.array(X, reshape=True)
+                else:
+                    ha = None
+                    hb = None
                 #return locals()
                 ret = {}
                 for key in [

@@ -152,7 +152,7 @@ class NoncommutativeGraph(object):
 
         self.cond_psd = {
             'name': 'psd',
-            'basis': self.full_basis_dh,
+            'basis': self.full_basis_dh, # FIXME - still needed?
             'R':  lambda Z: Z.transpose((0,2,1,3)).reshape(n**2, n**2),
             'R*': lambda Z: Z.reshape(n,n,n,n).transpose((0,2,1,3)),
             '0': np.zeros((n**2, n**2), dtype=complex),
@@ -394,7 +394,7 @@ class NoncommutativeGraph(object):
         quantities are returned (such as the optimal Y operator).
         """
 
-        return self.unified_dual(self.Y_basis, [], [], long_return)
+        return self.unified_dual(self.Y_basis, [], long_return)
 
     def szegedy(self, cone, long_return=False):
         """
@@ -420,7 +420,7 @@ class NoncommutativeGraph(object):
             'ppt': [self.cond_ppt],
         }[cone]
 
-        return self.unified_dual(self.Y_basis_dh, v, [], long_return)
+        return self.unified_dual(self.Y_basis_dh, v, long_return)
 
     def get_five_values(self):
         """
@@ -446,15 +446,14 @@ class NoncommutativeGraph(object):
             self.szegedy(True),
         ]
 
-    def unified_dual(self, Y_basis, extra_constraints, extra_vars, long_return=False):
+    def unified_dual(self, Y_basis, extra_constraints, long_return=False):
         """
-        Compute Lovasz/Schrijver/Szegedy type quantities.
+        # FIXME - use for Szegedy only now
 
         min t s.t.
-            tI - Tr_A (Y-Z) \succeq 0
+            tI - Tr_A Y \succeq 0
             Y \in S \ot \mathcal{L}
-            Y-Z \succeq \Phi
-            R(Z) \in \sum( extra_vars )
+            Y \succeq \Phi
             R(Y) \in \cap( extra_constraints )
         """
 
@@ -462,21 +461,13 @@ class NoncommutativeGraph(object):
 
         Yb_len = Y_basis.shape[4]
 
-        # x = [t, Y.A:Si * Y.A':i * Y.A':j, Z]
-        xvec_len = 1 + Yb_len + np.sum([ v['basis'].shape[-1] for v in extra_vars], dtype=int)
+        # x = [t, Y.A:Si * Y.A':i * Y.A':j]
+        xvec_len = 1 + Yb_len
 
         idx = 1
         x_to_Y = np.zeros((n,n,n,n,xvec_len), dtype=complex)
         x_to_Y[:,:,:,:,idx:idx+Yb_len] = Y_basis
         idx += Yb_len
-
-        x_to_Z = []
-        for v in extra_vars:
-            xZ = np.zeros((n,n,n,n,xvec_len), dtype=complex)
-            Zb_len = v['basis'].shape[-1]
-            xZ[:,:,:,:,idx:idx+Zb_len] = v['basis']
-            idx += Zb_len
-            x_to_Z.append(xZ)
 
         assert idx == xvec_len
 
@@ -490,28 +481,15 @@ class NoncommutativeGraph(object):
         c = np.zeros(xvec_len)
         c[0] = 1
 
-        # tI - tr_A{Y-Z} >= 0
+        # tI - tr_A(Y) >= 0
         Fx_1 = -np.trace(x_to_Y, axis1=0, axis2=2)
-        for xZ in x_to_Z:
-            Fx_1 += np.trace(xZ, axis1=0, axis2=2)
         for i in range(n):
             Fx_1[i, i, 0] = 1
         F0_1 = np.zeros((n, n))
 
-        # Y - Z  >=  |phi><phi|
+        # Y  >=  |phi><phi|
         Fx_2 = x_to_Y.reshape(n**2, n**2, xvec_len).copy()
-        for xZ in x_to_Z:
-            Fx_2 -= xZ.reshape(n**2, n**2, xvec_len)
         F0_2 = phi_phi
-
-        Fx_evars = []
-        F0_evars = []
-        for (xZ, v) in zip(x_to_Z, extra_vars):
-            Fx = np.array([ v['R'](z) for z in np.rollaxis(xZ, -1) ], dtype=complex)
-            Fx = np.rollaxis(Fx, 0, len(Fx.shape))
-            F0 = v['0']
-            Fx_evars.append(Fx)
-            F0_evars.append(F0)
 
         Fx_econs = []
         F0_econs = []
@@ -522,8 +500,8 @@ class NoncommutativeGraph(object):
             Fx_econs.append(Fx)
             F0_econs.append(F0)
 
-        Fx_list = [Fx_1, Fx_2] + Fx_evars + Fx_econs
-        F0_list = [F0_1, F0_2] + F0_evars + F0_econs
+        Fx_list = [Fx_1, Fx_2] + Fx_econs
+        F0_list = [F0_1, F0_2] + F0_econs
 
         (xvec, sdp_stats) = call_sdp(c, Fx_list, F0_list)
 
@@ -560,18 +538,9 @@ class NoncommutativeGraph(object):
                     err = check_psd(M)
                     if err > verify_tol: print("WARNING: R(L_%d) err = %g" % (i, err))
 
-                # FIXME - doesn't pass
-                for (i, v) in enumerate(extra_vars):
-                    M = v['R'](T) - v['0']
-                    print('Herm:', linalg.norm(M - M.conj().T))
-                    err = check_psd(M)
-                    if err > verify_tol: print("WARNING: R(T) [%d] err = %g" % (i, err))
-
         if sdp_stats['status'] == 'optimal':
             t = xvec[0]
             Y = np.dot(x_to_Y, xvec)
-            Z_list = [ np.dot(xZ, xvec) for xZ in x_to_Z ]
-            Z_sum = np.sum(Z_list, axis=0)
 
             # Verify primal/dual solution
             verify_tol=1e-7
@@ -579,20 +548,15 @@ class NoncommutativeGraph(object):
                 err = abs(T.trace().trace() + 1 - t)
                 if err > verify_tol: print("WARNING: primal vs dual err =", err)
 
-                err = check_psd((Y-Z_sum).reshape(n**2, n**2) - phi_phi)
+                err = check_psd(Y.reshape(n**2, n**2) - phi_phi)
                 if err > verify_tol: print("WARNING: phi_phi err =", err)
-
-                for (i, (v, Z)) in enumerate(zip(extra_vars, Z_list)):
-                    M = v['R'](Z) - v['0']
-                    err = check_psd(M)
-                    if err > verify_tol: print("WARNING: R(Z_%d) err = %g" % (i, err))
 
                 for (i, v) in enumerate(extra_constraints):
                     M = v['R'](Y) - v['0']
                     err = check_psd(M)
                     if err > verify_tol: print("WARNING: R(Y) [%d] err = %g" %(i, err))
 
-                maxeig = linalg.eigvalsh(np.trace(Y-Z_sum, axis1=0, axis2=2))[-1].real
+                maxeig = linalg.eigvalsh(np.trace(Y, axis1=0, axis2=2))[-1].real
                 err = abs(xvec[0] - maxeig)
                 if err > verify_tol: print("WARNING: t err =", err)
 
@@ -605,8 +569,8 @@ class NoncommutativeGraph(object):
             if long_return:
                 ret = {}
                 for key in [
-                    'n', 'x_to_Y', 'x_to_Z',
-                    'phi_phi', 'c', 't', 'Y', 'Z_list', 'xvec', 'sdp_stats',
+                    'n', 'x_to_Y',
+                    'phi_phi', 'c', 't', 'Y', 'xvec', 'sdp_stats',
                     'T', 'rho', 'T_plus_Irho', 'L_list', 'L_sum',
                 ]:
                     ret[key] = locals()[key]
@@ -648,13 +612,13 @@ class NoncommutativeGraph(object):
         max <\Phi|T + I \ot \rho|\Phi> s.t.
             \rho \succeq 0, \Tr(\rho)=1
             T + I \ot \rho \succeq 0
-            T \in S^\perp \ot S^\perp
+            T \in S^\perp \ot \bar{S}^\perp
             T^\ddag = T
             R(T) \in cones
 
         min ||Tr_A(Y)|| s.t.
             Y \succeq |\Phi><\Phi|
-            Y+L-X \in S \djp S
+            Y+L-X \in S \djp \bar{S}
             R(L) \in cones^*
             X^\ddag = -X
             X^\dag = X
@@ -733,29 +697,24 @@ class NoncommutativeGraph(object):
             for (i, j) in itertools.product(list(range(n)), repeat=2):
                 J[i, i, j, j] = 1
 
-            # FIXME - zs0 appears to always be zero.  But is it ever needed for constructing
-            # the dual solution?
-            zs0 = mat_real_to_cplx(np.array(sdp_stats['zs'][0]))
             Y = J + mat_real_to_cplx(np.array(sdp_stats['zs'][1])).reshape(n,n,n,n)
-            zs_idx = 2
 
             L_list = []
+            zs_idx = 2
             for (i,v) in enumerate(cones):
-                zsi = mat_real_to_cplx(np.array(sdp_stats['zs'][zs_idx]))
+                zsi = mat_real_to_cplx(np.array(sdp_stats['zs'][2+i]))
                 zs_idx += 1
                 L_list.append(v['R*'](zsi))
-            # FIXME - redefined below
-            L_sum = np.sum(L_list, axis=0)
-
             assert zs_idx == len(sdp_stats['zs'])
 
             # cvxopt guarantees the dual to give zero here
+            #zs0 = mat_real_to_cplx(np.array(sdp_stats['zs'][0]))
             #foo = (
             #    np.tensordot(zs0, x_to_rhotf.conj(), axes=2) +
             #    np.tensordot(Y, x_to_sum.conj(), axes=4)
             #)
             #if len(L_list):
-            #    foo += np.tensordot(L_sum, x_to_T.conj(), axes=4)
+            #    foo += np.tensordot(np.sum(L_list, axis=0), x_to_T.conj(), axes=4)
             #print('**', linalg.norm(foo))
 
             # Extract rot-antihermit portion of L and put it in Y.
@@ -820,7 +779,7 @@ class NoncommutativeGraph(object):
             if long_return:
                 if self.S._hilb_space is not None:
                     ha = self.S._hilb_space.ket_space()
-                    hb = ha.prime # FIXME
+                    hb = ha.prime # FIXME - what if ha=|a,a'>
                 rho = hb.O.array(rho)
                 T = (ha*hb).O.array(T)
                 Y = (ha*hb).O.array(Y)
@@ -1068,7 +1027,7 @@ if __name__ == "__main__":
     #    zG_list.append(zG)
     #print(linalg.norm(np.sum(zG_list, axis=0) + c))
 
-    #t_honly = S.unified_dual(S.Y_basis_dh, [], [], False)
+    #t_honly = S.unified_dual(S.Y_basis_dh, [], False)
     #print('hermit only:', t_honly)
 
     #b = S.szegedy(True, long_return=True)

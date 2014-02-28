@@ -1,5 +1,7 @@
 # Noncommutative graphs as defined by Duan, Severini, Winter in arXiv:1002.2514.
 
+from __future__ import print_function, division
+
 import numpy as np
 import scipy.linalg as linalg
 import itertools
@@ -14,17 +16,27 @@ from qitensor.subspace import TensorSubspace
 # This is the only thing that is exported.
 __all__ = ['NoncommutativeGraph']
 
+# Adapted from
+# https://wiki.python.org/moin/PythonDecoratorLibrary#Cached_Properties
+class cached_property(object):
+    def __init__(self, fget, doc=None):
+        self.fget = fget
+        self.__doc__ = doc or fget.__doc__
+        self.__name__ = fget.__name__
+        self.__module__ = fget.__module__
+
+    def __get__(self, obj, objtype):
+        try:
+            cache = obj._cache
+        except AttributeError:
+            cache = obj._cache = {}
+        if not self.__name__ in cache:
+            cache[self.__name__] = self.fget(obj)
+        return cache[self.__name__]
+
 ### Some helper functions for cvxopt ###
 
 def mat_cplx_to_real(cmat):
-    #rmat = np.zeros((2, cmat.shape[0], 2, cmat.shape[1]))
-    #rmat[0, :, 0, :] = cmat.real
-    #rmat[1, :, 1, :] = cmat.real
-    #rmat[0, :, 1, :] = -cmat.imag
-    #rmat[1, :, 0, :] = cmat.imag
-    ## preserve the norm
-    #rmat /= np.sqrt(2)
-    #return rmat.reshape(cmat.shape[0]*2, cmat.shape[1]*2)
     return np.bmat([[cmat.real, -cmat.imag], [cmat.imag, cmat.real]]) / np.sqrt(2)
 
 def mat_real_to_cplx(rmat):
@@ -139,28 +151,14 @@ class NoncommutativeGraph(object):
         self.S = S
 
         # Make it a space over rank-2 tensors.
-        S_flat = S._op_flatten()
+        S_flat = self.S_flat = S._op_flatten()
         assert S_flat._col_shp[0] == S_flat._col_shp[1]
         n = self.n = S_flat._col_shp[0]
 
-        self.S_basis  = np.array(S_flat.hermitian_basis()) \
-                if S_flat.dim() else np.zeros((0, n, n), dtype=complex)
-        self.Sp_basis = np.array(S_flat.perp().hermitian_basis()) \
-                if S_flat.perp().dim() else np.zeros((0, n, n), dtype=complex)
-        assert len(self.S_basis.shape) == 3
-        assert len(self.Sp_basis.shape) == 3
-
         assert np.eye(n) in S_flat
-
-        self.Y_basis = self._get_S_ot_L_basis(self.S_basis)
-        self.Y_basis_dh = self._basis_doubly_hermit(self.S_basis)
-        self.T_basis = self._get_S_ot_L_basis(self.Sp_basis)
-        self.T_basis_dh = self._basis_doubly_hermit(self.Sp_basis)
-        self.full_basis_dh = self._basis_doubly_hermit(TensorSubspace.full((n,n)).hermitian_basis())
 
         self.cond_psd = {
             'name': 'psd',
-            'basis': self.full_basis_dh, # FIXME - still needed?
             'R':  lambda Z: Z.transpose((0,2,1,3)).reshape(n**2, n**2),
             'R*': lambda Z: Z.reshape(n,n,n,n).transpose((0,2,1,3)),
             '0': np.zeros((n**2, n**2), dtype=complex),
@@ -168,7 +166,6 @@ class NoncommutativeGraph(object):
 
         self.cond_ppt = {
             'name': 'ppt',
-            'basis': self.full_basis_dh,
             'R':  lambda Z: Z.transpose((1,2,0,3)).reshape(n**2, n**2),
             'R*': lambda Z: Z.reshape(n,n,n,n).transpose((2,0,1,3)),
             '0': np.zeros((n**2, n**2), dtype=complex),
@@ -178,6 +175,40 @@ class NoncommutativeGraph(object):
             m = np.random.random((n**2, n**2))
             m2 = c['R'](c['R*'](m))
             assert linalg.norm(m-m2) < 1e-10
+
+    @cached_property
+    def S_basis(self):
+        ret = np.array(self.S_flat.hermitian_basis()) \
+            if self.S_flat.dim() else np.zeros((0, self.n, self.n), dtype=complex)
+        assert len(ret.shape) == 3
+        return ret
+
+    @cached_property
+    def Sp_basis(self):
+        ret = np.array(self.S_flat.perp().hermitian_basis()) \
+            if self.S_flat.perp().dim() else np.zeros((0, self.n, self.n), dtype=complex)
+        assert len(ret.shape) == 3
+        return ret
+
+    @cached_property
+    def Y_basis(self):
+        self.Y_basis = self._get_S_ot_L_basis(self.S_basis)
+
+    @cached_property
+    def Y_basis_dh(self):
+        return self._basis_doubly_hermit(self.S_basis)
+
+    @cached_property
+    def T_basis(self):
+        return self._get_S_ot_L_basis(self.Sp_basis)
+
+    @cached_property
+    def T_basis_dh(self):
+        return self._basis_doubly_hermit(self.Sp_basis)
+
+    @cached_property
+    def full_basis_dh(self):
+        return self._basis_doubly_hermit(TensorSubspace.full((self.n, self.n)).hermitian_basis())
 
     def __str__(self):
         return '<NoncommutativeGraph of '+self.S._str_inner()+'>'
@@ -252,6 +283,7 @@ class NoncommutativeGraph(object):
         G = cls.from_adjmat(adj_mat)
         return G
 
+    # FIXME - deprecate
     @classmethod
     def random(cls, spc, num_seeds):
         if isinstance(spc, HilbertSpace):
@@ -436,6 +468,7 @@ class NoncommutativeGraph(object):
         (nS, n, _n) = self.S_basis.shape
         assert n == _n
 
+        # FIXME
         return [
             self.schrijver(True),
             self.schrijver(False),
@@ -912,6 +945,13 @@ def _checking_routine(S, cones, ha, hb, task, report):
     Phi = ha.eye().relabel({ ha.H: hb })
     J = Phi.O
 
+    def proj_Sp_ot_Sp(x):
+        ret = (ha*hb).O.array()
+        for pa in S.perp():
+            foo = (x * pa.H).trace(ha)
+            ret += pa * Sb.perp().project(foo)
+        return ret
+
     err = {}
 
     if 'schrijver_primal' in task:
@@ -933,8 +973,11 @@ def _checking_routine(S, cones, ha, hb, task, report):
             else:
                 assert 0
 
-        Sp_ot_Sp = S.perp() * Sb.perp()
-        err[r'T \in S^\perp \ot \bar{S}^\perp'] = linalg.norm(Sp_ot_Sp.perp().to_basis(T))
+        # Slow
+        #Sp_ot_Sp = S.perp() * Sb.perp()
+        #err[r'T \in S^\perp \ot \bar{S}^\perp'] = linalg.norm(Sp_ot_Sp.perp().to_basis(T))
+        # Faster
+        err[r'T \in S^\perp \ot \bar{S}^\perp'] = (T - proj_Sp_ot_Sp(T)).norm()
 
     if 'schrijver_dual' in task:
         (Y, L_map, X) = task['schrijver_dual']
@@ -943,11 +986,15 @@ def _checking_routine(S, cones, ha, hb, task, report):
 
         err[r'Y \succeq J'] = check_psd(Y - J)
 
-        S_djp_S = S * hb.O.full_space() | ha.O.full_space() * Sb
         YLX = Y - X
         if len(cone_names):
             YLX += np.sum(list(L_map.values()))
-        err[r'Y+L-X \in S \djp \bar{S}'] = linalg.norm(S_djp_S.perp().to_basis(YLX))
+
+        # Slow
+        #S_djp_S = S * hb.O.full_space() | ha.O.full_space() * Sb
+        #err[r'Y+L-X \in S \djp \bar{S}'] = linalg.norm(S_djp_S.perp().to_basis(YLX))
+        # Faster
+        err[r'T \in S^\perp \ot \bar{S}^\perp'] = proj_Sp_ot_Sp(YLX).norm()
 
         for C in cone_names:
             L = L_map[C]

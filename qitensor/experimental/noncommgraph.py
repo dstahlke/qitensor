@@ -83,11 +83,9 @@ def call_sdp(c, Fx_list, F0_list):
         for i in range(Fx.shape[2]):
             assert linalg.norm(Fx[:,:,i] - Fx[:,:,i].conj().T) < 1e-10
 
-    # Note: Fx and F0 must be negated when passed to cvxopt.sdp.
-    # FIXME - move this negation outwards, to avoid confusion
     (Fx_list, F0_list) = make_F_real(Fx_list, F0_list)
-    Gs = [cvxopt.base.matrix(-Fx.reshape(Fx.shape[0]**2, Fx.shape[2])) for Fx in Fx_list]
-    hs = [cvxopt.base.matrix(-F0) for F0 in F0_list]
+    Gs = [cvxopt.base.matrix(Fx.reshape(Fx.shape[0]**2, Fx.shape[2])) for Fx in Fx_list]
+    hs = [cvxopt.base.matrix(F0) for F0 in F0_list]
 
     sol = cvxopt.solvers.sdp(cvxopt.base.matrix(c), Gs=Gs, hs=hs)
     xvec = np.array(sol['x']).flatten()
@@ -513,21 +511,21 @@ class NoncommutativeGraph(object):
         c[0] = 1
 
         # tI - tr_A(Y) >= 0
-        Fx_1 = -np.trace(x_to_Y, axis1=0, axis2=2)
+        Fx_1 = np.trace(x_to_Y, axis1=0, axis2=2)
         for i in range(n):
-            Fx_1[i, i, 0] = 1
+            Fx_1[i, i, 0] = -1
         F0_1 = np.zeros((n, n))
 
         # Y  >=  |phi><phi|
-        Fx_2 = x_to_Y.reshape(n**2, n**2, xvec_len).copy()
-        F0_2 = phi_phi
+        Fx_2 = -x_to_Y.reshape(n**2, n**2, xvec_len).copy()
+        F0_2 = -phi_phi
 
         Fx_econs = []
         F0_econs = []
         for v in extra_constraints:
-            Fx = np.array([ v['R'](y) for y in np.rollaxis(x_to_Y, -1) ], dtype=complex)
+            Fx = -np.array([ v['R'](y) for y in np.rollaxis(x_to_Y, -1) ], dtype=complex)
             Fx = np.rollaxis(Fx, 0, len(Fx.shape))
-            F0 = v['0']
+            F0 = -v['0']
             Fx_econs.append(Fx)
             F0_econs.append(F0)
 
@@ -540,7 +538,6 @@ class NoncommutativeGraph(object):
             rho = mat_real_to_cplx(np.array(sdp_stats['zs'][0]))
             I_ot_rho = np.tensordot(np.eye(n), rho, axes=0).transpose(0,2,1,3)
             zs1 = mat_real_to_cplx(np.array(sdp_stats['zs'][1])).reshape(n,n,n,n)
-            # FIXME - aren't Fx_evars before Fx_econs?
             L_list = []
             for (i,v) in enumerate(extra_constraints):
                 zsi = mat_real_to_cplx(np.array(sdp_stats['zs'][2+i]))
@@ -649,7 +646,7 @@ class NoncommutativeGraph(object):
 
         min ||Tr_A(Y)|| s.t.
             Y \succeq |\Phi><\Phi|
-            Y+L-X \in S \djp \bar{S}
+            Y+(L+L^\dag)-X \in S \djp \bar{S}
             R(L) \in cones^*
             X^\ddag = -X
             X^\dag = X
@@ -694,23 +691,23 @@ class NoncommutativeGraph(object):
                 np.tensordot(np.eye(n), x_to_rhotf, axes=0).transpose((0,2,1,3,4))
 
         # rho \succeq 0
-        Fx_1 = x_to_rhotf
-        F0_1 = -np.eye(n)/n
+        Fx_1 = -x_to_rhotf
+        F0_1 = np.eye(n)/n
 
         # T + I \ot rho \succeq 0
-        Fx_2 = x_to_sum.reshape(n**2, n**2, xvec_len)
+        Fx_2 = -x_to_sum.reshape(n**2, n**2, xvec_len)
         for i in range(Fx_2.shape[2]):
             assert linalg.norm(Fx_2[:,:,i] - Fx_2[:,:,i].conj().T) < 1e-10
-        F0_2 = -np.eye(n**2)/n
+        F0_2 = np.eye(n**2)/n
 
         c = -np.trace(np.trace(x_to_sum)).real
 
         Fx_econs = []
         F0_econs = []
         for v in cones:
-            Fx = np.array([ v['R'](y) for y in np.rollaxis(x_to_T, -1) ], dtype=complex)
+            Fx = -np.array([ v['R'](y) for y in np.rollaxis(x_to_T, -1) ], dtype=complex)
             Fx = np.rollaxis(Fx, 0, len(Fx.shape))
-            F0 = v['0']
+            F0 = -v['0']
             Fx_econs.append(Fx)
             F0_econs.append(F0)
 
@@ -737,7 +734,9 @@ class NoncommutativeGraph(object):
             for (i,v) in enumerate(cones):
                 zsi = mat_real_to_cplx(np.array(sdp_stats['zs'][2+i]))
                 zs_idx += 1
-                L_list.append(v['R*'](zsi))
+                # over 2 because we will later do L+L^\dag
+                L = v['R*'](zsi) / 2
+                L_list.append(L)
             assert zs_idx == len(sdp_stats['zs'])
 
             # cvxopt guarantees the dual to give zero here
@@ -750,16 +749,7 @@ class NoncommutativeGraph(object):
             #    foo += np.tensordot(np.sum(L_list, axis=0), x_to_T.conj(), axes=4)
             #print('**', linalg.norm(foo))
 
-            # Extract rot-antihermit portion of L and put it in Y.
             # Copy rot-antihermit portion of Y to X.
-            Ldh_list = [ project_dh(L) for L in L_list ]
-            if len(L_list):
-                L_slop = np.sum(Ldh_list, axis=0) - np.sum(L_list, axis=0)
-                # FIXME - needed rarely.  Only valid if cone is doubly hermit.
-                L_slop = (L_slop + L_slop.transpose(2,3,0,1).conj()) / 2
-                Y += L_slop
-            L_list = Ldh_list
-            L_sum = np.sum(L_list, axis=0)
             X = Y - project_dh(Y)
 
             verify_tol=1e-7
@@ -789,7 +779,12 @@ class NoncommutativeGraph(object):
                 for matA in self.Sp_basis:
                     for matB in self.Sp_basis:
                         xy = np.tensordot(matA, matB.conj(), axes=([],[])).transpose((0, 2, 1, 3))
-                        dp = np.tensordot(Y+L_sum-X, xy.conj(), axes=4)
+                        YLX = Y-X
+                        if len(L_list):
+                            L_sum = np.sum(L_list, axis=0)
+                            L_sum = L_sum + L_sum.transpose(2,3,0,1).conj()
+                            YLX += L_sum
+                        dp = np.tensordot(YLX, xy.conj(), axes=4)
                         err_Y_space += abs(dp)
                 err[r'Y+L-X in S \djp \bar{S}'] = err_Y_space
 
@@ -799,8 +794,6 @@ class NoncommutativeGraph(object):
 
                 err['Y-J PSD'] = check_psd((Y-J).reshape(n*n, n*n))
 
-                # FIXME - is X guaranteed Hermitian?
-                # Should I require the cones to be doubly hermit?
                 err['X - X.H'] = linalg.norm(X - X.transpose(2,3,0,1).conj())
                 err['X + X^ddag'] = linalg.norm(X + X.transpose(1,0,3,2).conj())
 
@@ -818,7 +811,6 @@ class NoncommutativeGraph(object):
                     T = (ha*hb).O.array(T, reshape=True)
                     Y = (ha*hb).O.array(Y, reshape=True)
                     L_map = { k: (ha*hb).O.array(L_map[k], reshape=True) for k in L_map.keys() }
-                    #L_sum = (ha*hb).O.array(L_sum, reshape=True)
                     X = (ha*hb).O.array(X, reshape=True)
                 else:
                     ha = None
@@ -870,10 +862,34 @@ class NoncommutativeGraph(object):
 
 ### Validation code ####################
 
-def test_schrijver():
-    ha = qudit('a', 3)
-    np.random.seed(3)
-    S = TensorSubspace.create_random_hermitian(ha, 5, tracefree=True).perp()
+def test_schrijver(dA=3, dS=5, seed=1):
+    """
+    >>> test_schrijver(3, 5, 1)
+    --- Schrijver with hermit
+    t = 3.31460511605
+    total err: 6.40497175329e-16
+    total err: 3.95143932875e-15
+    duality gap: 3.51548878896e-09
+    --- Schrijver with psd
+    t = 3.31460511899
+    total err: 9.52374539775e-10
+    total err: 2.0912092081e-09
+    duality gap: 2.17725570906e-09
+    --- Schrijver with ppt
+    t = 2.42819820943
+    total err: 1.11928504243e-10
+    total err: 2.07485612315e-10
+    duality gap: -1.67085012492e-10
+    --- Schrijver with psd&ppt
+    t = 2.42819821122
+    total err: 1.90901022447e-10
+    total err: 5.81738926097e-10
+    duality gap: -1.90005344791e-10
+    """
+
+    ha = qudit('a', dA)
+    np.random.seed(seed)
+    S = TensorSubspace.create_random_hermitian(ha, dS, tracefree=True).perp()
     G = NoncommutativeGraph(S)
 
     cvxopt.solvers.options['show_progress'] = False
@@ -896,13 +912,6 @@ def check_schrijver_primal(S, cones, ha, hb, rho, T, report=False):
     Verify Schrijver primal solution.
     Returns ``(t, err)`` where ``t`` is the value and ``err`` is the amount by which
     feasibility constrains are violated.
-
-    t = max <\Phi|T + I \ot \rho|\Phi> s.t.
-        \rho \succeq 0, \Tr(\rho)=1
-        T + I \ot \rho \succeq 0
-        T \in S^\perp \ot \bar{S}^\perp
-        T^\ddag = T
-        R(T) \in cones
     """
 
     return _checking_routine(S, cones, ha, hb, { 'schrijver_primal': (rho, T) }, report)
@@ -912,15 +921,6 @@ def check_schrijver_dual(S, cones, ha, hb, Y, L_map, X, report=False):
     Verify Schrijver dual solution.
     Returns ``(t, err)`` where ``t`` is the value and ``err`` is the amount by which
     feasibility constrains are violated.
-
-    FIXME - and L=L^\dag?
-
-    t = min ||Tr_A(Y)|| s.t.
-        Y \succeq |\Phi><\Phi|
-        Y+L-X \in S \djp \bar{S}
-        R(L) \in cones^*
-        X^\ddag = -X
-        X^\dag = X
     """
 
     return _checking_routine(S, cones, ha, hb, { 'schrijver_dual': (Y, L_map, X) }, report)
@@ -988,7 +988,8 @@ def _checking_routine(S, cones, ha, hb, task, report):
 
         YLX = Y - X
         if len(cone_names):
-            YLX += np.sum(list(L_map.values()))
+            L_sum = np.sum(list(L_map.values()))
+            YLX += L_sum + L_sum.H
 
         # Slow
         #S_djp_S = S * hb.O.full_space() | ha.O.full_space() * Sb

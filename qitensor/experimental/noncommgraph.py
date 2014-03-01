@@ -918,8 +918,8 @@ def test_schrijver(dA=3, dS=5, seed=1):
         print('--- Schrijver with', cone)
         info = G.schrijver(cone, True)
         print('t =', info['t'])
-        (tp, errp) = check_schrijver_primal(S, cone, *[ info[x] for x in 'ha,hb,rho,T'.split(',') ], report=True)
-        (td, errd) = check_schrijver_dual(S, cone, *[ info[x] for x in 'ha,hb,Y,L_map,X'.split(',') ], report=True)
+        (tp, errp) = check_schrijver_primal(S, cone, *[ info[x] for x in 'ha,hb,rho,T'.split(',') ])
+        (td, errd) = check_schrijver_dual(S, cone, *[ info[x] for x in 'ha,hb,Y,L_map,X'.split(',') ])
         print('duality gap:', td-tp)
 
     return info
@@ -940,14 +940,14 @@ def test_szegedy(dA=3, dS=3, seed=2):
         info = G.szegedy(cone, True)
         print('t =', info['t'])
         # FIXME
-        #(tp, errp) = check_szegedy_primal(S, cone, *[ info[x] for x in 'ha,hb,rho,T'.split(',') ], report=True)
-        (td, errd) = check_szegedy_dual(S, cone, *[ info[x] for x in 'ha,hb,Y,L_map,X'.split(',') ], report=True)
+        (tp, errp) = check_szegedy_primal(S, cone, *[ info[x] for x in 'ha,hb,rho,T,L_map,X'.split(',') ])
+        (td, errd) = check_szegedy_dual(S, cone, *[ info[x] for x in 'ha,hb,Y'.split(',') ])
         # FIXME
         #print('duality gap:', td-tp)
 
     return info
 
-def check_schrijver_primal(S, cones, ha, hb, rho, T, report=False):
+def check_schrijver_primal(S, cones, ha, hb, rho, T, report=True):
     r"""
     Verify Schrijver primal solution.
     Returns ``(t, err)`` where ``t`` is the value and ``err`` is the amount by which
@@ -956,7 +956,7 @@ def check_schrijver_primal(S, cones, ha, hb, rho, T, report=False):
 
     return _checking_routine(S, cones, ha, hb, { 'schrijver_primal': (rho, T) }, report)
 
-def check_schrijver_dual(S, cones, ha, hb, Y, L_map, X, report=False):
+def check_schrijver_dual(S, cones, ha, hb, Y, L_map, X, report=True):
     r"""
     Verify Schrijver dual solution.
     Returns ``(t, err)`` where ``t`` is the value and ``err`` is the amount by which
@@ -965,7 +965,16 @@ def check_schrijver_dual(S, cones, ha, hb, Y, L_map, X, report=False):
 
     return _checking_routine(S, cones, ha, hb, { 'schrijver_dual': (Y, L_map, X) }, report)
 
-def check_szegedy_dual(S, cones, ha, hb, Y, L_map, X, report=False):
+def check_szegedy_primal(S, cones, ha, hb, rho, T, L_map, X, report=True):
+    r"""
+    Verify Schrijver primal solution.
+    Returns ``(t, err)`` where ``t`` is the value and ``err`` is the amount by which
+    feasibility constrains are violated.
+    """
+
+    return _checking_routine(S, cones, ha, hb, { 'szegedy_primal': (rho, T, L_map, X) }, report)
+
+def check_szegedy_dual(S, cones, ha, hb, Y, report=True):
     r"""
     Verify Szegedy dual solution.
     Returns ``(t, err)`` where ``t`` is the value and ``err`` is the amount by which
@@ -1051,7 +1060,7 @@ def _checking_routine(S, cones, ha, hb, task, report):
         #S_djp_S = S * hb.O.full_space() | ha.O.full_space() * Sb
         #err[r'Y+L-X \in S \djp \bar{S}'] = linalg.norm(S_djp_S.perp().to_basis(YLX))
         # Faster
-        err[r'T \perp S^\perp \ot \bar{S}^\perp'] = proj_Sp_ot_Sp(YLX).norm()
+        err[r'Y+L-X \perp S^\perp \ot \bar{S}^\perp'] = proj_Sp_ot_Sp(YLX).norm()
 
         for C in cone_names:
             L = L_map[C]
@@ -1064,6 +1073,34 @@ def _checking_routine(S, cones, ha, hb, task, report):
 
         err[r'X^\ddag + X'] = (X + ddag(X)).norm()
         err[r'X^\dag - X'] = (X - X.H).norm()
+
+    if 'szegedy_primal' in task:
+        (rho, T, L_map, X) = task['szegedy_primal']
+
+        # FIXME: wrong/incomplete
+
+        assert rho.space == hb.O
+        assert T.space == (ha*hb).O
+        val = 1 + (Phi.H * T * Phi).real
+        err[r'trace(rho)'] = abs(1 - rho.trace())
+        err[r'rho PSD'] = check_psd(rho)
+        err[r'T + I \ot rho PSD'] = check_psd(T + ha.eye()*rho)
+
+        TLX = T - X
+        if len(cone_names):
+            L_sum = np.sum(list(L_map.values()))
+            TLX += L_sum + L_sum.H
+
+        err[r'T+L-X \in S^\perp \ot \bar{S}^\perp'] = (TLX - proj_Sp_ot_Sp(TLX)).norm()
+
+        for C in cone_names:
+            L = L_map[C]
+            if C == 'psd':
+                err[r'L_PSD'] = check_psd(R(L))
+            elif C == 'ppt':
+                err[r'L_PPT'] = check_psd(R(L).transpose(ha))
+            else:
+                assert 0
 
     if 'szegedy_dual' in task:
         Y = task['szegedy_dual']

@@ -885,9 +885,12 @@ class NoncommutativeGraph(object):
 
 ### Validation code ####################
 
-def test_schrijver(dA=3, dS=5, seed=1):
+def test_schrijver(S):
     """
-    >>> test_schrijver(3, 5, 1)
+    >>> ha = qudit('a', 3)
+    >>> np.random.seed(1)
+    >>> S = TensorSubspace.create_random_hermitian(ha, 5, tracefree=True).perp()
+    >>> test_schrijver(S)
     --- Schrijver with hermit
     t = 3.31460511605
     total err: 6.40497175329e-16
@@ -910,9 +913,6 @@ def test_schrijver(dA=3, dS=5, seed=1):
     duality gap: -1.90005344791e-10
     """
 
-    ha = qudit('a', dA)
-    np.random.seed(seed)
-    S = TensorSubspace.create_random_hermitian(ha, dS, tracefree=True).perp()
     G = NoncommutativeGraph(S)
 
     cvxopt.solvers.options['show_progress'] = False
@@ -930,10 +930,7 @@ def test_schrijver(dA=3, dS=5, seed=1):
 
     return info
 
-def test_szegedy(dA=3, dS=3, seed=2):
-    ha = qudit('a', dA)
-    np.random.seed(seed)
-    S = TensorSubspace.create_random_hermitian(ha, dS, tracefree=True).perp()
+def test_szegedy(S):
     G = NoncommutativeGraph(S)
 
     cvxopt.solvers.options['show_progress'] = False
@@ -1162,8 +1159,11 @@ if __name__ == "__main__":
 #    import doctest
 #    doctest.testmod()
 
-    #locals().update(test_schrijver())
-    locals().update(test_szegedy())
+    ha = qudit('a', 3)
+    np.random.seed(1)
+    S = TensorSubspace.create_random_hermitian(ha, 5, tracefree=True).perp()
+    #locals().update(test_schrijver(S))
+    locals().update(test_szegedy(S))
     #A1 = (X + X.H) / 2
     #A2 = X - A1
     #A11 = (A1 + ddag(A1)) / 2

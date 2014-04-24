@@ -6,6 +6,7 @@ FINISH DOCS
     * ``sage -coverage qitensor/*.py``
 
 BUGS/FEATURES
+    * HTML formatting broken in ipython3 notebook
     * 'assert' doesn't give useful message now that Cython is being used
     * redeclaring HilbertAtom can't change latex label
     * set formatting options on sage examples (including webpage)

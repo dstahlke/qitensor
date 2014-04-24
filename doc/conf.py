@@ -14,13 +14,24 @@
 # serve to show the default.
 
 import sys
+import sysconfig
 import os
 
-# FIXME
-# Sphinx (apparently) won't read *.pyx files, so it is necessary to import the
-# compiled and installed version of the module to be documented.
+# http://stackoverflow.com/a/14369968/1048959
+def distutils_dir_name(dname):
+    """Returns the name of a distutils build directory"""
+    f = "{dirname}.{platform}-{version[0]}.{version[1]}"
+    return f.format(dirname=dname,
+                    platform=sysconfig.get_platform(),
+                    version=sys.version_info)
+
+buildpath = os.path.join('..', 'build', distutils_dir_name('lib'))
+#print(os.path.join(buildpath, 'qitensor', 'array.so'))
+if not os.path.isfile(os.path.join(buildpath, 'qitensor', '__init__.py')):
+    print('Error: you must do "./setup.py build" first.')
+    sys.exit(1)
+sys.path.insert(0, buildpath)
 import qitensor
-#sys.path.insert(0, os.path.abspath('..'))
 
 # this is needed so that the doctests will pass
 import numpy

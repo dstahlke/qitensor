@@ -4,6 +4,9 @@ from distutils.core import setup
 from distutils.core import Command
 from distutils.extension import Extension
 import re
+import sys
+import sysconfig
+import os
 
 # http://stackoverflow.com/a/4515279/1048959
 try:
@@ -24,6 +27,14 @@ cmdclass = { }
 
 ######################################################################
 
+# http://stackoverflow.com/a/14369968/1048959
+def distutils_dir_name(dname):
+    """Returns the name of a distutils build directory"""
+    f = "{dirname}.{platform}-{version[0]}.{version[1]}"
+    return f.format(dirname=dname,
+                    platform=sysconfig.get_platform(),
+                    version=sys.version_info)
+
 # Adapted from sympy
 class test_qitensor(Command):
     """Runs tests."""
@@ -42,16 +53,14 @@ class test_qitensor(Command):
         pass
 
     def run(self):
-        import sys
-        import os
-        # Tests must run on installed module, since the files under the source
-        # tree are all Cythonized.
-        cwd = os.path.abspath('.')
-        if cwd in sys.path:
-            sys.path.remove(cwd)
+        buildpath = os.path.join('build', distutils_dir_name('lib'))
+        if not os.path.isfile(os.path.join(buildpath, 'qitensor', '__init__.py')):
+            print('Error: you must do "./setup.py build" first.')
+            sys.exit(1)
+        sys.path.insert(0, buildpath)
 
         import numpy
-        numpy.set_printoptions(precision = 6, suppress = True)
+        numpy.set_printoptions(precision=6, suppress=True)
 
         import qitensor
         qitensor.doctest()
@@ -77,7 +86,7 @@ if use_cython:
     cmdclass.update({'build_ext': build_ext})
 
     ext_modules += [
-        Extension("qitensor."+s, ["qitensor/"+s+".pyx"]) \
+        Extension("qitensor."+s, ["qitensor/"+s+".pyx"])
         for s in ext_names
     ]
 
@@ -97,7 +106,7 @@ if use_cython:
         ]
 else: # no cython
     ext_modules += [
-        Extension("qitensor."+s, ["qitensor/"+s+".c"]) \
+        Extension("qitensor."+s, ["qitensor/"+s+".c"])
         for s in ext_names
     ]
 
@@ -108,15 +117,15 @@ else: # no cython
 ######################################################################
 
 setup(
-    name = 'qitensor',
-    version = version,
-    author = 'Dan Stahlke',
-    author_email = 'dstahlke@gmail.com',
-    url = 'http://www.stahlke.org/dan/qitensor',
-    license = 'BSD',
-    keywords = ['quantum', 'tensor', 'numpy', 'sage'],
-    description = 'Quantum Hilbert Space Tensors in Python and Sage',
-    long_description = '''
+    name='qitensor',
+    version=version,
+    author='Dan Stahlke',
+    author_email='dstahlke@gmail.com',
+    url='http://www.stahlke.org/dan/qitensor',
+    license='BSD',
+    keywords=['quantum', 'tensor', 'numpy', 'sage'],
+    description='Quantum Hilbert Space Tensors in Python and Sage',
+    long_description='''
 This module is essentially a wrapper for numpy that uses semantics useful for
 finite dimensional quantum mechanics of many particles.  In particular, this
 should be useful for the study of quantum information and quantum computing.
@@ -148,11 +157,11 @@ space tensor product structure.
         'Topic :: Scientific/Engineering :: Mathematics',
         'Topic :: Scientific/Engineering :: Physics',
         ],
-    packages = [
+    packages=[
         'qitensor',
         'qitensor.experimental',
         'qitensor.tests',
     ],
-    cmdclass = cmdclass,
-    ext_modules = ext_modules,
+    cmdclass=cmdclass,
+    ext_modules=ext_modules,
 )

@@ -5,3 +5,4 @@ MANIFEST
 sage_package/qitensor-*/
 sage_package/qitensor-*.spkg
 sage_package/.hg
+qitensor.egg-info/

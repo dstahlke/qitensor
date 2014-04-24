@@ -26,6 +26,10 @@ class cached_property(object):
         self.__module__ = fget.__module__
 
     def __get__(self, obj, objtype):
+        # For Sphinx:
+        if obj is None:
+            return self.fget
+
         try:
             cache = obj._cache
         except AttributeError:
@@ -657,19 +661,21 @@ class NoncommutativeGraph(object):
         r"""
         My non-commutative generalization of Schrijver's number.
 
-        max <\Phi|T + I \ot \rho|\Phi> s.t.
-            \rho \succeq 0, \Tr(\rho)=1
-            T + I \ot \rho \succeq 0
-            T \in S^\perp \ot \bar{S}^\perp
-            T^\ddag = T
-            R(T) \in cones
+        .. math::
+            \max &\left<\Phi|T + I \otimes \rho|\Phi\right> \textrm{ s.t.} \\
+                &\rho \succeq 0, \Tr(\rho)=1 \\
+                &T + I \otimes \rho \succeq 0 \\
+                &T \in S^\perp \otimes \bar{S}^\perp \\
+                &T^\ddag = T \\
+                &R(T) \in \texttt{cones} \\
+            \min &\opnorm{Tr_A(Y)} \textrm{ s.t.} \\
+                &Y \succeq \ket{\Phi}\bra{\Phi} \\
+                &Y+(L+L^\dag)-X \in S * \bar{S} \\
+                &R(L) \in \texttt{cones}^* \\
+                &X^\ddag = -X \\
+                &X^\dag = X
 
-        min ||Tr_A(Y)|| s.t.
-            Y \succeq |\Phi><\Phi|
-            Y+(L+L^\dag)-X \in S \djp \bar{S}
-            R(L) \in cones^*
-            X^\ddag = -X
-            X^\dag = X
+        ``cones`` can be ``hermit``, ``psd``, ``ppt``, or ``psd&ppt``.
 
         If the long_return option is True, then some extra status and internal
         quantities are returned (such as the optimal Y operator).

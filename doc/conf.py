@@ -43,7 +43,6 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.doctest',
     'sphinx.ext.pngmath',
-    'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
 ]
 
@@ -213,6 +212,18 @@ latex_elements = {
         \newcommand{\Tr}[0]{\ensuremath{\textnormal{Tr}}}
         '''
 }
+
+pngmath_latex_preamble = ""
+pngmath_latex_preamble = r'''
+\newcommand{\Tr}[0]{\ensuremath{\textnormal{Tr}}}
+\newcommand{\opnorm}[1]{\ensuremath{\left\lVert#1\right\rVert}}
+\newcommand{\abs}[1]{\ensuremath{{\lvert#1\rvert}}}
+\newcommand{\bra}[1]{\ensuremath{\left\langle{#1}\right|}}
+\newcommand{\ket}[1]{\ensuremath{\left|{#1}\right\rangle}}
+\newcommand{\braket}[2]{\ensuremath{\left\langle{#1}\middle|{#2}\right\rangle}}
+\newcommand{\ip}[1]{\left< #1 \right>}
+\newcommand{\braopket}[3]{\ensuremath{\left\langle{#1}\middle|{#2}\middle|{#3}\right\rangle}}
+'''
 
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title,

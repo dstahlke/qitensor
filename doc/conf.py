@@ -209,7 +209,6 @@ latex_elements = {
     'preamble': r'''
         \usepackage{amsmath}
         \usepackage{amssymb}
-        \newcommand{\Tr}[0]{\ensuremath{\textnormal{Tr}}}
         '''
 }
 
@@ -229,8 +228,8 @@ pngmath_latex_preamble = r'''
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  ('index', 'qitensor.tex', 'qitensor Documentation',
-   'Dan Stahlke', 'manual'),
+    ('index', 'qitensor.tex', 'qitensor Documentation',
+     'Dan Stahlke', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -273,9 +272,9 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'qitensor', 'qitensor Documentation',
-   'Dan Stahlke', 'qitensor', 'One line description of project.',
-   'Miscellaneous'),
+    ('index', 'qitensor', 'qitensor Documentation',
+     'Dan Stahlke', 'qitensor', 'One line description of project.',
+     'Miscellaneous'),
 ]
 
 # Documents to append as an appendix to all manuals.

@@ -2373,7 +2373,7 @@ cdef class HilbertArray:
         such that :math:`M = \sum_i w_i P_i`.
 
         :param hermit: set this to `True` if the input is Hermitian.  The returned eigenvalues
-        will then be real.
+            will then be real.
         :param grouping_tol: threshold for grouping similar eigenvalues.
 
         >>> from qitensor import qudit

@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-from distutils.core import setup
-from distutils.core import Command
-from distutils.extension import Extension
+from setuptools import setup
+from setuptools import Command
+from setuptools.extension import Extension
 import re
 import sys
 import sysconfig
@@ -28,8 +28,8 @@ cmdclass = { }
 ######################################################################
 
 # http://stackoverflow.com/a/14369968/1048959
-def distutils_dir_name(dname):
-    """Returns the name of a distutils build directory"""
+def build_dir_name(dname):
+    """Returns the name of the build directory"""
     f = "{dirname}.{platform}-{version[0]}.{version[1]}"
     return f.format(dirname=dname,
                     platform=sysconfig.get_platform(),
@@ -40,20 +40,20 @@ class test_qitensor(Command):
     """Runs tests."""
 
     description = "Automatically run the test suite for qitensor."
-    user_options = []  # distutils complains if this is not here.
+    user_options = []  # setuptools complains if this is not here.
 
     def __init__(self, *args):
         self.args = args[0] # so we can pass it to other classes
         Command.__init__(self, *args)
 
-    def initialize_options(self):  # distutils wants this
+    def initialize_options(self):  # setuptools wants this
         pass
 
     def finalize_options(self):    # this too
         pass
 
     def run(self):
-        buildpath = os.path.join('build', distutils_dir_name('lib'))
+        buildpath = os.path.join('build', build_dir_name('lib'))
         if not os.path.isfile(os.path.join(buildpath, 'qitensor', '__init__.py')):
             print('Error: you must do "./setup.py build" first.')
             sys.exit(1)
@@ -164,4 +164,5 @@ space tensor product structure.
     ],
     cmdclass=cmdclass,
     ext_modules=ext_modules,
+    install_requires=['cvxopt', 'numpy', 'scipy'],
 )

@@ -5,6 +5,7 @@ from __future__ import print_function, division
 import numpy as np
 import scipy.linalg as linalg
 import itertools
+import collections
 import cvxopt.base
 import cvxopt.solvers
 
@@ -537,7 +538,63 @@ def lovasz_theta(S, long_return=False):
 
     (xvec, sdp_stats) = call_sdp(c, [Fx_1, Fx_2], [F0_1, F0_2])
 
-    assert 0 # FIXME - to be completed
+    err = collections.defaultdict(float)
+
+    if sdp_stats['status'] == 'optimal':
+        rho = mat_real_to_cplx(np.array(sdp_stats['zs'][0]))
+        I_ot_rho = np.tensordot(np.eye(n), rho, axes=0).transpose(0,2,1,3)
+        zs1 = mat_real_to_cplx(np.array(sdp_stats['zs'][1])).reshape(n,n,n,n)
+        T = zs1 - I_ot_rho
+
+        t = xvec[0]
+        Y = np.dot(x_to_Y, xvec)
+
+        # Verify primal/dual solution
+        verify_tol=1e-7
+        if verify_tol:
+            # Test the primal solution
+            for mat in np.rollaxis(ncg.Y_basis, -1):
+                dp = np.tensordot(T, mat.conj(), axes=4)
+                err[r'T in Ybas.perp()'] += linalg.norm(dp)
+            T_plus_Irho = T + I_ot_rho
+            err[r'T_plus_Irho pos'] = check_psd(T_plus_Irho.reshape(n**2, n**2))
+            err[r'Tr(rho)'] = abs(np.trace(rho) - 1)
+            err[r'rho pos'] = check_psd(rho)
+
+            err[r'primal value'] = abs(T.trace().trace() + 1 - t)
+
+            err[r'Y - phi_phi PSD'] = check_psd(Y.reshape(n**2, n**2) - phi_phi)
+
+            maxeig = linalg.eigvalsh(np.trace(Y, axis1=0, axis2=2))[-1].real
+            err[r'dual value'] = abs(t - maxeig)
+
+            for mat in ncg.Sp_basis:
+                dp = np.tensordot(Y, mat.conj(), axes=[[0, 2], [0, 1]])
+                err[r'Y in S \ot \bar{S}'] += linalg.norm(dp)
+
+        assert min(err.values()) >= 0
+        for (k, v) in err.items():
+            if v > verify_tol:
+                print('WARRNING: err[%s] = %g' % (k, v))
+
+        if long_return:
+            if ncg.S._hilb_space is not None:
+                ha = ncg.top_space
+                hb = ncg.bottom_space
+                rho = hb.O.array(rho, reshape=True)
+                T = ncg.make_ab_array(T)
+                Y = ncg.make_ab_array(Y)
+            else:
+                ha = None
+                hb = None
+            #return locals()
+            to_ret = [ 't', 'T', 'rho', 'Y', 'ha', 'hb', 'sdp_stats' ]
+            _locals = locals()
+            return { key: _locals[key] for key in to_ret }
+        else:
+            return t
+    else:
+        raise Exception('cvxopt.sdp returned error: '+sdp_stats['status'])
 
 def szegedy(S, cones, long_return=False):
     r"""
@@ -628,6 +685,7 @@ def szegedy(S, cones, long_return=False):
         if verify_tol:
             # Test the primal solution
             # FIXME - not correct anymore, needs updating
+            # FIXME - need to accumulate?
             for mat in np.rollaxis(Ybas, -1):
                 L_sum = np.sum(L_list, axis=0)
                 dp = np.tensordot(T+L_sum, mat.conj(), axes=4)
@@ -659,6 +717,7 @@ def szegedy(S, cones, long_return=False):
             maxeig = linalg.eigvalsh(np.trace(Y, axis1=0, axis2=2))[-1].real
             err[r'dual value'] = abs(t - maxeig)
 
+            # FIXME - need to accumulate?
             for mat in ncg.Sp_basis:
                 dp = np.tensordot(Y, mat.conj(), axes=[[0, 2], [0, 1]])
                 err[r'Y in S \ot \bar{S}'] = linalg.norm(dp)
@@ -826,6 +885,7 @@ def schrijver(S, cones, long_return=False):
             err[r'T + I \ot rho'] = linalg.norm(T + I_rho - T_plus_Irho)
             err['primal value'] = abs(t - T_plus_Irho.trace(axis1=0, axis2=1).trace(axis1=0, axis2=1))
 
+            # FIXME - need to accumulate?
             for mat in ncg.S_basis:
                 dp = np.tensordot(T, mat.conj(), axes=[[0, 2], [0, 1]])
                 err[r'T in S^\perp \ot \bar{S}^\perp'] = linalg.norm(dp)

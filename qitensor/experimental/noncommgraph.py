@@ -212,6 +212,33 @@ class NoncommutativeGraph(object):
     def full_basis_dh(self):
         return self._basis_doubly_hermit(TensorSubspace.full((self.n, self.n)).hermitian_basis())
 
+    @cached_property
+    def _ha(self):
+        return self.S._hilb_space.ket_space()
+
+    @cached_property
+    def _hb(self):
+        ret = self._ha.prime # FIXME - what if it already is primed?
+        assert ret.ket_set.isdisjoint(self._ha.ket_set)
+        return ret
+
+    def R(self, x):
+        ha = self._ha
+        hb = self._hb
+        return x.relabel({ hb: ha.H, ha.H: hb })
+
+    def ddag(self, x):
+        ha = self._ha
+        hb = self._hb
+        ret = x.relabel({ ha: hb, hb: ha, ha.H: hb.H, hb.H: ha.H }).conj()
+        assert (ret - self.R(self.R(x).H)).norm() < 1e-12
+        return ret
+
+    def make_ab_array(self, M):
+        ha = self._ha
+        hb = self._hb
+        return (ha*hb).O.array(M, reshape=True, input_axes=ha.axes+hb.axes+ha.H.axes+hb.H.axes)
+
     def __str__(self):
         return '<NoncommutativeGraph of '+self.S._str_inner()+'>'
 
@@ -623,14 +650,14 @@ class NoncommutativeGraph(object):
             if long_return:
                 L_map = { C['name']: L for (C, L) in zip(cones, L_list) }
                 if self.S._hilb_space is not None:
-                    ha = self.S._hilb_space.ket_space()
-                    hb = ha.prime # FIXME - what if ha=|a,a'>
+                    ha = self._ha
+                    hb = self._hb
                     rho = hb.O.array(rho, reshape=True)
-                    T = (ha*hb).O.array(T, reshape=True)
+                    T = self.make_ab_array(T)
                     if sdp_stats['status'] == 'optimal':
-                        Y = (ha*hb).O.array(Y, reshape=True)
-                    L_map = { k: (ha*hb).O.array(L_map[k], reshape=True) for k in L_map.keys() }
-                    X = (ha*hb).O.array(X, reshape=True)
+                        Y = self.make_ab_array(Y)
+                    L_map = { k: self.make_ab_array(L_map[k]) for k in L_map.keys() }
+                    X = self.make_ab_array(X)
                 else:
                     ha = None
                     hb = None
@@ -831,13 +858,13 @@ class NoncommutativeGraph(object):
             if long_return:
                 L_map = { C['name']: L for (C, L) in zip(cones, L_list) }
                 if self.S._hilb_space is not None:
-                    ha = self.S._hilb_space.ket_space()
-                    hb = ha.prime # FIXME - what if ha=|a,a'>
+                    ha = self._ha
+                    hb = self._hb
                     rho = hb.O.array(rho, reshape=True)
-                    T = (ha*hb).O.array(T, reshape=True)
-                    Y = (ha*hb).O.array(Y, reshape=True)
-                    L_map = { k: (ha*hb).O.array(L_map[k], reshape=True) for k in L_map.keys() }
-                    X = (ha*hb).O.array(X, reshape=True)
+                    T = self.make_ab_array(T)
+                    Y = self.make_ab_array(Y)
+                    L_map = { k: self.make_ab_array(L_map[k]) for k in L_map.keys() }
+                    X = self.make_ab_array(X)
                 else:
                     ha = None
                     hb = None
@@ -885,7 +912,7 @@ class NoncommutativeGraph(object):
 
 ### Validation code ####################
 
-def test_schrijver(S):
+def test_schrijver(S, cones=('hermit', 'psd', 'ppt', 'psd&ppt')):
     """
     >>> ha = qudit('a', 3)
     >>> np.random.seed(1)
@@ -920,12 +947,12 @@ def test_schrijver(S):
     cvxopt.solvers.options['reltol'] = float(1e-8)
 
     # FIXME - are the first two and last two always the same?
-    for cone in ('hermit', 'psd', 'ppt', 'psd&ppt'):
+    for cone in cones:
         print('--- Schrijver with', cone)
         info = G.schrijver(cone, True)
         print('t =', info['t'])
-        (tp, errp) = check_schrijver_primal(S, cone, *[ info[x] for x in 'ha,hb,rho,T'.split(',') ])
-        (td, errd) = check_schrijver_dual(S, cone, *[ info[x] for x in 'ha,hb,Y,L_map,X'.split(',') ])
+        (tp, errp) = check_schrijver_primal(S, cone, *[ info[x] for x in 'rho,T'.split(',') ])
+        (td, errd) = check_schrijver_dual(S, cone, *[ info[x] for x in 'Y,L_map,X'.split(',') ])
         print('duality gap:', td-tp)
 
     return info
@@ -943,63 +970,59 @@ def test_szegedy(S):
         info = G.szegedy(cone, True)
         print('t =', info['t'])
         # FIXME
-        (tp, errp) = check_szegedy_primal(S, cone, *[ info[x] for x in 'ha,hb,rho,T,L_map,X'.split(',') ])
-        (td, errd) = check_szegedy_dual(S, cone, *[ info[x] for x in 'ha,hb,Y'.split(',') ])
+        (tp, errp) = check_szegedy_primal(S, cone, *[ info[x] for x in 'rho,T,L_map,X'.split(',') ])
+        (td, errd) = check_szegedy_dual(S, cone, *[ info[x] for x in 'Y'.split(',') ])
         # FIXME
         #print('duality gap:', td-tp)
 
     return info
 
-def check_schrijver_primal(S, cones, ha, hb, rho, T, report=True):
+def check_schrijver_primal(S, cones, rho, T, report=True):
     r"""
     Verify Schrijver primal solution.
     Returns ``(t, err)`` where ``t`` is the value and ``err`` is the amount by which
     feasibility constrains are violated.
     """
 
-    return _checking_routine(S, cones, ha, hb, { 'schrijver_primal': (rho, T) }, report)
+    return _checking_routine(S, cones, { 'schrijver_primal': (rho, T) }, report)
 
-def check_schrijver_dual(S, cones, ha, hb, Y, L_map, X, report=True):
+def check_schrijver_dual(S, cones, Y, L_map, X, report=True):
     r"""
     Verify Schrijver dual solution.
     Returns ``(t, err)`` where ``t`` is the value and ``err`` is the amount by which
     feasibility constrains are violated.
     """
 
-    return _checking_routine(S, cones, ha, hb, { 'schrijver_dual': (Y, L_map, X) }, report)
+    return _checking_routine(S, cones, { 'schrijver_dual': (Y, L_map, X) }, report)
 
-def check_szegedy_primal(S, cones, ha, hb, rho, T, L_map, X, report=True):
+def check_szegedy_primal(S, cones, rho, T, L_map, X, report=True):
     r"""
     Verify Schrijver primal solution.
     Returns ``(t, err)`` where ``t`` is the value and ``err`` is the amount by which
     feasibility constrains are violated.
     """
 
-    return _checking_routine(S, cones, ha, hb, { 'szegedy_primal': (rho, T, L_map, X) }, report)
+    return _checking_routine(S, cones, { 'szegedy_primal': (rho, T, L_map, X) }, report)
 
-def check_szegedy_dual(S, cones, ha, hb, Y, report=True):
+def check_szegedy_dual(S, cones, Y, report=True):
     r"""
     Verify Szegedy dual solution.
     Returns ``(t, err)`` where ``t`` is the value and ``err`` is the amount by which
     feasibility constrains are violated.
     """
 
-    return _checking_routine(S, cones, ha, hb, { 'szegedy_dual': Y }, report)
+    return _checking_routine(S, cones, { 'szegedy_dual': Y }, report)
 
-def _checking_routine(S, cones, ha, hb, task, report):
-    assert S._hilb_space == ha.O
+def _checking_routine(S, cones, task, report):
     ncg = NoncommutativeGraph(S)
 
     cones = ncg._get_cone_set(cones)
     cone_names = frozenset(C['name'] for C in cones)
 
-    def R(x):
-        return x.relabel({ hb: ha.H, ha.H: hb })
-
-    def ddag(x):
-        ret = x.relabel({ ha: hb, hb: ha, ha.H: hb.H, hb.H: ha.H }).conj()
-        assert (ret - R(R(x).H)).norm() < 1e-12
-        return ret
+    ha = ncg._ha
+    hb = ncg._hb
+    R = ncg.R
+    ddag = ncg.ddag
 
     Sb = S.map(lambda x: x.relabel({ ha: hb, ha.H: hb.H }).conj())
 

@@ -532,7 +532,7 @@ def lovasz_theta(S, long_return=False):
         Fx_1[i, i, 0] = -1
     F0_1 = np.zeros((n, n))
 
-    # Y  >=  |phi><phi|
+    # Y  >=  |Phi><Phi|
     Fx_2 = -x_to_Y.reshape(n**2, n**2, xvec_len).copy()
     F0_2 = -phi_phi
 
@@ -597,15 +597,23 @@ def lovasz_theta(S, long_return=False):
         raise Exception('cvxopt.sdp returned error: '+sdp_stats['status'])
 
 def szegedy(S, cones, long_return=False):
+    # FIXME - tell about how L=(\sum L_i)-X (or something like that) to match paper
+    # FIXME - code is broken
     r"""
     My non-commutative generalization of Szegedy's number.
 
-    # FIXME - make it match the paper (primal and dual)
-    min t s.t.
-        tI - Tr_A Y \succeq 0
-        Y \in S \ot \bar{S}
-        Y \succeq |\Phi><\Phi|
-        R(Y) \in cones
+    .. math::
+        \max &\left<\Phi|T + I \otimes \rho|\Phi\right> \textrm{ s.t.} \\
+            &\rho \succeq 0, \Tr(\rho)=1 \\
+            &T + I \otimes \rho \succeq 0 \\
+            &T+(L+L^\dag)-X \in S^\perp \otimes \bar{S}^\perp \\
+            &R(L) \in \texttt{cones}^* \\
+            &X^\ddag = -X \\
+            &X^\dag = X \\
+        \min &\opnorm{Tr_A(Y)} \textrm{ s.t.} \\
+            &Y \succeq \ket{\Phi}\bra{\Phi} \\
+            &Y \in S * \bar{S} \\
+            &R(Y) \in \texttt{cones}^* \\
 
     If the long_return option is True, then some extra status and internal
     quantities are returned (such as the optimal Y operator).
@@ -648,7 +656,7 @@ def szegedy(S, cones, long_return=False):
         Fx_1[i, i, 0] = -1
     F0_1 = np.zeros((n, n))
 
-    # Y  >=  |phi><phi|
+    # Y  >=  |Phi><Phi|
     Fx_2 = -x_to_Y.reshape(n**2, n**2, xvec_len).copy()
     F0_2 = -phi_phi
 
@@ -666,10 +674,11 @@ def szegedy(S, cones, long_return=False):
 
     (xvec, sdp_stats) = call_sdp(c, Fx_list, F0_list)
 
-    err = {}
+    err = collections.defaultdict(float)
 
     if sdp_stats['status'] in ['optimal', 'primal infeasible']:
         rho = mat_real_to_cplx(np.array(sdp_stats['zs'][0]))
+        print('tr', rho.trace(), sdp_stats['status'])
         I_ot_rho = np.tensordot(np.eye(n), rho, axes=0).transpose(0,2,1,3)
         zs1 = mat_real_to_cplx(np.array(sdp_stats['zs'][1])).reshape(n,n,n,n)
         L_list = []
@@ -684,20 +693,29 @@ def szegedy(S, cones, long_return=False):
         verify_tol=1e-7
         if verify_tol:
             # Test the primal solution
-            # FIXME - not correct anymore, needs updating
-            # FIXME - need to accumulate?
-            for mat in np.rollaxis(Ybas, -1):
+            TLX = T-X
+            if len(L_list):
                 L_sum = np.sum(L_list, axis=0)
-                dp = np.tensordot(T+L_sum, mat.conj(), axes=4)
-                err[r'T+L_sum in Ybas.perp()'] = linalg.norm(dp)
-            T_plus_Irho = T + I_ot_rho
-            err[r'T_plus_Irho pos'] = check_psd(T_plus_Irho.reshape(n**2, n**2))
-            err[r'Tr(rho)'] = abs(np.trace(rho) - 1)
-            err[r'rho pos'] = check_psd(rho)
+                L_sum = L_sum + L_sum.transpose(2,3,0,1).conj()
+                TLX += L_sum
+
+            # FIXME - which space?
+            for mat in np.rollaxis(Ybas, -1):
+                dp = np.tensordot(TLX, mat.conj(), axes=4)
+                # FIXME - which space?
+                err[r'T+L-X in Ybas.perp()'] += linalg.norm(dp)
 
             for (i, (v, L)) in enumerate(zip(cones, L_list)):
                 M = v['R'](L) - v['0']
-                err[r'R(L_%d)'] = check_psd(M)
+                err['R(L) in '+v['name']] = check_psd(M)
+
+            T_plus_Irho = T + I_ot_rho
+            err[r'T_plus_Irho pos'] = check_psd(T_plus_Irho.reshape(n**2, n**2))
+            if sdp_stats['status'] == 'optimal':
+                err[r'Tr(rho)'] = abs(np.trace(rho) - 1)
+            else:
+                err[r'Tr(rho)'] = abs(np.trace(rho))
+            err[r'rho pos'] = check_psd(rho)
 
     if sdp_stats['status'] == 'optimal':
         t = xvec[0]
@@ -717,16 +735,18 @@ def szegedy(S, cones, long_return=False):
             maxeig = linalg.eigvalsh(np.trace(Y, axis1=0, axis2=2))[-1].real
             err[r'dual value'] = abs(t - maxeig)
 
-            # FIXME - need to accumulate?
+            # FIXME - which space?
             for mat in ncg.Sp_basis:
                 dp = np.tensordot(Y, mat.conj(), axes=[[0, 2], [0, 1]])
-                err[r'Y in S \ot \bar{S}'] = linalg.norm(dp)
+                # FIXME - which space?
+                err[r'Y in S \ot \bar{S}'] += linalg.norm(dp)
 
     assert min(err.values()) >= 0
     for (k, v) in err.items():
         if v > verify_tol:
             print('WARRNING: err[%s] = %g' % (k, v))
 
+    # FIXME - need to update
     if sdp_stats['status'] in ['optimal', 'primal infeasible']:
         if sdp_stats['status'] == 'primal infeasible':
             t = np.inf
@@ -756,6 +776,7 @@ def szegedy(S, cones, long_return=False):
         raise Exception('cvxopt.sdp returned error: '+sdp_stats['status'])
 
 def schrijver(S, cones, long_return=False):
+    # FIXME - tell about how L=(\sum L_i)-X (or something like that) to match paper
     r"""
     My non-commutative generalization of Schrijver's number.
 
@@ -879,16 +900,16 @@ def schrijver(S, cones, long_return=False):
 
         verify_tol=1e-7
         if verify_tol:
-            err = {}
+            err = collections.defaultdict(float)
 
             # Test the primal solution
             err[r'T + I \ot rho'] = linalg.norm(T + I_rho - T_plus_Irho)
             err['primal value'] = abs(t - T_plus_Irho.trace(axis1=0, axis2=1).trace(axis1=0, axis2=1))
 
-            # FIXME - need to accumulate?
+            # FIXME - wrong basis?
             for mat in ncg.S_basis:
                 dp = np.tensordot(T, mat.conj(), axes=[[0, 2], [0, 1]])
-                err[r'T in S^\perp \ot \bar{S}^\perp'] = linalg.norm(dp)
+                err[r'T in S^\perp \ot \bar{S}^\perp'] += linalg.norm(dp)
 
             err['T_plus_Irho PSD'] = check_psd(T_plus_Irho.reshape(n**2, n**2))
             err['Tr(rho)'] = abs(np.trace(rho) - 1)
@@ -998,10 +1019,13 @@ def test_lovasz(S):
     cvxopt.solvers.options['reltol'] = float(1e-8)
 
     info = lovasz_theta(S, True)
-    print('t =', info['t'])
-    (tp, errp) = check_lovasz_primal(S, *[ info[x] for x in 'rho,T'.split(',') ])
-    (td, errd) = check_lovasz_dual(S, *[ info[x] for x in 'Y'.split(',') ])
-    print('duality gap:', td-tp)
+    if info['sdp_stats']['status'] != 'optimal':
+        print('Error: status='+info['sdp_stats']['status'])
+    else:
+        print('t =', info['t'])
+        (tp, errp) = check_lovasz_primal(S, *[ info[x] for x in 'rho,T'.split(',') ])
+        (td, errd) = check_lovasz_dual(S, *[ info[x] for x in 'Y'.split(',') ])
+        print('duality gap:', td-tp)
 
 def test_schrijver(S, cones=('hermit', 'psd', 'ppt', 'psd&ppt')):
     """
@@ -1039,10 +1063,13 @@ def test_schrijver(S, cones=('hermit', 'psd', 'ppt', 'psd&ppt')):
     for cone in cones:
         print('--- Schrijver with', cone)
         info = schrijver(S, cone, True)
-        print('t =', info['t'])
-        (tp, errp) = check_schrijver_primal(S, cone, *[ info[x] for x in 'rho,T'.split(',') ])
-        (td, errd) = check_schrijver_dual(S, cone, *[ info[x] for x in 'Y,L_map,X'.split(',') ])
-        print('duality gap:', td-tp)
+        if info['sdp_stats']['status'] != 'optimal':
+            print('Error: status='+info['sdp_stats']['status'])
+        else:
+            print('t =', info['t'])
+            (tp, errp) = check_schrijver_primal(S, cone, *[ info[x] for x in 'rho,T'.split(',') ])
+            (td, errd) = check_schrijver_dual(S, cone, *[ info[x] for x in 'Y,L_map,X'.split(',') ])
+            print('duality gap:', td-tp)
 
 def test_szegedy(S):
     """
@@ -1061,14 +1088,16 @@ def test_szegedy(S):
     for cone in ('hermit', 'psd', 'ppt', 'psd&ppt'):
         print('--- Szegedy with', cone)
         info = szegedy(S, cone, True)
-        print('t =', info['t'])
-        # FIXME
-        (tp, errp) = check_szegedy_primal(S, cone, *[ info[x] for x in 'rho,T,L_map,X'.split(',') ])
-        (td, errd) = check_szegedy_dual(S, cone, *[ info[x] for x in 'Y'.split(',') ])
-        # FIXME
-        #print('duality gap:', td-tp)
-
-    return info
+        if not info['sdp_stats']['status'] in ['optimal', 'primal infeasible']:
+            print('Error: status='+info['sdp_stats']['status'])
+        else:
+            print('t =', info['t'])
+            is_opt = (info['sdp_stats']['status'] == 'optimal')
+            info['is_opt'] = is_opt
+            (tp, errp) = check_szegedy_primal(S, cone, *[ info[x] for x in 'rho,T,L_map,X,is_opt'.split(',') ])
+            if is_opt:
+                (td, errd) = check_szegedy_dual(S, cone, *[ info[x] for x in 'Y'.split(',') ])
+                print('duality gap:', td-tp)
 
 def check_lovasz_primal(S, rho, T, report=True):
     r"""
@@ -1106,14 +1135,14 @@ def check_schrijver_dual(S, cones, Y, L_map, X, report=True):
 
     return checking_routine(S, cones, { 'schrijver_dual': (Y, L_map, X) }, report)
 
-def check_szegedy_primal(S, cones, rho, T, L_map, X, report=True):
+def check_szegedy_primal(S, cones, rho, T, L_map, X, is_opt, report=True):
     r"""
     Verify Schrijver primal solution.
     Returns ``(t, err)`` where ``t`` is the value and ``err`` is the amount by which
     feasibility constrains are violated.
     """
 
-    return checking_routine(S, cones, { 'szegedy_primal': (rho, T, L_map, X) }, report)
+    return checking_routine(S, cones, { 'szegedy_primal': (rho, T, L_map, X, is_opt) }, report)
 
 def check_szegedy_dual(S, cones, Y, report=True):
     r"""
@@ -1240,14 +1269,19 @@ def checking_routine(S, cones, task, report):
         err[r'X^\dag - X'] = (X - X.H).norm()
 
     if 'szegedy_primal' in task:
-        (rho, T, L_map, X) = task['szegedy_primal']
-
-        # FIXME: wrong/incomplete
+        (rho, T, L_map, X, is_opt) = task['szegedy_primal']
 
         assert rho.space == hb.O
         assert T.space == (ha*hb).O
-        val = 1 + (Phi.H * T * Phi).real
-        err[r'trace(rho)'] = abs(1 - rho.trace())
+
+        if is_opt:
+            val = 1 + (Phi.H * T * Phi).real
+            err[r'trace(rho)'] = abs(1 - rho.trace())
+        else:
+            # Certificate of primal infeasibility
+            val = np.inf
+            err[r'trace(rho)'] = abs(rho.trace())
+
         err[r'rho PSD'] = check_psd(rho)
         err[r'T + I \ot rho PSD'] = check_psd(T + ha.eye()*rho)
 
@@ -1256,7 +1290,8 @@ def checking_routine(S, cones, task, report):
             L_sum = np.sum(list(L_map.values()))
             TLX += L_sum + L_sum.H
 
-        err[r'T+L-X \in S^\perp \ot \bar{S}^\perp'] = (TLX - proj_Sp_ot_Sp(TLX)).norm()
+        # FIXME - fails when certificate of primal infeasibility
+        err[r'T+L-X \perp S \ot \bar{S}'] = proj_S_ot_S(TLX).norm()
 
         for C in cone_names:
             L = L_map[C]

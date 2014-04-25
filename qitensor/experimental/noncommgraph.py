@@ -598,7 +598,7 @@ def lovasz_theta(S, long_return=False):
 
 def szegedy(S, cones, long_return=False):
     # FIXME - tell about how L=(\sum L_i)-X (or something like that) to match paper
-    # FIXME - code is broken
+    # FIXME - here and for schrijver, absorb X into L_0
     r"""
     My non-commutative generalization of Szegedy's number.
 
@@ -678,13 +678,14 @@ def szegedy(S, cones, long_return=False):
 
     if sdp_stats['status'] in ['optimal', 'primal infeasible']:
         rho = mat_real_to_cplx(np.array(sdp_stats['zs'][0]))
-        print('tr', rho.trace(), sdp_stats['status'])
         I_ot_rho = np.tensordot(np.eye(n), rho, axes=0).transpose(0,2,1,3)
         zs1 = mat_real_to_cplx(np.array(sdp_stats['zs'][1])).reshape(n,n,n,n)
         L_list = []
         for (i,v) in enumerate(cones):
             zsi = mat_real_to_cplx(np.array(sdp_stats['zs'][2+i]))
-            L_list.append(v['R*'](zsi))
+            # over 2 because we will later do L+L^\dag
+            L = v['R*'](zsi) / 2
+            L_list.append(L)
         T = zs1 - I_ot_rho
         # Copy rot-antihermit portion of T to X.
         X = T - project_dh(T)
@@ -1281,6 +1282,7 @@ def checking_routine(S, cones, task, report):
             # Certificate of primal infeasibility
             val = np.inf
             err[r'trace(rho)'] = abs(rho.trace())
+            # FIXME - make sure <Phi|T|Phi> \ge 0
 
         err[r'rho PSD'] = check_psd(rho)
         err[r'T + I \ot rho PSD'] = check_psd(T + ha.eye()*rho)
@@ -1290,7 +1292,6 @@ def checking_routine(S, cones, task, report):
             L_sum = np.sum(list(L_map.values()))
             TLX += L_sum + L_sum.H
 
-        # FIXME - fails when certificate of primal infeasibility
         err[r'T+L-X \perp S \ot \bar{S}'] = proj_S_ot_S(TLX).norm()
 
         for C in cone_names:
@@ -1409,3 +1410,8 @@ if __name__ == "__main__":
     #print(T.trace().trace()+1 - t)
     #w=[np.tensordot(x, y.conj(), axes=([],[])).transpose((0, 2, 1, 3)) for x in S.S_basis for y in S.S_basis]
     #print(np.max([linalg.norm(np.tensordot(T, (x + x.transpose(1,0,3,2).conj()).conj(), axes=4)) for x in w]))
+
+    info=szegedy(TensorSubspace.from_span([qitensor.qudit('a',2).eye()]), 'ppt', long_return=True)
+    T = info['T']
+    L = np.sum(info['L_map'].values(), axis=0)
+    L += L.H

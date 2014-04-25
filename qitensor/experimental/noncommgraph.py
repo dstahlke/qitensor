@@ -987,7 +987,10 @@ def test_lovasz(S):
     >>> np.random.seed(1)
     >>> S = TensorSubspace.create_random_hermitian(ha, 5, tracefree=True).perp()
     >>> test_lovasz(S)
-    FIXME
+    t = 3.80697364692
+    total err: 2.64960358991e-14
+    total err: 2.63553617673e-09
+    duality gap: 6.07764505389e-10
     """
 
     cvxopt.solvers.options['show_progress'] = False
@@ -1130,6 +1133,12 @@ def checking_routine(S, cones, task, report):
     Phi = ha.eye().relabel({ ha.H: hb })
     J = Phi.O
 
+    def proj_Sp_ot_all(x):
+        ret = (ha*hb).O.array()
+        for pa in S.perp():
+            ret += pa * (x * pa.H).trace(ha)
+        return ret
+
     def proj_Sp_ot_Sp(x):
         ret = (ha*hb).O.array()
         for pa in S.perp():
@@ -1156,8 +1165,7 @@ def checking_routine(S, cones, task, report):
         err[r'rho PSD'] = check_psd(rho)
         err[r'T + I \ot rho PSD'] = check_psd(T + ha.eye()*rho)
 
-        # FIXME - wrong space
-        err[r'T \in S^\perp \ot \bar{S}^\perp'] = (T - proj_Sp_ot_Sp(T)).norm()
+        err[r"T \in S^\perp \ot \linop{A'}"] = (T - proj_Sp_ot_all(T)).norm()
 
     if 'lovasz_dual' in task:
         (Y,) = task['lovasz_dual']
@@ -1166,8 +1174,7 @@ def checking_routine(S, cones, task, report):
 
         err[r'Y \succeq J'] = check_psd(Y - J)
 
-        # FIXME - wrong space
-        err[r'Y \perp S^\perp \ot \bar{S}^\perp'] = proj_Sp_ot_Sp(Y).norm()
+        err[r"Y \perp S^\perp \ot \linop{A'}"] = proj_Sp_ot_all(Y).norm()
 
     if 'schrijver_primal' in task:
         (rho, T) = task['schrijver_primal']

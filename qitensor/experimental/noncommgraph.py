@@ -1045,6 +1045,14 @@ def test_schrijver(S, cones=('hermit', 'psd', 'ppt', 'psd&ppt')):
         print('duality gap:', td-tp)
 
 def test_szegedy(S):
+    """
+    >>> ha = qudit('a', 3)
+    >>> np.random.seed(1)
+    >>> S = TensorSubspace.create_random_hermitian(ha, 5, tracefree=True).perp()
+    >>> test_szegedy(S)
+    FIXME
+    """
+
     cvxopt.solvers.options['show_progress'] = False
     cvxopt.solvers.options['abstol'] = float(1e-8)
     cvxopt.solvers.options['reltol'] = float(1e-8)
@@ -1217,7 +1225,6 @@ def checking_routine(S, cones, task, report):
         #S_djp_S = S * hb.O.full_space() | ha.O.full_space() * Sb
         #err[r'Y+L-X \in S \djp \bar{S}'] = linalg.norm(S_djp_S.perp().to_basis(YLX))
         # Faster
-        # FIXME - shouldn't it be "S \ot \bar{S}"?
         err[r'Y+L-X \perp S^\perp \ot \bar{S}^\perp'] = proj_Sp_ot_Sp(YLX).norm()
 
         for C in cone_names:

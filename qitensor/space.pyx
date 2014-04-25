@@ -439,8 +439,23 @@ cdef class HilbertSpace:
         """
 
         if self._prime is None:
-            self._prime = create_space1([ x.prime for x in self.bra_ket_set ])
+            self._prime = self.decorate(lambda x: x+"'", lambda x: '{'+x+"}'")
         return self._prime
+
+    def decorate(self, fn, fn_latex=None):
+        """
+        Just like ``self.prime`` but can add suffix other than apostrophe.
+
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> hb = qubit('b')
+        >>> (ha*hb).decorate(lambda x: '['+x+']')
+        |[a],[b]>
+        >>> ha.O.decorate(lambda x: '['+x+']')
+        |[a]><[a]|
+        """
+
+        return create_space1([ x.decorate(fn, fn_latex) for x in self.bra_ket_set ])
 
     def __richcmp__(self, other, op):
         """

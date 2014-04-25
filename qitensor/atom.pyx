@@ -271,18 +271,35 @@ cdef class HilbertAtom(HilbertSpace):
         >>> ha = qubit('a')
         >>> ha.prime
         |a'>
+        >>> ha.H.prime
+        <a'|
+        >>> ha.H.prime == ha.prime.H
+        True
         >>> ha.prime.prime
         |a''>
         """
+
         if self._prime is None:
-            if self.is_dual:
-                self._prime = self.H.prime.H
-            else:
-                self._prime = _atom_factory(
-                    self.base_field,
-                    self.label+"'", "{"+self.latex_label+"}'",
-                    self.indices, self.group_op)
+            self._prime = self.decorate(lambda x: x+"'", lambda x: '{'+x+"}'")
         return self._prime
+
+    def decorate(self, fn, fn_latex=None):
+        """
+        >>> from qitensor import qubit
+        >>> ha = qubit('a')
+        >>> ha.decorate(lambda x: '['+x+']')
+        |[a]>
+        """
+
+        if self.is_dual:
+            return self.H.decorate(fn, fn_latex).H
+        else:
+            if fn_latex is None:
+                fn_latex = fn
+            return _atom_factory(
+                self.base_field,
+                fn(self.label), fn_latex(self.latex_label),
+                self.indices, self.group_op)
 
     cpdef ket(self, idx):
         """

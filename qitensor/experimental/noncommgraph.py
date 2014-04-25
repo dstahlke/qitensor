@@ -981,6 +981,25 @@ def get_many_values(S, cones=('hermit', 'psd', 'ppt', 'psd&ppt')):
 
 ### Validation code ####################
 
+def test_lovasz(S):
+    """
+    >>> ha = qudit('a', 3)
+    >>> np.random.seed(1)
+    >>> S = TensorSubspace.create_random_hermitian(ha, 5, tracefree=True).perp()
+    >>> test_lovasz(S)
+    FIXME
+    """
+
+    cvxopt.solvers.options['show_progress'] = False
+    cvxopt.solvers.options['abstol'] = float(1e-8)
+    cvxopt.solvers.options['reltol'] = float(1e-8)
+
+    info = lovasz_theta(S, True)
+    print('t =', info['t'])
+    (tp, errp) = check_lovasz_primal(S, *[ info[x] for x in 'rho,T'.split(',') ])
+    (td, errd) = check_lovasz_dual(S, *[ info[x] for x in 'Y'.split(',') ])
+    print('duality gap:', td-tp)
+
 def test_schrijver(S, cones=('hermit', 'psd', 'ppt', 'psd&ppt')):
     """
     >>> ha = qudit('a', 3)
@@ -1040,6 +1059,24 @@ def test_szegedy(S):
 
     return info
 
+def check_lovasz_primal(S, rho, T, report=True):
+    r"""
+    Verify Lovasz primal solution.
+    Returns ``(t, err)`` where ``t`` is the value and ``err`` is the amount by which
+    feasibility constrains are violated.
+    """
+
+    return checking_routine(S, None, { 'lovasz_primal': (rho, T) }, report)
+
+def check_lovasz_dual(S, Y, report=True):
+    r"""
+    Verify Lovasz dual solution.
+    Returns ``(t, err)`` where ``t`` is the value and ``err`` is the amount by which
+    feasibility constrains are violated.
+    """
+
+    return checking_routine(S, None, { 'lovasz_dual': (Y,) }, report)
+
 def check_schrijver_primal(S, cones, rho, T, report=True):
     r"""
     Verify Schrijver primal solution.
@@ -1079,8 +1116,9 @@ def check_szegedy_dual(S, cones, Y, report=True):
 def checking_routine(S, cones, task, report):
     ncg = GraphProperties(S)
 
-    cones = ncg.get_cone_set(cones)
-    cone_names = frozenset(C['name'] for C in cones)
+    if cones is not None:
+        cones = ncg.get_cone_set(cones)
+        cone_names = frozenset(C['name'] for C in cones)
 
     ha = ncg.top_space
     hb = ncg.bottom_space
@@ -1107,6 +1145,29 @@ def checking_routine(S, cones, task, report):
         return ret
 
     err = {}
+
+    if 'lovasz_primal' in task:
+        (rho, T) = task['lovasz_primal']
+
+        assert rho.space == hb.O
+        assert T.space == (ha*hb).O
+        val = 1 + (Phi.H * T * Phi).real
+        err[r'trace(rho)'] = abs(1 - rho.trace())
+        err[r'rho PSD'] = check_psd(rho)
+        err[r'T + I \ot rho PSD'] = check_psd(T + ha.eye()*rho)
+
+        # FIXME - wrong space
+        err[r'T \in S^\perp \ot \bar{S}^\perp'] = (T - proj_Sp_ot_Sp(T)).norm()
+
+    if 'lovasz_dual' in task:
+        (Y,) = task['lovasz_dual']
+
+        val = Y.trace(ha).eigvalsh()[-1]
+
+        err[r'Y \succeq J'] = check_psd(Y - J)
+
+        # FIXME - wrong space
+        err[r'Y \perp S^\perp \ot \bar{S}^\perp'] = proj_Sp_ot_Sp(Y).norm()
 
     if 'schrijver_primal' in task:
         (rho, T) = task['schrijver_primal']
@@ -1149,6 +1210,7 @@ def checking_routine(S, cones, task, report):
         #S_djp_S = S * hb.O.full_space() | ha.O.full_space() * Sb
         #err[r'Y+L-X \in S \djp \bar{S}'] = linalg.norm(S_djp_S.perp().to_basis(YLX))
         # Faster
+        # FIXME - shouldn't it be "S \ot \bar{S}"?
         err[r'Y+L-X \perp S^\perp \ot \bar{S}^\perp'] = proj_Sp_ot_Sp(YLX).norm()
 
         for C in cone_names:

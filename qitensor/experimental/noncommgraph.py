@@ -16,12 +16,14 @@ from qitensor.subspace import TensorSubspace
 __all__ = [
     'from_adjmat',
     'pentagon',
-    'random',
-    'get_many_values',
+    'make_channel',
     'lovasz_theta',
     'szegedy',
     'schrijver',
-    'make_channel',
+    'qthperp',
+    'qthmperp',
+    'qthpperp',
+    'get_many_values',
     'test_schrijver',
     'test_szegedy',
 ]
@@ -455,34 +457,39 @@ def pentagon():
     ])
     return from_adjmat(adj_mat)
 
-# FIXME - deprecate
-def random(spc, num_seeds):
-    if isinstance(spc, HilbertSpace):
-        n = spc.dim()
-    else:
-        n = spc
-    Sp = TensorSubspace.create_random_hermitian(spc, n**2 - num_seeds - 1, tracefree=True)
-    S = Sp.perp()
-    assert S.dim() == num_seeds+1
-    return S
-
-def get_many_values(S, cones=('hermit', 'psd', 'ppt', 'psd&ppt')):
+def make_channel(S):
     """
-    >>> np.random.seed(1)
-    >>> S = random(3, 5)
-    >>> cvxopt.solvers.options['abstol'] = float(1e-7)
-    >>> cvxopt.solvers.options['reltol'] = float(1e-7)
-    >>> vals = get_many_values(S)
-    >>> vals=={}
-    FIXME
+    Makes a CPTP map whose confusibility graph is equal to ``S``.
     """
 
-    ret = {}
-    ret['lovasz'] = lovasz_theta(S)
-    for cone in cones:
-        ret['schrijver('+cone+')'] = schrijver(S, cone)
-        ret['szegedy('+cone+')'] = szegedy(S, cone)
-    return ret
+    assert S._hilb_space is not None
+    spc = S._hilb_space
+    assert S.is_hermitian()
+    assert spc.eye() in S
+
+    if S.dim() == 1:
+        return CP_Map.identity(spc)
+
+    B = (S - spc.eye().span()).hermitian_basis()
+    B = [ b - spc.eye() * b.eigvalsh()[0] for b in B ]
+    m = np.sum(B).eigvalsh()[-1]
+    B = [ b/m for b in B ]
+    B += [ spc.eye() - np.sum(B) ]
+    J = [ b.sqrt() for b in B ]
+    J = [ j.svd()[0].H * j for j in J ]
+
+    hk = qudit('k', len(J))
+    J = [ hk.ket(k) * j for (k,j) in enumerate(J) ]
+
+    Kspc = TensorSubspace.from_span(J)
+    assert S.equiv(Kspc.H * Kspc)
+
+    chan = CP_Map.from_kraus(J)
+    assert chan.is_cptp()
+
+    return chan
+
+### Main SDP routines =============
 
 def lovasz_theta(S, long_return=False):
     """
@@ -883,37 +890,34 @@ def schrijver(S, cones, long_return=False):
     else:
         raise Exception('cvxopt.sdp returned error: '+sdp_stats['status'])
 
-def make_channel(S):
+### Convenience functions ================
+
+def qthperp(S, long_return=False):
+    return lovasz_theta(~S, long_return)
+
+def qthmperp(S, cones, long_return=False):
+    return schrijver(~S, cones, long_return)
+
+def qthpperp(S, cones, long_return=False):
+    return szegedy(~S, cones, long_return)
+
+def get_many_values(S, cones=('hermit', 'psd', 'ppt', 'psd&ppt')):
     """
-    Makes a CPTP map whose confusibility graph is equal to ``S``.
+    >>> np.random.seed(1)
+    >>> S = TensorSubspace.create_random_hermitian(3, 5, tracefree=True).perp()
+    >>> cvxopt.solvers.options['abstol'] = float(1e-7)
+    >>> cvxopt.solvers.options['reltol'] = float(1e-7)
+    >>> vals = get_many_values(S)
+    >>> vals.keys()
+    FIXME
     """
 
-    assert S._hilb_space is not None
-    spc = S._hilb_space
-    assert S.is_hermitian()
-    assert spc.eye() in S
-
-    if S.dim() == 1:
-        return CP_Map.identity(spc)
-
-    B = (S - spc.eye().span()).hermitian_basis()
-    B = [ b - spc.eye() * b.eigvalsh()[0] for b in B ]
-    m = np.sum(B).eigvalsh()[-1]
-    B = [ b/m for b in B ]
-    B += [ spc.eye() - np.sum(B) ]
-    J = [ b.sqrt() for b in B ]
-    J = [ j.svd()[0].H * j for j in J ]
-
-    hk = qudit('k', len(J))
-    J = [ hk.ket(k) * j for (k,j) in enumerate(J) ]
-
-    Kspc = TensorSubspace.from_span(J)
-    assert S.equiv(Kspc.H * Kspc)
-
-    chan = CP_Map.from_kraus(J)
-    assert chan.is_cptp()
-
-    return chan
+    ret = {}
+    ret['lovasz'] = lovasz_theta(S)
+    for cone in cones:
+        ret['schrijver('+cone+')'] = schrijver(S, cone)
+        ret['szegedy('+cone+')'] = szegedy(S, cone)
+    return ret
 
 ### Validation code ####################
 

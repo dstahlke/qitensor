@@ -571,7 +571,7 @@ def from_channel(N):
 
 ### Main SDP routines =============
 
-def lovasz_theta(S, long_return=False):
+def lovasz_theta(S, long_return=False, verify_tol=1e-7):
     """
     Compute the non-commutative generalization of the Lovasz function,
     using Theorem 9 of arXiv:1002.2514.
@@ -619,8 +619,6 @@ def lovasz_theta(S, long_return=False):
 
     (xvec, sdp_stats) = call_sdp(c, [Fx_1, Fx_2], [F0_1, F0_2])
 
-    err = collections.defaultdict(float)
-
     if sdp_stats['status'] == 'optimal':
         rho = mat_real_to_cplx(np.array(sdp_stats['zs'][0]))
         I_ot_rho = np.tensordot(np.eye(n), rho, axes=0).transpose(0,2,1,3)
@@ -631,8 +629,9 @@ def lovasz_theta(S, long_return=False):
         Y = np.dot(x_to_Y, xvec)
 
         # Verify primal/dual solution
-        verify_tol=1e-7
         if verify_tol:
+            err = collections.defaultdict(float)
+
             # Test the primal solution
             for mat in np.rollaxis(ncg.Y_basis, -1):
                 dp = np.tensordot(T, mat.conj(), axes=4)
@@ -653,10 +652,10 @@ def lovasz_theta(S, long_return=False):
                 dp = np.tensordot(Y, mat.conj(), axes=[[0, 2], [0, 1]])
                 err[r'Y in S \ot \bar{S}'] += linalg.norm(dp)
 
-        assert min(err.values()) >= 0
-        for (k, v) in err.items():
-            if v > verify_tol:
-                print('WARRNING: err[%s] = %g' % (k, v))
+            assert min(err.values()) >= 0
+            for (k, v) in err.items():
+                if v > verify_tol:
+                    print('WARRNING: err[%s] = %g' % (k, v))
 
         if long_return:
             if ncg.S._hilb_space is not None:
@@ -676,7 +675,7 @@ def lovasz_theta(S, long_return=False):
     else:
         raise Exception('cvxopt.sdp returned error: '+sdp_stats['status'])
 
-def szegedy(S, cones, long_return=False):
+def szegedy(S, cones, long_return=False, verify_tol=1e-7):
     r"""
     My non-commutative generalization of Szegedy's number.
 
@@ -787,7 +786,6 @@ def szegedy(S, cones, long_return=False):
             L_list = [ L_i/s for L_i in L_list ]
 
         # Verify dual solution (or part of it; more is done below)
-        verify_tol=1e-7
         if verify_tol:
             # Test the primal solution
             L = np.sum(L_list, axis=0)
@@ -824,7 +822,6 @@ def szegedy(S, cones, long_return=False):
         Y = np.dot(x_to_Y, xvec)
 
         # Verify primal/dual solution
-        verify_tol=1e-7
         if verify_tol:
             err[r'primal value'] = abs(T.trace().trace() + 1 - t)
 
@@ -876,7 +873,7 @@ def szegedy(S, cones, long_return=False):
     else:
         raise Exception('cvxopt.sdp returned error: '+sdp_stats['status'])
 
-def schrijver(S, cones, long_return=False):
+def schrijver(S, cones, long_return=False, verify_tol=1e-7):
     r"""
     My non-commutative generalization of Schrijver's number.
 
@@ -991,7 +988,6 @@ def schrijver(S, cones, long_return=False):
             L_list.append(-X/2)
         X = None
 
-        verify_tol=1e-7
         if verify_tol:
             err = collections.defaultdict(float)
 

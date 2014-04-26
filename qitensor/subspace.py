@@ -5,7 +5,7 @@ import numpy.linalg as linalg
 
 from qitensor.array import HilbertArray
 from qitensor.space import HilbertSpace
-from qitensor.exceptions import MismatchedSpaceError
+from qitensor.exceptions import MismatchedSpaceError, HilbertError
 
 # This is the only thing that is exported.
 __all__ = ['TensorSubspace']
@@ -301,6 +301,64 @@ class TensorSubspace(object):
         """
 
         return cls.empty(col_shp, tol=tol, dtype=dtype).perp()
+
+    @classmethod
+    def diagonals(cls, col_shp, tol=1e-10, dtype=complex):
+        """
+        Constructs the space of diagonal matrices.
+
+        >>> from qitensor import TensorSubspace, qubit, qudit
+        >>> TensorSubspace.diagonals((3,5))
+        Traceback (most recent call last):
+            ...
+        qitensor.exceptions.HilbertError: 'col_shp must correspond to a square matrix, but was (3, 5)'
+        >>> TensorSubspace.diagonals((3,3))
+        <TensorSubspace of dim 3 over space (3, 3)>
+        >>> ha = qubit('a')
+        >>> hb = qudit('b', 3)
+        >>> TensorSubspace.diagonals(ha)
+        <TensorSubspace of dim 2 over space (|a><a|)>
+        >>> TensorSubspace.diagonals(ha.O)
+        <TensorSubspace of dim 2 over space (|a><a|)>
+        >>> TensorSubspace.diagonals(ha*hb)
+        <TensorSubspace of dim 6 over space (|a,b><a,b|)>
+        """
+
+        if isinstance(col_shp, HilbertSpace):
+            hilb_space = col_shp
+            if not hilb_space.bra_set:
+                hilb_space *= hilb_space.H
+            if not hilb_space == hilb_space.H:
+                raise HilbertError('space must be ket space or Hermitian, but was '+
+                    repr(col_shp))
+            dtype = hilb_space.base_field.dtype
+            col_shp = hilb_space.shape
+            n = hilb_space.ket_space().dim()
+        else:
+            hilb_space = None
+            if len(col_shp) != 2 or col_shp[0] != col_shp[1]:
+                raise HilbertError('col_shp must correspond to a square matrix, but was '+
+                    repr(col_shp))
+            n = col_shp[0]
+
+        basis = []
+        perp_basis = []
+        for i in range(n):
+            x = np.zeros((n,n), dtype=dtype)
+            x[i, i] = 1
+            basis.append(x)
+
+            for j in range(n):
+                if j == i:
+                    continue
+                x = np.zeros((n,n), dtype=dtype)
+                x[i, j] = 1
+                perp_basis.append(x)
+
+        basis = np.array([ x.reshape(col_shp) for x in basis ])
+        perp_basis = np.array([ x.reshape(col_shp) for x in perp_basis ])
+
+        return cls(basis, perp_basis, tol=tol, hilb_space=hilb_space, dtype=dtype)
 
     @classmethod
     def create_random_hermitian(cls, spc, opspc_dim, tracefree=False):

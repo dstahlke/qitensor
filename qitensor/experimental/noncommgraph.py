@@ -16,6 +16,7 @@ from qitensor.subspace import TensorSubspace
 
 __all__ = [
     'from_adjmat',
+    'from_graph6',
     'pentagon',
     'make_channel',
     'lovasz_theta',
@@ -403,7 +404,15 @@ def from_adjmat(adj_mat, loops=False):
     ...     [1, 0, 0, 1, 0]
     ... ])
     >>> S = from_adjmat(adj_mat)
+    >>> S
+    <TensorSubspace of dim 10 over space (5, 5)>
     >>> theta = lovasz_theta(~S)
+    >>> abs(theta - numpy.sqrt(5)) < 1e-8
+    True
+    >>> T = from_adjmat(adj_mat, loops=True)
+    >>> T
+    <TensorSubspace of dim 15 over space (5, 5)>
+    >>> theta = lovasz_theta(T)
     >>> abs(theta - numpy.sqrt(5)) < 1e-8
     True
     """
@@ -422,7 +431,41 @@ def from_adjmat(adj_mat, loops=False):
         m[i, j] = 1
         basis.append(m)
 
-    return TensorSubspace.from_span(basis)
+    ret = TensorSubspace.from_span(basis)
+
+    if loops:
+        ret |= TensorSubspace.diagonals((n, n))
+
+    return ret
+
+def from_graph6(g6, loops=False):
+    """
+    Create a non-commutative graph corresponding to the classical graph with the given
+    graph6 code.
+
+    >>> from_graph6('GRddY{')
+    <TensorSubspace of dim 32 over space (8, 8)>
+    >>> from_graph6('GRddY{', loops=True)
+    <TensorSubspace of dim 40 over space (8, 8)>
+    """
+
+    import networkx as nx
+    G = nx.parse_graph6(g6)
+    n = len(G)
+    basis = []
+
+    for (i, j) in G.edges():
+        m = np.zeros((n, n), dtype=complex)
+        m[i, j] = 1
+        basis.append(m)
+    basis += [ x.transpose() for x in basis ]
+
+    ret = TensorSubspace.from_span(basis)
+
+    if loops:
+        ret |= TensorSubspace.diagonals((n, n))
+
+    return ret
 
 def pentagon():
     """

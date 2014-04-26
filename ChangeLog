@@ -8,6 +8,7 @@
 	* HilbertArray.eigproj
 	* HilbertSpace.random_povm_element
 	* TensorSubspace.create_random_hermitian
+	* TensorSubspace.diagonals
 	* experimental: non-commutative graphs
 	* fixes for the way TensorSubspace deals with dtype, etc.
 	* CP_Map.krauses

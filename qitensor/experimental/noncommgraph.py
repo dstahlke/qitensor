@@ -176,14 +176,12 @@ class GraphProperties(object):
             'name': 'psd',
             'R':  lambda Z: Z.transpose((0,2,1,3)).reshape(n**2, n**2),
             'R*': lambda Z: Z.reshape(n,n,n,n).transpose((0,2,1,3)),
-            '0': np.zeros((n**2, n**2), dtype=complex),
         }
 
         self.cond_ppt = {
             'name': 'ppt',
             'R':  lambda Z: Z.transpose((1,2,0,3)).reshape(n**2, n**2),
             'R*': lambda Z: Z.reshape(n,n,n,n).transpose((2,0,1,3)),
-            '0': np.zeros((n**2, n**2), dtype=complex),
         }
 
         for c in [self.cond_psd, self.cond_ppt]:
@@ -597,8 +595,6 @@ def lovasz_theta(S, long_return=False):
         raise Exception('cvxopt.sdp returned error: '+sdp_stats['status'])
 
 def szegedy(S, cones, long_return=False):
-    # FIXME - tell about how L=(\sum L_i)-X (or something like that) to match paper
-    # FIXME - here and for schrijver, absorb X into L_0
     r"""
     My non-commutative generalization of Szegedy's number.
 
@@ -606,14 +602,14 @@ def szegedy(S, cones, long_return=False):
         \max &\left<\Phi|T + I \otimes \rho|\Phi\right> \textrm{ s.t.} \\
             &\rho \succeq 0, \Tr(\rho)=1 \\
             &T + I \otimes \rho \succeq 0 \\
-            &T+(L+L^\dag)-X \in S^\perp \otimes \bar{S}^\perp \\
-            &R(L) \in \texttt{cones}^* \\
+            &T+\sum_i (L_i+L_i^\dag) \in S^\perp \otimes \bar{S}^\perp \\
+            &R(L_i)+R(L_i)^\dag \in \mathcal{C}_i^* \\
             &X^\ddag = -X \\
             &X^\dag = X \\
         \min &\opnorm{Tr_A(Y)} \textrm{ s.t.} \\
             &Y \succeq \ket{\Phi}\bra{\Phi} \\
             &Y \in S * \bar{S} \\
-            &R(Y) \in \texttt{cones}^* \\
+            &R(Y) \in \mathcal{C}_i \quad \forall i \\
 
     If the long_return option is True, then some extra status and internal
     quantities are returned (such as the optimal Y operator).
@@ -665,7 +661,7 @@ def szegedy(S, cones, long_return=False):
     for v in cones:
         Fx = -np.array([ v['R'](y) for y in np.rollaxis(x_to_Y, -1) ], dtype=complex)
         Fx = np.rollaxis(Fx, 0, len(Fx.shape))
-        F0 = -v['0']
+        F0 = -np.zeros((n**2, n**2), dtype=complex)
         Fx_econs.append(Fx)
         F0_econs.append(F0)
 
@@ -683,32 +679,38 @@ def szegedy(S, cones, long_return=False):
         L_list = []
         for (i,v) in enumerate(cones):
             zsi = mat_real_to_cplx(np.array(sdp_stats['zs'][2+i]))
-            # over 2 because we will later do L+L^\dag
-            L = v['R*'](zsi) / 2
-            L_list.append(L)
+            # over 2 because we will later do L_i+L_i^\dag
+            L_i = v['R*'](zsi) / 2
+            L_list.append(L_i)
         T = zs1 - I_ot_rho
+
         # Copy rot-antihermit portion of T to X.
         X = T - project_dh(T)
+        if len(cones):
+            L_list[0] -= X/2
+        else:
+            L_list.append(-X/2)
+        X = None
 
         # Verify dual solution (or part of it; more is done below)
         verify_tol=1e-7
         if verify_tol:
             # Test the primal solution
-            TLX = T-X
-            if len(L_list):
-                L_sum = np.sum(L_list, axis=0)
-                L_sum = L_sum + L_sum.transpose(2,3,0,1).conj()
-                TLX += L_sum
+            L = np.sum(L_list, axis=0)
+            LH = L.transpose(2,3,0,1).conj()
 
             # FIXME - which space?
+            # FIXME - this should break when X is not added
             for mat in np.rollaxis(Ybas, -1):
-                dp = np.tensordot(TLX, mat.conj(), axes=4)
+                dp = np.tensordot(T+L+LH, mat.conj(), axes=4)
                 # FIXME - which space?
-                err[r'T+L-X in Ybas.perp()'] += linalg.norm(dp)
+                err[r'T+L+L^\dag in Ybas.perp()'] += linalg.norm(dp)
 
-            for (i, (v, L)) in enumerate(zip(cones, L_list)):
-                M = v['R'](L) - v['0']
-                err['R(L) in '+v['name']] = check_psd(M)
+            if len(cones):
+                for (i, (v, L_i)) in enumerate(zip(cones, L_list)):
+                    M = v['R'](L_i).copy()
+                    M += M.T.conj()
+                    err['R(L_i)+R(L_i)^\dag in '+v['name']] = check_psd(M)
 
             T_plus_Irho = T + I_ot_rho
             err[r'T_plus_Irho pos'] = check_psd(T_plus_Irho.reshape(n**2, n**2))
@@ -730,7 +732,7 @@ def szegedy(S, cones, long_return=False):
             err[r'Y - phi_phi PSD'] = check_psd(Y.reshape(n**2, n**2) - phi_phi)
 
             for v in cones:
-                M = v['R'](Y) - v['0']
+                M = v['R'](Y)
                 err[r'R(Y) in '+v['name']] = check_psd(M)
 
             maxeig = linalg.eigvalsh(np.trace(Y, axis1=0, axis2=2))[-1].real
@@ -752,7 +754,11 @@ def szegedy(S, cones, long_return=False):
         if sdp_stats['status'] == 'primal infeasible':
             t = np.inf
         if long_return:
-            L_map = { C['name']: L for (C, L) in zip(cones, L_list) }
+            if len(cones):
+                L_map = { C['name']: L_i for (C, L_i) in zip(cones, L_list) }
+            else:
+                assert len(L_list)==1
+                L_map = { 'hermit': L_list[0] }
             if ncg.S._hilb_space is not None:
                 ha = ncg.top_space
                 hb = ncg.bottom_space
@@ -761,12 +767,11 @@ def szegedy(S, cones, long_return=False):
                 if sdp_stats['status'] == 'optimal':
                     Y = ncg.make_ab_array(Y)
                 L_map = { k: ncg.make_ab_array(L_map[k]) for k in L_map.keys() }
-                X = ncg.make_ab_array(X)
             else:
                 ha = None
                 hb = None
             #return locals()
-            to_ret = [ 't', 'T', 'rho', 'L_map', 'X', 'ha', 'hb', 'sdp_stats' ]
+            to_ret = [ 't', 'T', 'rho', 'L_map', 'ha', 'hb', 'sdp_stats' ]
             if sdp_stats['status'] == 'optimal':
                 to_ret += 'Y'
             _locals = locals()
@@ -854,7 +859,7 @@ def schrijver(S, cones, long_return=False):
     for v in cones:
         Fx = -np.array([ v['R'](y) for y in np.rollaxis(x_to_T, -1) ], dtype=complex)
         Fx = np.rollaxis(Fx, 0, len(Fx.shape))
-        F0 = -v['0']
+        F0 = -np.zeros((n**2, n**2), dtype=complex)
         Fx_econs.append(Fx)
         F0_econs.append(F0)
 
@@ -917,7 +922,7 @@ def schrijver(S, cones, long_return=False):
             err['rho PSD'] = check_psd(rho)
 
             for v in cones:
-                M = v['R'](T) - v['0']
+                M = v['R'](T)
                 err['R(T) in '+v['name']] = check_psd(M)
 
             # Test the dual solution
@@ -937,7 +942,7 @@ def schrijver(S, cones, long_return=False):
             err[r'Y+L-X in S \djp \bar{S}'] = err_Y_space
 
             for (i, (v, L)) in enumerate(zip(cones, L_list)):
-                M = v['R'](L) - v['0']
+                M = v['R'](L)
                 err['R(L) in '+v['name']] = check_psd(M)
 
             err['Y-J PSD'] = check_psd((Y-J).reshape(n*n, n*n))
@@ -1095,7 +1100,7 @@ def test_szegedy(S):
             print('t =', info['t'])
             is_opt = (info['sdp_stats']['status'] == 'optimal')
             info['is_opt'] = is_opt
-            (tp, errp) = check_szegedy_primal(S, cone, *[ info[x] for x in 'rho,T,L_map,X,is_opt'.split(',') ])
+            (tp, errp) = check_szegedy_primal(S, cone, *[ info[x] for x in 'rho,T,L_map,is_opt'.split(',') ])
             if is_opt:
                 (td, errd) = check_szegedy_dual(S, cone, *[ info[x] for x in 'Y'.split(',') ])
                 print('duality gap:', td-tp)
@@ -1136,14 +1141,14 @@ def check_schrijver_dual(S, cones, Y, L_map, X, report=True):
 
     return checking_routine(S, cones, { 'schrijver_dual': (Y, L_map, X) }, report)
 
-def check_szegedy_primal(S, cones, rho, T, L_map, X, is_opt, report=True):
+def check_szegedy_primal(S, cones, rho, T, L_map, is_opt, report=True):
     r"""
     Verify Schrijver primal solution.
     Returns ``(t, err)`` where ``t`` is the value and ``err`` is the amount by which
     feasibility constrains are violated.
     """
 
-    return checking_routine(S, cones, { 'szegedy_primal': (rho, T, L_map, X, is_opt) }, report)
+    return checking_routine(S, cones, { 'szegedy_primal': (rho, T, L_map, is_opt) }, report)
 
 def check_szegedy_dual(S, cones, Y, report=True):
     r"""
@@ -1270,7 +1275,7 @@ def checking_routine(S, cones, task, report):
         err[r'X^\dag - X'] = (X - X.H).norm()
 
     if 'szegedy_primal' in task:
-        (rho, T, L_map, X, is_opt) = task['szegedy_primal']
+        (rho, T, L_map, is_opt) = task['szegedy_primal']
 
         assert rho.space == hb.O
         assert T.space == (ha*hb).O
@@ -1287,14 +1292,14 @@ def checking_routine(S, cones, task, report):
         err[r'rho PSD'] = check_psd(rho)
         err[r'T + I \ot rho PSD'] = check_psd(T + ha.eye()*rho)
 
-        TLX = T - X
-        if len(cone_names):
-            L_sum = np.sum(list(L_map.values()))
-            TLX += L_sum + L_sum.H
+        L = np.sum(list(L_map.values()))
 
-        err[r'T+L-X \perp S \ot \bar{S}'] = proj_S_ot_S(TLX).norm()
+        err[r'T+L+L^\dag \perp S \ot \bar{S}'] = proj_S_ot_S(T+L+L.H).norm()
+
+        # FIXME - test hermit cone
 
         for C in cone_names:
+            # FIXME - symmetrize
             L = L_map[C]
             if C == 'psd':
                 err[r'L_PSD'] = check_psd(R(L))
@@ -1411,7 +1416,7 @@ if __name__ == "__main__":
     #w=[np.tensordot(x, y.conj(), axes=([],[])).transpose((0, 2, 1, 3)) for x in S.S_basis for y in S.S_basis]
     #print(np.max([linalg.norm(np.tensordot(T, (x + x.transpose(1,0,3,2).conj()).conj(), axes=4)) for x in w]))
 
-    info=szegedy(TensorSubspace.from_span([qitensor.qudit('a',2).eye()]), 'ppt', long_return=True)
+    info=szegedy(TensorSubspace.from_span([qudit('a',2).eye()]), 'ppt', long_return=True)
     T = info['T']
     L = np.sum(info['L_map'].values(), axis=0)
     L += L.H

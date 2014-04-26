@@ -495,8 +495,7 @@ def lovasz_theta(S, long_return=False):
     Compute the non-commutative generalization of the Lovasz function,
     using Theorem 9 of arXiv:1002.2514.
 
-    If the long_return option is True, then some extra status and internal
-    quantities are returned (such as the optimal Y operator).
+    If the long_return option is True, then the optimal solution (T, Y, etc.) is returned.
     """
 
     ncg = GraphProperties(S)
@@ -595,6 +594,7 @@ def lovasz_theta(S, long_return=False):
         raise Exception('cvxopt.sdp returned error: '+sdp_stats['status'])
 
 def szegedy(S, cones, long_return=False):
+    # FIXME - test Y^\ddag = Y
     r"""
     My non-commutative generalization of Szegedy's number.
 
@@ -602,17 +602,16 @@ def szegedy(S, cones, long_return=False):
         \max &\left<\Phi|T + I \otimes \rho|\Phi\right> \textrm{ s.t.} \\
             &\rho \succeq 0, \Tr(\rho)=1 \\
             &T + I \otimes \rho \succeq 0 \\
-            &T+\sum_i (L_i+L_i^\dag) \in S^\perp \otimes \bar{S}^\perp \\
-            &R(L_i)+R(L_i)^\dag \in \mathcal{C}_i^* \\
-            &X^\ddag = -X \\
-            &X^\dag = X \\
+            &T+\sum_i (L_i+L_i^\dag) \in S^\perp \otimes \overline{S}^\perp \\
+            &R(L_i)+R(L_i)^\dag \in \mathcal{C}_i^* \quad \forall i \\
         \min &\opnorm{Tr_A(Y)} \textrm{ s.t.} \\
             &Y \succeq \ket{\Phi}\bra{\Phi} \\
-            &Y \in S * \bar{S} \\
-            &R(Y) \in \mathcal{C}_i \quad \forall i \\
+            &Y \in S * \overline{S} \\
+            &R(Y) \in \mathcal{C}_i \quad \forall i
 
-    If the long_return option is True, then some extra status and internal
-    quantities are returned (such as the optimal Y operator).
+    ``cones`` can be ``hermit``, ``psd``, ``ppt``, or ``psd&ppt``.
+
+    If the long_return option is True, then the optimal solution (T, Y, etc.) is returned.
     """
 
     ncg = GraphProperties(S)
@@ -782,7 +781,7 @@ def szegedy(S, cones, long_return=False):
         raise Exception('cvxopt.sdp returned error: '+sdp_stats['status'])
 
 def schrijver(S, cones, long_return=False):
-    # FIXME - tell about how L=(\sum L_i)-X (or something like that) to match paper
+    # FIXME - test T^\ddag = T
     r"""
     My non-commutative generalization of Schrijver's number.
 
@@ -790,20 +789,16 @@ def schrijver(S, cones, long_return=False):
         \max &\left<\Phi|T + I \otimes \rho|\Phi\right> \textrm{ s.t.} \\
             &\rho \succeq 0, \Tr(\rho)=1 \\
             &T + I \otimes \rho \succeq 0 \\
-            &T \in S^\perp \otimes \bar{S}^\perp \\
-            &T^\ddag = T \\
-            &R(T) \in \texttt{cones} \\
+            &T \in S^\perp \otimes \overline{S}^\perp \\
+            &R(T) \in \mathcal{C}_i \quad \forall i \\
         \min &\opnorm{Tr_A(Y)} \textrm{ s.t.} \\
             &Y \succeq \ket{\Phi}\bra{\Phi} \\
-            &Y+(L+L^\dag)-X \in S * \bar{S} \\
-            &R(L) \in \texttt{cones}^* \\
-            &X^\ddag = -X \\
-            &X^\dag = X
+            &Y+\sum_i (L_i+L_i^\dag) \in S * \overline{S} \\
+            &R(L_i)+R(L_i)^\dag \in \mathcal{C}_i^* \quad \forall i
 
     ``cones`` can be ``hermit``, ``psd``, ``ppt``, or ``psd&ppt``.
 
-    If the long_return option is True, then some extra status and internal
-    quantities are returned (such as the optimal Y operator).
+    If the long_return option is True, then the optimal solution (T, Y, etc.) is returned.
     """
 
     # FIXME - test with S being full-space
@@ -903,6 +898,11 @@ def schrijver(S, cones, long_return=False):
 
         # Copy rot-antihermit portion of Y to X.
         X = Y - project_dh(Y)
+        if len(cones):
+            L_list[0] -= X/2
+        else:
+            L_list.append(-X/2)
+        X = None
 
         verify_tol=1e-7
         if verify_tol:
@@ -928,27 +928,27 @@ def schrijver(S, cones, long_return=False):
             # Test the dual solution
             err['dual value'] = abs(t - linalg.eigvalsh(Y.trace(axis1=0, axis2=2))[-1])
 
+            L = np.sum(L_list, axis=0)
+            LH = L.transpose(2,3,0,1).conj()
+
             err_Y_space = 0
             for matA in ncg.Sp_basis:
                 for matB in ncg.Sp_basis:
                     xy = np.tensordot(matA, matB.conj(), axes=([],[])).transpose((0, 2, 1, 3))
-                    YLX = Y-X
-                    if len(L_list):
-                        L_sum = np.sum(L_list, axis=0)
-                        L_sum = L_sum + L_sum.transpose(2,3,0,1).conj()
-                        YLX += L_sum
-                    dp = np.tensordot(YLX, xy.conj(), axes=4)
+                    dp = np.tensordot(Y+L+LH, xy.conj(), axes=4)
                     err_Y_space += abs(dp)
-            err[r'Y+L-X in S \djp \bar{S}'] = err_Y_space
+            err[r'Y+L+L^\dag in S \djp \bar{S}'] = err_Y_space
 
-            for (i, (v, L)) in enumerate(zip(cones, L_list)):
-                M = v['R'](L)
-                err['R(L) in '+v['name']] = check_psd(M)
+            if len(cones):
+                for (i, (v, L_i)) in enumerate(zip(cones, L_list)):
+                    M = v['R'](L_i).copy()
+                    M += M.T.conj()
+                    err['R(L_i) in '+v['name']] = check_psd(M)
 
             err['Y-J PSD'] = check_psd((Y-J).reshape(n*n, n*n))
 
-            err['X - X.H'] = linalg.norm(X - X.transpose(2,3,0,1).conj())
-            err['X + X^ddag'] = linalg.norm(X + X.transpose(1,0,3,2).conj())
+            #err['X - X.H'] = linalg.norm(X - X.transpose(2,3,0,1).conj())
+            #err['X + X^ddag'] = linalg.norm(X + X.transpose(1,0,3,2).conj())
 
             assert min(err.values()) >= 0
             for (k, v) in err.items():
@@ -956,7 +956,11 @@ def schrijver(S, cones, long_return=False):
                     print('WARRNING: err[%s] = %g' % (k, v))
 
         if long_return:
-            L_map = { C['name']: L for (C, L) in zip(cones, L_list) }
+            if len(cones):
+                L_map = { C['name']: L_i for (C, L_i) in zip(cones, L_list) }
+            else:
+                assert len(L_list)==1
+                L_map = { 'hermit': L_list[0] }
             if ncg.S._hilb_space is not None:
                 ha = ncg.top_space
                 hb = ncg.bottom_space
@@ -964,12 +968,11 @@ def schrijver(S, cones, long_return=False):
                 T = ncg.make_ab_array(T)
                 Y = ncg.make_ab_array(Y)
                 L_map = { k: ncg.make_ab_array(L_map[k]) for k in L_map.keys() }
-                X = ncg.make_ab_array(X)
             else:
                 ha = None
                 hb = None
             #return locals()
-            to_ret = [ 't', 'T', 'rho', 'Y', 'L_map', 'X', 'ha', 'hb', 'sdp_stats' ]
+            to_ret = [ 't', 'T', 'rho', 'Y', 'L_map', 'ha', 'hb', 'sdp_stats' ]
             _locals = locals()
             return { key: _locals[key] for key in to_ret }
         else:
@@ -995,9 +998,8 @@ def get_many_values(S, cones=('hermit', 'psd', 'ppt', 'psd&ppt')):
     >>> cvxopt.solvers.options['abstol'] = float(1e-7)
     >>> cvxopt.solvers.options['reltol'] = float(1e-7)
     >>> vals = get_many_values(S)
-    >>> ', '.join([ '%s: %.5f' % (k, vals[k]) for k in
-    ...     sorted(vals.keys(), key=lambda k: vals[k]) ])
-    'schrijver(ppt): 2.42820, schrijver(psd&ppt): 2.42820, schrijver(hermit): 3.31461, schrijver(psd): 3.31461, lovasz: 3.80697, szegedy(hermit): 4.55314, szegedy(psd): 4.55314, szegedy(ppt): inf, szegedy(psd&ppt): inf'
+    >>> ', '.join([ '%s: %.5f' % (k, vals[k]) for k in sorted(vals.keys()) ])
+    'lovasz: 3.80697, schrijver(hermit): 3.31461, schrijver(ppt): 2.42820, schrijver(psd&ppt): 2.42820, schrijver(psd): 3.31461, szegedy(hermit): 4.55314, szegedy(ppt): inf, szegedy(psd&ppt): inf, szegedy(psd): 4.55314'
     """
 
     ret = {}
@@ -1015,10 +1017,10 @@ def test_lovasz(S):
     >>> np.random.seed(1)
     >>> S = TensorSubspace.create_random_hermitian(ha, 5, tracefree=True).perp()
     >>> test_lovasz(S)
-    t = 3.80697364692
-    total err: 2.64960358991e-14
-    total err: 2.63553617673e-09
-    duality gap: 6.07764505389e-10
+    t: 3.8069736
+    total err: 0.0000000
+    total err: 0.0000000
+    duality gap: 0.0000000
     """
 
     cvxopt.solvers.options['show_progress'] = False
@@ -1029,10 +1031,10 @@ def test_lovasz(S):
     if info['sdp_stats']['status'] != 'optimal':
         print('Error: status='+info['sdp_stats']['status'])
     else:
-        print('t =', info['t'])
+        print('t: %.7f' % info['t'])
         (tp, errp) = check_lovasz_primal(S, *[ info[x] for x in 'rho,T'.split(',') ])
         (td, errd) = check_lovasz_dual(S, *[ info[x] for x in 'Y'.split(',') ])
-        print('duality gap:', td-tp)
+        print('duality gap: %.7f' % (td-tp))
 
 def test_schrijver(S, cones=('hermit', 'psd', 'ppt', 'psd&ppt')):
     """
@@ -1041,25 +1043,25 @@ def test_schrijver(S, cones=('hermit', 'psd', 'ppt', 'psd&ppt')):
     >>> S = TensorSubspace.create_random_hermitian(ha, 5, tracefree=True).perp()
     >>> test_schrijver(S)
     --- Schrijver with hermit
-    t = 3.31460511605
-    total err: 6.40497175329e-16
-    total err: 3.95143932875e-15
-    duality gap: 3.51548878896e-09
+    t: 3.3146051
+    total err: 0.0000000
+    total err: 0.0000000
+    duality gap: 0.0000000
     --- Schrijver with psd
-    t = 3.31460511899
-    total err: 9.52374539775e-10
-    total err: 2.0912092081e-09
-    duality gap: 2.17725570906e-09
+    t: 3.3146051
+    total err: 0.0000000
+    total err: 0.0000000
+    duality gap: 0.0000000
     --- Schrijver with ppt
-    t = 2.42819820943
-    total err: 1.11928504243e-10
-    total err: 2.07485612315e-10
-    duality gap: -1.67085012492e-10
+    t: 2.4281982
+    total err: 0.0000000
+    total err: 0.0000000
+    duality gap: -0.0000000
     --- Schrijver with psd&ppt
-    t = 2.42819821122
-    total err: 1.90901022447e-10
-    total err: 5.81738926097e-10
-    duality gap: -1.90005344791e-10
+    t: 2.4281982
+    total err: 0.0000000
+    total err: 0.0000000
+    duality gap: -0.0000000
     """
 
     cvxopt.solvers.options['show_progress'] = False
@@ -1073,10 +1075,10 @@ def test_schrijver(S, cones=('hermit', 'psd', 'ppt', 'psd&ppt')):
         if info['sdp_stats']['status'] != 'optimal':
             print('Error: status='+info['sdp_stats']['status'])
         else:
-            print('t =', info['t'])
+            print('t: %.7f' % info['t'])
             (tp, errp) = check_schrijver_primal(S, cone, *[ info[x] for x in 'rho,T'.split(',') ])
-            (td, errd) = check_schrijver_dual(S, cone, *[ info[x] for x in 'Y,L_map,X'.split(',') ])
-            print('duality gap:', td-tp)
+            (td, errd) = check_schrijver_dual(S, cone, *[ info[x] for x in 'Y,L_map'.split(',') ])
+            print('duality gap: %.7f' % (td-tp))
 
 def test_szegedy(S):
     """
@@ -1084,7 +1086,22 @@ def test_szegedy(S):
     >>> np.random.seed(1)
     >>> S = TensorSubspace.create_random_hermitian(ha, 5, tracefree=True).perp()
     >>> test_szegedy(S)
-    FIXME
+    --- Szegedy with hermit
+    t: 4.5531383
+    total err: 0.0000000
+    total err: 0.0000000
+    duality gap: 0.0000000
+    --- Szegedy with psd
+    t: 4.5531383
+    total err: 0.0000000
+    total err: 0.0000000
+    duality gap: -0.0000000
+    --- Szegedy with ppt
+    t: inf
+    total err: 0.0000000
+    --- Szegedy with psd&ppt
+    t: inf
+    total err: 0.0000000
     """
 
     cvxopt.solvers.options['show_progress'] = False
@@ -1098,13 +1115,13 @@ def test_szegedy(S):
         if not info['sdp_stats']['status'] in ['optimal', 'primal infeasible']:
             print('Error: status='+info['sdp_stats']['status'])
         else:
-            print('t =', info['t'])
+            print('t: %.7f' % info['t'])
             is_opt = (info['sdp_stats']['status'] == 'optimal')
             info['is_opt'] = is_opt
             (tp, errp) = check_szegedy_primal(S, cone, *[ info[x] for x in 'rho,T,L_map,is_opt'.split(',') ])
             if is_opt:
                 (td, errd) = check_szegedy_dual(S, cone, *[ info[x] for x in 'Y'.split(',') ])
-                print('duality gap:', td-tp)
+                print('duality gap: %.7f' % (td-tp))
 
 def check_lovasz_primal(S, rho, T, report=True):
     r"""
@@ -1133,14 +1150,14 @@ def check_schrijver_primal(S, cones, rho, T, report=True):
 
     return checking_routine(S, cones, { 'schrijver_primal': (rho, T) }, report)
 
-def check_schrijver_dual(S, cones, Y, L_map, X, report=True):
+def check_schrijver_dual(S, cones, Y, L_map, report=True):
     r"""
     Verify Schrijver dual solution.
     Returns ``(t, err)`` where ``t`` is the value and ``err`` is the amount by which
     feasibility constrains are violated.
     """
 
-    return checking_routine(S, cones, { 'schrijver_dual': (Y, L_map, X) }, report)
+    return checking_routine(S, cones, { 'schrijver_dual': (Y, L_map) }, report)
 
 def check_szegedy_primal(S, cones, rho, T, L_map, is_opt, report=True):
     r"""
@@ -1246,22 +1263,19 @@ def checking_routine(S, cones, task, report):
         err[r'T \in S^\perp \ot \bar{S}^\perp'] = (T - proj_Sp_ot_Sp(T)).norm()
 
     if 'schrijver_dual' in task:
-        (Y, L_map, X) = task['schrijver_dual']
+        (Y, L_map) = task['schrijver_dual']
 
         val = Y.trace(ha).eigvalsh()[-1]
 
         err[r'Y \succeq J'] = check_psd(Y - J)
 
-        YLX = Y - X
-        if len(cone_names):
-            L_sum = np.sum(list(L_map.values()))
-            YLX += L_sum + L_sum.H
+        L = np.sum(list(L_map.values()))
 
         # Slow
         #S_djp_S = S * hb.O.full_space() | ha.O.full_space() * Sb
         #err[r'Y+L-X \in S \djp \bar{S}'] = linalg.norm(S_djp_S.perp().to_basis(YLX))
         # Faster
-        err[r'Y+L-X \perp S^\perp \ot \bar{S}^\perp'] = proj_Sp_ot_Sp(YLX).norm()
+        err[r'Y+L+L^\dag \perp S^\perp \ot \bar{S}^\perp'] = proj_Sp_ot_Sp(Y+L+L.H).norm()
 
         for C in cone_names:
             L = L_map[C]
@@ -1272,9 +1286,6 @@ def checking_routine(S, cones, task, report):
                 err[r'L_PPT'] = check_psd(M.transpose(ha))
             else:
                 assert 0
-
-        err[r'X^\ddag + X'] = (X + ddag(X)).norm()
-        err[r'X^\dag - X'] = (X - X.H).norm()
 
     if 'szegedy_primal' in task:
         (rho, T, L_map, is_opt) = task['szegedy_primal']
@@ -1335,7 +1346,7 @@ def checking_routine(S, cones, task, report):
             if v > 1e-7:
                 print('err[%s] = %g' % (k, v))
 
-        print('total err:', sum(err.values()))
+        print('total err: %.7f' % sum(err.values()))
 
     return (val, err)
 
@@ -1416,7 +1427,7 @@ if __name__ == "__main__":
     #w=[np.tensordot(x, y.conj(), axes=([],[])).transpose((0, 2, 1, 3)) for x in S.S_basis for y in S.S_basis]
     #print(np.max([linalg.norm(np.tensordot(T, (x + x.transpose(1,0,3,2).conj()).conj(), axes=4)) for x in w]))
 
-    info=szegedy(TensorSubspace.from_span([qudit('a',2).eye()]), 'ppt', long_return=True)
-    T = info['T']
-    L = np.sum(info['L_map'].values(), axis=0)
-    L += L.H
+    #info=szegedy(TensorSubspace.from_span([qudit('a',2).eye()]), 'ppt', long_return=True)
+    #T = info['T']
+    #L = np.sum(info['L_map'].values(), axis=0)
+    #L += L.H

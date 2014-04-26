@@ -19,6 +19,7 @@ __all__ = [
     'from_graph6',
     'pentagon',
     'make_channel',
+    'from_channel',
     'lovasz_theta',
     'szegedy',
     'schrijver',
@@ -26,8 +27,6 @@ __all__ = [
     'qthmperp',
     'qthpperp',
     'get_many_values',
-    'test_schrijver',
-    'test_szegedy',
 ]
 
 # Adapted from
@@ -499,6 +498,19 @@ def pentagon():
 def make_channel(S):
     """
     Makes a CPTP map whose confusibility graph is equal to ``S``.
+
+    >>> ha = qudit('a', 3)
+    >>> S = TensorSubspace.create_random_hermitian(ha, 5, tracefree=True).perp()
+    >>> S
+    <TensorSubspace of dim 4 over space (|a><a|)>
+    >>> N = make_channel(S)
+    >>> N
+    CP_Map( |a><a| to |a,k><a,k| )
+    >>> T = from_channel(N)
+    >>> T
+    <TensorSubspace of dim 4 over space (|a><a|)>
+    >>> T.equiv(S)
+    True
     """
 
     assert S._hilb_space is not None
@@ -509,14 +521,23 @@ def make_channel(S):
     if S.dim() == 1:
         return CP_Map.identity(spc)
 
+    # Hermitian basis for all but identity
     B = (S - spc.eye().span()).hermitian_basis()
+    # Add identity to make a PSD basis
     B = [ b - spc.eye() * b.eigvalsh()[0] for b in B ]
+    # Make everything in the basis sum to a bounded operator
     m = np.sum(B).eigvalsh()[-1]
     B = [ b/m for b in B ]
+    # Add a final element to make a complete POVM
     B += [ spc.eye() - np.sum(B) ]
+    # Make Kraus operators
     J = [ b.sqrt() for b in B ]
+    # Remove a unitary degree of freedom
+    # Is this needed or just here to make a nicer answer?
     J = [ j.svd()[0].H * j for j in J ]
 
+    # Add basis index to channel output (eliminates interference between different basis
+    # elements).
     hk = qudit('k', len(J))
     J = [ hk.ket(k) * j for (k,j) in enumerate(J) ]
 
@@ -527,6 +548,26 @@ def make_channel(S):
     assert chan.is_cptp()
 
     return chan
+
+def from_channel(N):
+    """
+    Returns the confusibility graph for a ``CP_Map``.
+
+    >>> ha = qudit('a', 3)
+    >>> N = CP_Map.decohere(ha)
+    >>> N
+    CP_Map( |a><a| to |a><a| )
+    >>> S = from_channel(N)
+    >>> S
+    <TensorSubspace of dim 3 over space (|a><a|)>
+    >>> theta = lovasz_theta(S)
+    >>> abs(theta - 3.0) < 1e-8
+    True
+    """
+
+    assert N.is_cptp()
+    K = TensorSubspace.from_span(N.krauses())
+    return K.H * K
 
 ### Main SDP routines =============
 
@@ -1030,12 +1071,27 @@ def schrijver(S, cones, long_return=False):
 ### Convenience functions ================
 
 def qthperp(S, long_return=False):
+    '''
+    Returns ``lovasz_theta(S.perp())``.
+    ``S`` should be trace-free.
+    '''
+
     return lovasz_theta(~S, long_return)
 
 def qthmperp(S, cones, long_return=False):
+    '''
+    Returns ``schrijver(S.perp())``.
+    ``S`` should be trace-free.
+    '''
+
     return schrijver(~S, cones, long_return)
 
 def qthpperp(S, cones, long_return=False):
+    '''
+    Returns ``szegedy(S.perp())``.
+    ``S`` should be trace-free.
+    '''
+
     return szegedy(~S, cones, long_return)
 
 def get_many_values(S, which_ones=None):

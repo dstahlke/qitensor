@@ -91,10 +91,6 @@ def call_sdp(c, Fx_list, F0_list):
     $\sum_i Fx_i x_i - F0 \ge 0$ for all (Fx, F0) in (Fx_list, F0_list).
     '''
 
-    # Alternatively, the SDPA library can be used, but this requires
-    # interfacing to C libraries.
-    #xvec = sdpa.run_sdpa(c, Fx_list, F0_list).
-
     for (k, (F0, Fx)) in enumerate(zip(F0_list, Fx_list)):
         assert linalg.norm(F0 - F0.conj().T) < 1e-10
         for i in range(Fx.shape[2]):
@@ -588,7 +584,6 @@ def lovasz_theta(S, long_return=False):
             else:
                 ha = None
                 hb = None
-            #return locals()
             to_ret = [ 't', 'T', 'rho', 'Y', 'ha', 'hb', 'sdp_stats' ]
             _locals = locals()
             return { key: _locals[key] for key in to_ret }
@@ -733,7 +728,7 @@ def szegedy(S, cones, long_return=False):
                 err[r'Tr(rho)'] = abs(np.trace(rho))
             err[r'rho pos'] = check_psd(rho)
 
-            # not mandatory, but we can git this condtion anyway
+            # not mandatory, but we can get this condtion anyway
             TLLddag = TLL.transpose((1,0,3,2)).conj()
             err[r'R(T+L+L^\dag) \in Herm'] = linalg.norm(TLL-TLLddag)
 
@@ -786,7 +781,6 @@ def szegedy(S, cones, long_return=False):
             else:
                 ha = None
                 hb = None
-            #return locals()
             to_ret = [ 't', 'T', 'rho', 'L_map', 'ha', 'hb', 'sdp_stats' ]
             if sdp_stats['status'] == 'optimal':
                 to_ret += 'Y'
@@ -904,16 +898,6 @@ def schrijver(S, cones, long_return=False):
             L_list.append(L)
         assert zs_idx == len(sdp_stats['zs'])
 
-        # cvxopt guarantees the dual to give zero here
-        #zs0 = mat_real_to_cplx(np.array(sdp_stats['zs'][0]))
-        #foo = (
-        #    np.tensordot(zs0, x_to_rhotf.conj(), axes=2) +
-        #    np.tensordot(Y, x_to_sum.conj(), axes=4)
-        #)
-        #if len(L_list):
-        #    foo += np.tensordot(np.sum(L_list, axis=0), x_to_T.conj(), axes=4)
-        #print('**', linalg.norm(foo))
-
         # Copy rot-antihermit portion of Y to X.
         X = Y - project_dh(Y)
         if len(cones):
@@ -962,7 +946,7 @@ def schrijver(S, cones, long_return=False):
                     M += M.T.conj()
                     err['R(L_i) in '+v['name']] = check_psd(M)
 
-            # not mandatory, but we can git this condtion anyway
+            # not mandatory, but we can get this condtion anyway
             YLLddag = YLL.transpose((1,0,3,2)).conj()
             err[r'R(Y+L+L^\dag) \in Herm'] = linalg.norm(YLL-YLLddag)
 
@@ -970,9 +954,6 @@ def schrijver(S, cones, long_return=False):
             err[r'Y-Y^\dag'] = linalg.norm(Y-YH)
 
             err['Y-J PSD'] = check_psd((Y-J).reshape(n*n, n*n))
-
-            #err['X - X.H'] = linalg.norm(X - X.transpose(2,3,0,1).conj())
-            #err['X + X^ddag'] = linalg.norm(X + X.transpose(1,0,3,2).conj())
 
             assert min(err.values()) >= 0
             for (k, v) in err.items():
@@ -995,7 +976,6 @@ def schrijver(S, cones, long_return=False):
             else:
                 ha = None
                 hb = None
-            #return locals()
             to_ret = [ 't', 'T', 'rho', 'Y', 'L_map', 'ha', 'hb', 'sdp_stats' ]
             _locals = locals()
             return { key: _locals[key] for key in to_ret }
@@ -1106,7 +1086,7 @@ def test_schrijver(S, cones=('hermit', 'psd', 'ppt', 'psd&ppt')):
     cvxopt.solvers.options['abstol'] = float(1e-8)
     cvxopt.solvers.options['reltol'] = float(1e-8)
 
-    # FIXME - are the first two and last two always the same?
+    # FIXME - are 'ppt' and 'psd&ppt' always the same value?
     for cone in cones:
         print('--- Schrijver with', cone)
         info = schrijver(S, cone, True)
@@ -1144,7 +1124,7 @@ def test_szegedy(S):
     cvxopt.solvers.options['abstol'] = float(1e-8)
     cvxopt.solvers.options['reltol'] = float(1e-8)
 
-    # FIXME - are the first two and last two always the same?
+    # FIXME - are 'ppt' and 'psd&ppt' always the same value?
     for cone in ('hermit', 'psd', 'ppt', 'psd&ppt'):
         print('--- Szegedy with', cone)
         info = szegedy(S, cone, True)
@@ -1290,10 +1270,6 @@ def checking_routine(S, cones, task, report):
             else:
                 assert 0
 
-        # Slow
-        #Sp_ot_Sp = S.perp() * Sb.perp()
-        #err[r'T \in S^\perp \ot \bar{S}^\perp'] = linalg.norm(Sp_ot_Sp.perp().to_basis(T))
-        # Faster
         err[r'T \in S^\perp \ot \bar{S}^\perp'] = (T - proj_Sp_ot_Sp(T)).norm()
 
     if 'schrijver_dual' in task:
@@ -1305,10 +1281,6 @@ def checking_routine(S, cones, task, report):
 
         L = np.sum(list(L_map.values()))
 
-        # Slow
-        #S_djp_S = S * hb.O.full_space() | ha.O.full_space() * Sb
-        #err[r'Y+L-X \in S \djp \bar{S}'] = linalg.norm(S_djp_S.perp().to_basis(YLX))
-        # Faster
         err[r'Y+L+L^\dag \perp S^\perp \ot \bar{S}^\perp'] = proj_Sp_ot_Sp(Y+L+L.H).norm()
 
         for C in cone_names:
@@ -1388,79 +1360,6 @@ if __name__ == "__main__":
     # Doctests require not getting progress messages from SDP solver.
     cvxopt.solvers.options['show_progress'] = False
 
-    # FIXME - when done experimenting, make sure this is not commented out.
     print("Running doctests.")
     import doctest
     doctest.testmod()
-
-    #ha = qudit('a', 3)
-    #np.random.seed(1)
-    #S = TensorSubspace.create_random_hermitian(ha, 5, tracefree=True).perp()
-    ##locals().update(test_schrijver(S))
-    #locals().update(test_schrijver(S))
-    #A1 = (X + X.H) / 2
-    #A2 = X - A1
-    #A11 = (A1 + ddag(A1)) / 2
-    #A12 = A1 - A11
-    #A21 = (A2 + ddag(A2)) / 2
-    #A22 = A2 - A21
-    #print(A11.norm())
-    #print(A12.norm())
-    #print(A21.norm())
-    #print(A22.norm())
-
-    # seed=5 random(4, 5) gives gap between Szegedy with positive and with
-    # just Hermitian.
-    #cvxopt.solvers.options['abstol'] = float(1e-7)
-    #cvxopt.solvers.options['reltol'] = float(1e-7)
-    #cvxopt.solvers.options['show_progress'] = True
-
-    #print('th dual:  ', S.lovasz_theta())
-    #a = S.unified_primal(S.T_basis, [], [], True)
-    #print('th primal:', a['t'])
-
-    #a = S.szegedy('psd&ppt', long_return=True)
-    #print('thp dual:  ', a['t'])
-    #print('---------')
-    #b = S.unified_primal(S.T_basis, [], [S.cond_psd], True)
-    #print('thp primal:', b['t'])
-
-    #a = S.schrijver('psd&ppt', long_return=True)
-    #print('thm dual:  ', a['t'])
-    #print('---------')
-    #b = S.schrijver([S.cond_psd, S.cond_ppt], True)
-    #print('---------')
-    #b = S.schrijver([S.cond_ppt], True)
-    #print('---------')
-    #b = S.schrijver([S.cond_psd], True)
-    #print('---------')
-    #print('thm primal:', b['t'])
-
-    #locals().update(b)
-
-    #zG_list = []
-    #for (z, G) in zip(sdp_stats['zs'], sdp_stats['Gs']):
-    #    v = np.array(z).reshape(z.size[0]**2)
-    #    zG = np.dot(np.array(G).T, v)
-    #    zG_list.append(zG)
-    #print(linalg.norm(np.sum(zG_list, axis=0) + c))
-
-    #t_honly = S.unified_dual(S.Y_basis_dh, [], False)
-    #print('hermit only:', t_honly)
-
-    #b = S.szegedy(True, long_return=True)
-    ##b = S.lovasz_theta(long_return=True)
-    #locals().update(b)
-    #print(t)
-
-    #zs1 = mat_real_to_cplx(np.array(sdp_stats['zs'][1])).reshape(n,n,n,n) * 2
-    #zs2 = mat_real_to_cplx(np.array(sdp_stats['zs'][2])).reshape(n,n,n,n) * 2
-    ##zs3 = mat_real_to_cplx(np.array(sdp_stats['zs'][3])).reshape(n,n,n,n) * 2
-    #print(T.trace().trace()+1 - t)
-    #w=[np.tensordot(x, y.conj(), axes=([],[])).transpose((0, 2, 1, 3)) for x in S.S_basis for y in S.S_basis]
-    #print(np.max([linalg.norm(np.tensordot(T, (x + x.transpose(1,0,3,2).conj()).conj(), axes=4)) for x in w]))
-
-    #info=szegedy(TensorSubspace.from_span([qudit('a',2).eye()]), 'ppt', long_return=True)
-    #T = info['T']
-    #L = np.sum(info['L_map'].values(), axis=0)
-    #L += L.H

@@ -655,7 +655,7 @@ def lovasz_theta(S, long_return=False, verify_tol=1e-7):
             assert min(err.values()) >= 0
             for (k, v) in err.items():
                 if v > verify_tol:
-                    print('WARRNING: err[%s] = %g' % (k, v))
+                    print('WARNING: err[%s] = %g' % (k, v))
 
         if long_return:
             if ncg.S._hilb_space is not None:
@@ -841,7 +841,7 @@ def szegedy(S, cones, long_return=False, verify_tol=1e-7):
         assert min(err.values()) >= 0
     for (k, v) in err.items():
         if v > verify_tol:
-            print('WARRNING: err[%s] = %g' % (k, v))
+            print('WARNING: err[%s] = %g' % (k, v))
 
     if sdp_stats['status'] in ['optimal', 'primal infeasible']:
         if sdp_stats['status'] == 'primal infeasible':
@@ -1039,7 +1039,7 @@ def schrijver(S, cones, long_return=False, verify_tol=1e-7):
             assert min(err.values()) >= 0
             for (k, v) in err.items():
                 if v > verify_tol:
-                    print('WARRNING: err[%s] = %g' % (k, v))
+                    print('WARNING: err[%s] = %g' % (k, v))
 
         if long_return:
             if len(cones):

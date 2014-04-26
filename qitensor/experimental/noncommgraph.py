@@ -605,11 +605,11 @@ def szegedy(S, cones, long_return=False):
         \max &\left<\Phi|T + I \otimes \rho|\Phi\right> \textrm{ s.t.} \\
             &\rho \succeq 0, \Tr(\rho)=1 \\
             &T + I \otimes \rho \succeq 0 \\
-            &T+\sum_i (L_i+L_i^\dag) \in S^\perp \otimes \overline{S}^\perp \\
+            &T+\sum_i (L_i+L_i^\dag) \in S^\perp * \overline{S}^\perp \\
             &R(L_i)+R(L_i)^\dag \in \mathcal{C}_i^* \quad \forall i \\
         \min &\opnorm{Tr_A(Y)} \textrm{ s.t.} \\
             &Y \succeq \ket{\Phi}\bra{\Phi} \\
-            &Y \in S * \overline{S} \\
+            &Y \in S \otimes \overline{S} \\
             &R(Y) \in \mathcal{C}_i \quad \forall i \\
             &Y = Y^\ddag \textrm{ (redundant with above)}
 
@@ -713,12 +713,10 @@ def szegedy(S, cones, long_return=False):
             # Test the primal solution
             L = np.sum(L_list, axis=0)
             LH = L.transpose(2,3,0,1).conj()
+            TLL = T+L+LH
 
-            # FIXME - which space?
-            # FIXME - this should break when X is not added
             for mat in np.rollaxis(Ybas, -1):
-                dp = np.tensordot(T+L+LH, mat.conj(), axes=4)
-                # FIXME - which space?
+                dp = np.tensordot(TLL, mat.conj(), axes=4)
                 err[r'T+L+L^\dag in Ybas.perp()'] += linalg.norm(dp)
 
             if len(cones):
@@ -734,6 +732,13 @@ def szegedy(S, cones, long_return=False):
             else:
                 err[r'Tr(rho)'] = abs(np.trace(rho))
             err[r'rho pos'] = check_psd(rho)
+
+            # not mandatory, but we can git this condtion anyway
+            TLLddag = TLL.transpose((1,0,3,2)).conj()
+            err[r'R(T+L+L^\dag) \in Herm'] = linalg.norm(TLL-TLLddag)
+
+            TH = T.transpose((2,3,0,1)).conj()
+            err[r'T-T^\dag'] = linalg.norm(T-TH)
 
     if sdp_stats['status'] == 'optimal':
         t = xvec[0]
@@ -755,12 +760,6 @@ def szegedy(S, cones, long_return=False):
 
             maxeig = linalg.eigvalsh(np.trace(Y, axis1=0, axis2=2))[-1].real
             err[r'dual value'] = abs(t - maxeig)
-
-            # FIXME - which space?
-            for mat in ncg.Sp_basis:
-                dp = np.tensordot(Y, mat.conj(), axes=[[0, 2], [0, 1]])
-                # FIXME - which space?
-                err[r'Y in S \ot \bar{S}'] += linalg.norm(dp)
 
     assert min(err.values()) >= 0
     for (k, v) in err.items():
@@ -931,11 +930,6 @@ def schrijver(S, cones, long_return=False):
             err[r'T + I \ot rho'] = linalg.norm(T + I_rho - T_plus_Irho)
             err['primal value'] = abs(t - T_plus_Irho.trace(axis1=0, axis2=1).trace(axis1=0, axis2=1))
 
-            # FIXME - wrong basis?
-            for mat in ncg.S_basis:
-                dp = np.tensordot(T, mat.conj(), axes=[[0, 2], [0, 1]])
-                err[r'T in S^\perp \ot \bar{S}^\perp'] += linalg.norm(dp)
-
             err['T_plus_Irho PSD'] = check_psd(T_plus_Irho.reshape(n**2, n**2))
             err['Tr(rho)'] = abs(np.trace(rho) - 1)
             err['rho PSD'] = check_psd(rho)
@@ -952,12 +946,13 @@ def schrijver(S, cones, long_return=False):
 
             L = np.sum(L_list, axis=0)
             LH = L.transpose(2,3,0,1).conj()
+            YLL = Y+L+LH
 
             err_Y_space = 0
             for matA in ncg.Sp_basis:
                 for matB in ncg.Sp_basis:
                     xy = np.tensordot(matA, matB.conj(), axes=([],[])).transpose((0, 2, 1, 3))
-                    dp = np.tensordot(Y+L+LH, xy.conj(), axes=4)
+                    dp = np.tensordot(YLL, xy.conj(), axes=4)
                     err_Y_space += abs(dp)
             err[r'Y+L+L^\dag in S \djp \bar{S}'] = err_Y_space
 
@@ -966,6 +961,13 @@ def schrijver(S, cones, long_return=False):
                     M = v['R'](L_i).copy()
                     M += M.T.conj()
                     err['R(L_i) in '+v['name']] = check_psd(M)
+
+            # not mandatory, but we can git this condtion anyway
+            YLLddag = YLL.transpose((1,0,3,2)).conj()
+            err[r'R(Y+L+L^\dag) \in Herm'] = linalg.norm(YLL-YLLddag)
+
+            YH = Y.transpose((2,3,0,1)).conj()
+            err[r'Y-Y^\dag'] = linalg.norm(Y-YH)
 
             err['Y-J PSD'] = check_psd((Y-J).reshape(n*n, n*n))
 

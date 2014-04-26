@@ -1015,7 +1015,7 @@ def qthmperp(S, cones, long_return=False):
 def qthpperp(S, cones, long_return=False):
     return szegedy(~S, cones, long_return)
 
-def get_many_values(S, cones=('hermit', 'psd', 'ppt', 'psd&ppt')):
+def get_many_values(S, which_ones=None):
     """
     >>> np.random.seed(1)
     >>> S = TensorSubspace.create_random_hermitian(3, 5, tracefree=True).perp()
@@ -1026,11 +1026,27 @@ def get_many_values(S, cones=('hermit', 'psd', 'ppt', 'psd&ppt')):
     'lovasz: 3.80697, schrijver(hermit): 3.31461, schrijver(ppt): 2.42820, schrijver(psd&ppt): 2.42820, schrijver(psd): 3.31461, szegedy(hermit): 4.55314, szegedy(ppt): inf, szegedy(psd&ppt): inf, szegedy(psd): 4.55314'
     """
 
+    if which_ones is None:
+        which_ones = [
+            'lovasz',
+            'schrijver(hermit)',
+            'schrijver(ppt)',
+            'schrijver(psd&ppt)',
+            'schrijver(psd)',
+            'szegedy(hermit)',
+            'szegedy(ppt)',
+            'szegedy(psd&ppt)',
+            'szegedy(psd)',
+        ]
+
     ret = {}
-    ret['lovasz'] = lovasz_theta(S)
-    for cone in cones:
-        ret['schrijver('+cone+')'] = schrijver(S, cone)
-        ret['szegedy('+cone+')'] = szegedy(S, cone)
+    if 'lovasz' in which_ones:
+        ret['lovasz'] = lovasz_theta(S)
+    for cone in ('hermit', 'ppt', 'psd', 'psd&ppt'):
+        if 'schrijver('+cone+')' in which_ones:
+            ret['schrijver('+cone+')'] = schrijver(S, cone)
+        if 'szegedy('+cone+')' in which_ones:
+            ret['szegedy('+cone+')'] = szegedy(S, cone)
     return ret
 
 ### Validation code ####################

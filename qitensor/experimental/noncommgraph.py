@@ -840,7 +840,8 @@ def szegedy(S, cones, long_return=False):
             maxeig = linalg.eigvalsh(np.trace(Y, axis1=0, axis2=2))[-1].real
             err[r'dual value'] = abs(t - maxeig)
 
-    assert min(err.values()) >= 0
+    if err:
+        assert min(err.values()) >= 0
     for (k, v) in err.items():
         if v > verify_tol:
             print('WARRNING: err[%s] = %g' % (k, v))

@@ -995,8 +995,9 @@ def get_many_values(S, cones=('hermit', 'psd', 'ppt', 'psd&ppt')):
     >>> cvxopt.solvers.options['abstol'] = float(1e-7)
     >>> cvxopt.solvers.options['reltol'] = float(1e-7)
     >>> vals = get_many_values(S)
-    >>> vals.keys()
-    FIXME
+    >>> ', '.join([ '%s: %.5f' % (k, vals[k]) for k in
+    ...     sorted(vals.keys(), key=lambda k: vals[k]) ])
+    'schrijver(ppt): 2.42820, schrijver(psd&ppt): 2.42820, schrijver(hermit): 3.31461, schrijver(psd): 3.31461, lovasz: 3.80697, szegedy(hermit): 4.55314, szegedy(psd): 4.55314, szegedy(ppt): inf, szegedy(psd&ppt): inf'
     """
 
     ret = {}
@@ -1264,10 +1265,11 @@ def checking_routine(S, cones, task, report):
 
         for C in cone_names:
             L = L_map[C]
+            M = R(L) + R(L).H
             if C == 'psd':
-                err[r'L_PSD'] = check_psd(R(L))
+                err[r'L_PSD'] = check_psd(M)
             elif C == 'ppt':
-                err[r'L_PPT'] = check_psd(R(L).transpose(ha))
+                err[r'L_PPT'] = check_psd(M.transpose(ha))
             else:
                 assert 0
 
@@ -1296,15 +1298,13 @@ def checking_routine(S, cones, task, report):
 
         err[r'T+L+L^\dag \perp S \ot \bar{S}'] = proj_S_ot_S(T+L+L.H).norm()
 
-        # FIXME - test hermit cone
-
         for C in cone_names:
-            # FIXME - symmetrize
             L = L_map[C]
+            M = R(L) + R(L).H
             if C == 'psd':
-                err[r'L_PSD'] = check_psd(R(L))
+                err[r'L_PSD'] = check_psd(M)
             elif C == 'ppt':
-                err[r'L_PPT'] = check_psd(R(L).transpose(ha))
+                err[r'L_PPT'] = check_psd(M.transpose(ha))
             else:
                 assert 0
 

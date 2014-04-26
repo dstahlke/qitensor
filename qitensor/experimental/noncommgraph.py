@@ -229,8 +229,9 @@ class GraphProperties(object):
 
     @cached_property
     def bottom_space(self):
-        ret = self.top_space.prime # FIXME - what if it already is primed?
-        assert ret.ket_set.isdisjoint(self.top_space.ket_set)
+        ret = self.top_space
+        while not ret.isdisjoint(self.top_space):
+            ret = ret.prime
         return ret
 
     def R(self, x):
@@ -498,6 +499,9 @@ def lovasz_theta(S, long_return=False):
     If the long_return option is True, then the optimal solution (T, Y, etc.) is returned.
     """
 
+    if S.perp().dim() == 0:
+        return 1.0
+
     ncg = GraphProperties(S)
     n = ncg.n
 
@@ -594,7 +598,6 @@ def lovasz_theta(S, long_return=False):
         raise Exception('cvxopt.sdp returned error: '+sdp_stats['status'])
 
 def szegedy(S, cones, long_return=False):
-    # FIXME - test Y^\ddag = Y
     r"""
     My non-commutative generalization of Szegedy's number.
 
@@ -607,12 +610,18 @@ def szegedy(S, cones, long_return=False):
         \min &\opnorm{Tr_A(Y)} \textrm{ s.t.} \\
             &Y \succeq \ket{\Phi}\bra{\Phi} \\
             &Y \in S * \overline{S} \\
-            &R(Y) \in \mathcal{C}_i \quad \forall i
+            &R(Y) \in \mathcal{C}_i \quad \forall i \\
+            &Y = Y^\ddag \textrm{ (redundant with above)}
 
     ``cones`` can be ``hermit``, ``psd``, ``ppt``, or ``psd&ppt``.
 
     If the long_return option is True, then the optimal solution (T, Y, etc.) is returned.
+    It is possible for the value to be ``inf``, in which case the primal solution will be
+    a certificate of infeasibility, with :math:`\Tr(\rho)=0`.
     """
+
+    if S.perp().dim() == 0:
+        return 1.0
 
     ncg = GraphProperties(S)
     cones = ncg.get_cone_set(cones)
@@ -691,6 +700,13 @@ def szegedy(S, cones, long_return=False):
             L_list.append(-X/2)
         X = None
 
+        if sdp_stats['status'] == 'primal infeasible':
+            # Rescale certificate of infeasibility so that <Phi|T|Phi>=1 exactly.
+            s = T.trace().trace()
+            T /= s
+            rho /= s
+            L_list = [ L_i/s for L_i in L_list ]
+
         # Verify dual solution (or part of it; more is done below)
         verify_tol=1e-7
         if verify_tol:
@@ -734,6 +750,9 @@ def szegedy(S, cones, long_return=False):
                 M = v['R'](Y)
                 err[r'R(Y) in '+v['name']] = check_psd(M)
 
+            Yddag = Y.transpose((1,0,3,2)).conj()
+            err[r'Y-Y^\ddag'] = linalg.norm(Y-Yddag)
+
             maxeig = linalg.eigvalsh(np.trace(Y, axis1=0, axis2=2))[-1].real
             err[r'dual value'] = abs(t - maxeig)
 
@@ -748,7 +767,6 @@ def szegedy(S, cones, long_return=False):
         if v > verify_tol:
             print('WARRNING: err[%s] = %g' % (k, v))
 
-    # FIXME - need to update
     if sdp_stats['status'] in ['optimal', 'primal infeasible']:
         if sdp_stats['status'] == 'primal infeasible':
             t = np.inf
@@ -781,7 +799,6 @@ def szegedy(S, cones, long_return=False):
         raise Exception('cvxopt.sdp returned error: '+sdp_stats['status'])
 
 def schrijver(S, cones, long_return=False):
-    # FIXME - test T^\ddag = T
     r"""
     My non-commutative generalization of Schrijver's number.
 
@@ -791,6 +808,7 @@ def schrijver(S, cones, long_return=False):
             &T + I \otimes \rho \succeq 0 \\
             &T \in S^\perp \otimes \overline{S}^\perp \\
             &R(T) \in \mathcal{C}_i \quad \forall i \\
+            &T = T^\ddag \textrm{ (redundant with above)} \\
         \min &\opnorm{Tr_A(Y)} \textrm{ s.t.} \\
             &Y \succeq \ket{\Phi}\bra{\Phi} \\
             &Y+\sum_i (L_i+L_i^\dag) \in S * \overline{S} \\
@@ -801,7 +819,8 @@ def schrijver(S, cones, long_return=False):
     If the long_return option is True, then the optimal solution (T, Y, etc.) is returned.
     """
 
-    # FIXME - test with S being full-space
+    if S.perp().dim() == 0:
+        return 1.0
 
     ncg = GraphProperties(S)
     cones = ncg.get_cone_set(cones)
@@ -925,6 +944,9 @@ def schrijver(S, cones, long_return=False):
                 M = v['R'](T)
                 err['R(T) in '+v['name']] = check_psd(M)
 
+            Tddag = T.transpose((1,0,3,2)).conj()
+            err[r'T-T^\ddag'] = linalg.norm(T-Tddag)
+
             # Test the dual solution
             err['dual value'] = abs(t - linalg.eigvalsh(Y.trace(axis1=0, axis2=2))[-1])
 
@@ -1028,13 +1050,11 @@ def test_lovasz(S):
     cvxopt.solvers.options['reltol'] = float(1e-8)
 
     info = lovasz_theta(S, True)
-    if info['sdp_stats']['status'] != 'optimal':
-        print('Error: status='+info['sdp_stats']['status'])
-    else:
-        print('t: %.7f' % info['t'])
-        (tp, errp) = check_lovasz_primal(S, *[ info[x] for x in 'rho,T'.split(',') ])
-        (td, errd) = check_lovasz_dual(S, *[ info[x] for x in 'Y'.split(',') ])
-        print('duality gap: %.7f' % (td-tp))
+    assert info['sdp_stats']['status'] == 'optimal'
+    print('t: %.7f' % info['t'])
+    (tp, errp) = check_lovasz_primal(S, *[ info[x] for x in 'rho,T'.split(',') ])
+    (td, errd) = check_lovasz_dual(S, *[ info[x] for x in 'Y'.split(',') ])
+    print('duality gap: %.7f' % (td-tp))
 
 def test_schrijver(S, cones=('hermit', 'psd', 'ppt', 'psd&ppt')):
     """
@@ -1072,13 +1092,11 @@ def test_schrijver(S, cones=('hermit', 'psd', 'ppt', 'psd&ppt')):
     for cone in cones:
         print('--- Schrijver with', cone)
         info = schrijver(S, cone, True)
-        if info['sdp_stats']['status'] != 'optimal':
-            print('Error: status='+info['sdp_stats']['status'])
-        else:
-            print('t: %.7f' % info['t'])
-            (tp, errp) = check_schrijver_primal(S, cone, *[ info[x] for x in 'rho,T'.split(',') ])
-            (td, errd) = check_schrijver_dual(S, cone, *[ info[x] for x in 'Y,L_map'.split(',') ])
-            print('duality gap: %.7f' % (td-tp))
+        assert info['sdp_stats']['status'] == 'optimal'
+        print('t: %.7f' % info['t'])
+        (tp, errp) = check_schrijver_primal(S, cone, *[ info[x] for x in 'rho,T'.split(',') ])
+        (td, errd) = check_schrijver_dual(S, cone, *[ info[x] for x in 'Y,L_map'.split(',') ])
+        print('duality gap: %.7f' % (td-tp))
 
 def test_szegedy(S):
     """
@@ -1112,16 +1130,14 @@ def test_szegedy(S):
     for cone in ('hermit', 'psd', 'ppt', 'psd&ppt'):
         print('--- Szegedy with', cone)
         info = szegedy(S, cone, True)
-        if not info['sdp_stats']['status'] in ['optimal', 'primal infeasible']:
-            print('Error: status='+info['sdp_stats']['status'])
-        else:
-            print('t: %.7f' % info['t'])
-            is_opt = (info['sdp_stats']['status'] == 'optimal')
-            info['is_opt'] = is_opt
-            (tp, errp) = check_szegedy_primal(S, cone, *[ info[x] for x in 'rho,T,L_map,is_opt'.split(',') ])
-            if is_opt:
-                (td, errd) = check_szegedy_dual(S, cone, *[ info[x] for x in 'Y'.split(',') ])
-                print('duality gap: %.7f' % (td-tp))
+        assert info['sdp_stats']['status'] in ['optimal', 'primal infeasible']
+        print('t: %.7f' % info['t'])
+        is_opt = (info['sdp_stats']['status'] == 'optimal')
+        info['is_opt'] = is_opt
+        (tp, errp) = check_szegedy_primal(S, cone, *[ info[x] for x in 'rho,T,L_map,is_opt'.split(',') ])
+        if is_opt:
+            (td, errd) = check_szegedy_dual(S, cone, *[ info[x] for x in 'Y'.split(',') ])
+            print('duality gap: %.7f' % (td-tp))
 
 def check_lovasz_primal(S, rho, T, report=True):
     r"""
@@ -1300,7 +1316,7 @@ def checking_routine(S, cones, task, report):
             # Certificate of primal infeasibility
             val = np.inf
             err[r'trace(rho)'] = abs(rho.trace())
-            # FIXME - make sure <Phi|T|Phi> \ge 0
+            err[r'<Phi|T|Phi>=1'] = abs(1-(Phi.H * T * Phi).real)
 
         err[r'rho PSD'] = check_psd(rho)
         err[r'T + I \ot rho PSD'] = check_psd(T + ha.eye()*rho)
@@ -1324,7 +1340,6 @@ def checking_routine(S, cones, task, report):
 
         val = Y.trace(ha).eigvalsh()[-1]
         err[r'Y \succeq J'] = check_psd(Y - J)
-        # FIXME: add to docstring; check in solver
         err[r'Y^\ddag - Y'] = (Y - ddag(Y)).norm()
 
         for C in cone_names:
@@ -1355,7 +1370,7 @@ if __name__ == "__main__":
     # Doctests require not getting progress messages from SDP solver.
     cvxopt.solvers.options['show_progress'] = False
 
-    # FIXME
+    # FIXME - when done experimenting, make sure this is not commented out.
     print("Running doctests.")
     import doctest
     doctest.testmod()

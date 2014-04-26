@@ -457,6 +457,9 @@ cdef class HilbertSpace:
 
         return create_space1([ x.decorate(fn, fn_latex) for x in self.bra_ket_set ])
 
+    def isdisjoint(self, other):
+        return self.bra_ket_set.isdisjoint(other.bra_ket_set)
+
     def __richcmp__(self, other, op):
         """
         Compares two HilbertSpace objects lexicographically.

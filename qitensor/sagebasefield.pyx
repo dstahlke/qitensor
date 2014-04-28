@@ -130,3 +130,6 @@ cdef class SageHilbertBaseField(HilbertBaseField):
         w = self.matrix_np_to_sage(m).eigenvalues()
         # convert result to numpy
         return np.array(w)
+
+    cpdef eval_suppress_small(self, x, float threshold):
+        return False

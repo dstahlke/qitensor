@@ -196,3 +196,6 @@ cdef class HilbertBaseField:
         # cast to complex in case we have symbolic vals from Sage
         (q, r) = np.linalg.qr(np.matrix(mat, dtype=complex))
         return (q, r)
+
+    cpdef eval_suppress_small(self, x, float threshold):
+        return abs(x) < threshold

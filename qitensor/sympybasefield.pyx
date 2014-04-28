@@ -110,3 +110,6 @@ cdef class SympyHilbertBaseField(HilbertBaseField):
     cpdef np.ndarray mat_pow(self, np.ndarray m, n):
         sm = sympy.Matrix(m)
         return np.matrix(sm ** n)
+
+    cpdef eval_suppress_small(self, x, float threshold):
+        return False

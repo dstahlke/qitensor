@@ -183,7 +183,7 @@ class HilbertArrayFormatter(object):
                 else:
                     idx = k_idx + b_idx
                 v = arr[idx]
-                if suppress and abs(v) < suppress_thresh:
+                if suppress and spc.base_field.eval_suppress_small(v, suppress_thresh):
                     if self.zero_color_latex != '':
                         vs = r'\color{'+self.zero_color_latex+'}{0}'
                     else:
@@ -202,8 +202,36 @@ class HilbertArrayFormatter(object):
         return ht
 
     def array_html_block_table(self, arr):
-        """
+        r"""
         Format array in HTML.  Used for IPython.
+
+        >>> from qitensor import qudit
+        >>> ha = qudit('a', 3)
+        >>> hb = qudit('b', 2)
+        >>> X = ha.eye() * hb.ket(1)
+        >>> f = HilbertArrayFormatter()
+        >>> f.set_printoptions()
+        >>> print(f.array_html_block_table(X))
+        $\left| a,b \right\rangle\left\langle a \right|$<table style='margin: 0px 0px;'>
+        <colgroup style='border: 2px solid black;'></colgroup>
+        <colgroup span=3 style='border: 2px solid black;'></colgroup>
+        <tbody style='border: 2px solid black;'>
+        <tr style='border: 1px dotted; padding: 2px;'><td style='border: 1px dotted; padding: 2px; text-align: center;'> </td><td style='border: 1px dotted; padding: 2px; text-align: center;'><nobr>&#x27e8;<tt>0</tt>|</nobr></td><td style='border: 1px dotted; padding: 2px; text-align: center;'><nobr>&#x27e8;<tt>1</tt>|</nobr></td><td style='border: 1px dotted; padding: 2px; text-align: center;'><nobr>&#x27e8;<tt>2</tt>|</nobr></td></tr>
+        </tbody>
+        <tbody style='border: 2px solid black;'>
+        <tr style='border: 1px dotted; padding: 2px;'><td style='border: 1px dotted; padding: 2px; text-align: center;'><nobr>|<tt>0</tt>,<tt>0</tt>&#x27e9;</nobr></td><td style='border: 1px dotted; padding: 2px; text-align: right;'><font color='#cccccc'>0</font></td><td style='border: 1px dotted; padding: 2px; text-align: right;'><font color='#cccccc'>0</font></td><td style='border: 1px dotted; padding: 2px; text-align: right;'><font color='#cccccc'>0</font></td></tr>
+        <tr style='border: 1px dotted; padding: 2px;'><td style='border: 1px dotted; padding: 2px; text-align: center;'><nobr>|<tt>0</tt>,<tt>1</tt>&#x27e9;</nobr></td><td style='border: 1px dotted; padding: 2px; text-align: right;'><nobr><tt> 1.+0.j</tt></nobr></td><td style='border: 1px dotted; padding: 2px; text-align: right;'><font color='#cccccc'>0</font></td><td style='border: 1px dotted; padding: 2px; text-align: right;'><font color='#cccccc'>0</font></td></tr>
+        </tbody>
+        <tbody style='border: 2px solid black;'>
+        <tr style='border: 1px dotted; padding: 2px;'><td style='border: 1px dotted; padding: 2px; text-align: center;'><nobr>|<tt>1</tt>,<tt>0</tt>&#x27e9;</nobr></td><td style='border: 1px dotted; padding: 2px; text-align: right;'><font color='#cccccc'>0</font></td><td style='border: 1px dotted; padding: 2px; text-align: right;'><font color='#cccccc'>0</font></td><td style='border: 1px dotted; padding: 2px; text-align: right;'><font color='#cccccc'>0</font></td></tr>
+        <tr style='border: 1px dotted; padding: 2px;'><td style='border: 1px dotted; padding: 2px; text-align: center;'><nobr>|<tt>1</tt>,<tt>1</tt>&#x27e9;</nobr></td><td style='border: 1px dotted; padding: 2px; text-align: right;'><font color='#cccccc'>0</font></td><td style='border: 1px dotted; padding: 2px; text-align: right;'><nobr><tt> 1.+0.j</tt></nobr></td><td style='border: 1px dotted; padding: 2px; text-align: right;'><font color='#cccccc'>0</font></td></tr>
+        </tbody>
+        <tbody style='border: 2px solid black;'>
+        <tr style='border: 1px dotted; padding: 2px;'><td style='border: 1px dotted; padding: 2px; text-align: center;'><nobr>|<tt>2</tt>,<tt>0</tt>&#x27e9;</nobr></td><td style='border: 1px dotted; padding: 2px; text-align: right;'><font color='#cccccc'>0</font></td><td style='border: 1px dotted; padding: 2px; text-align: right;'><font color='#cccccc'>0</font></td><td style='border: 1px dotted; padding: 2px; text-align: right;'><font color='#cccccc'>0</font></td></tr>
+        <tr style='border: 1px dotted; padding: 2px;'><td style='border: 1px dotted; padding: 2px; text-align: center;'><nobr>|<tt>2</tt>,<tt>1</tt>&#x27e9;</nobr></td><td style='border: 1px dotted; padding: 2px; text-align: right;'><font color='#cccccc'>0</font></td><td style='border: 1px dotted; padding: 2px; text-align: right;'><font color='#cccccc'>0</font></td><td style='border: 1px dotted; padding: 2px; text-align: right;'><nobr><tt> 1.+0.j</tt></nobr></td></tr>
+        </tbody>
+        </table>
+        <BLANKLINE>
         """
 
         (suppress, suppress_thresh) = self._get_suppress()
@@ -238,7 +266,7 @@ class HilbertArrayFormatter(object):
             ht += "<colgroup "+st_tab+"></colgroup>\n"
         if len(spc.bra_set):
             colgrp_size = spc.bra_space().shape[-1]
-            for i in range(spc.bra_space().dim() / colgrp_size):
+            for i in range(spc.bra_space().dim() // colgrp_size):
                 ht += ("<colgroup span=%d "+st_tab+"></colgroup>\n") % colgrp_size
         else:
             ht += "<colgroup "+st_tab+"></colgroup>\n"
@@ -293,7 +321,7 @@ class HilbertArrayFormatter(object):
                 else:
                     idx = k_idx + b_idx
                 v = arr[idx]
-                if suppress and abs(v) < suppress_thresh:
+                if suppress and spc.base_field.eval_suppress_small(v, suppress_thresh):
                     if self.zero_color_html != '':
                         vs = "<font color='"+self.zero_color_html+"'>0</font>"
                     else:

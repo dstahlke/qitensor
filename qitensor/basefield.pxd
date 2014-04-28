@@ -38,3 +38,4 @@ cdef class HilbertBaseField:
     cpdef mat_eig(self, np.ndarray mat, cpython.bool hermit)
     cpdef mat_eigvals(self, np.ndarray mat, cpython.bool hermit)
     cpdef mat_qr(self, np.ndarray mat)
+    cpdef eval_suppress_small(self, x, float threshold)

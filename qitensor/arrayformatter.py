@@ -223,7 +223,16 @@ class HilbertArrayFormatter(object):
             bra_indices = [None]
         fmt = spc.base_field.latex_formatter(arr.nparray.flatten(), dollar_if_tex=True)
 
-        ht = "<table style='margin: 0px 0px;'>\n"
+        ht = ''
+
+        if self.use_latex_label_in_html:
+            ht += spc._repr_latex_()
+        else:
+            # FIXME - here, and elsewhere, use unicode symbols '&#x27e8;' and '&#x27e9;'
+            # for html.
+            ht += spc._html_()+'<br>'
+
+        ht += "<table style='margin: 0px 0px;'>\n"
 
         if spc.ket_set:
             ht += "<colgroup "+st_tab+"></colgroup>\n"
@@ -234,8 +243,6 @@ class HilbertArrayFormatter(object):
         else:
             ht += "<colgroup "+st_tab+"></colgroup>\n"
 
-        bra_ket_font = 'font-size:100%'
-
         if spc.bra_set:
             ht += "<tbody "+st_tab+">\n"
             ht += '<tr '+st_tr+'>'
@@ -244,15 +251,14 @@ class HilbertArrayFormatter(object):
 
             for b_idx in bra_indices:
                 ht += '<td '+st_th+'><nobr>'
-                if self.use_latex_label_in_html:
-                    ht += r'$\scriptsize{\left< '
-                    for (x, y) in zip(b_idx, spc.sorted_bras):
-                        ht += str(x) + '_{' + y.latex_label + '}'
-                    ht += r' \right|}$'
-                else:
-                    ht += '<span style="'+bra_ket_font+'">&#x27e8;'
-                    ht += ''.join('<tt>'+str(x)+'</tt><sub>'+y.label+'</sub>' for (x, y) in zip(b_idx, spc.sorted_bras))
-                    ht += '|</span>'
+
+                #if self.use_latex_label_in_html:
+                #    ht += r'$\scriptsize{\left< '
+                #    ht += ','.join([str(x) for x in b_idx]) # FIXME - latex label for indices?
+                #    ht += r' \right|}$'
+                #else:
+                ht += '&#x27e8;'+(','.join(['<tt>'+str(x)+'</tt>' for x in b_idx]))+'|'
+
                 ht += '</nobr></td>'
 
             ht += '</tr>\n'
@@ -268,15 +274,14 @@ class HilbertArrayFormatter(object):
             ht += '<tr '+st_tr+'>'
             if spc.ket_set:
                 ht += '<td '+st_th+'><nobr>'
-                if self.use_latex_label_in_html:
-                    ht += r'$\scriptsize{\left| '
-                    for (x, y) in zip(k_idx, spc.sorted_kets):
-                        ht += str(x) + '_{' + y.latex_label + '}'
-                    ht += r' \right>}$'
-                else:
-                    ht += '<span style="'+bra_ket_font+'">|'
-                    ht += ''.join('<tt>'+str(x)+'</tt><sub>'+y.label+'</sub>' for (x, y) in zip(k_idx, spc.sorted_kets))
-                    ht += '&#x27e9;</span>'
+
+                #if self.use_latex_label_in_html:
+                #    ht += r'$\scriptsize{\left| '
+                #    ht += ','.join([str(x) for x in k_idx]) # FIXME - latex label for indices?
+                #    ht += r' \right>}$'
+                #else:
+                ht += '|'+(','.join(['<tt>'+str(x)+'</tt>' for x in k_idx]))+'&#x27e9;'
+
                 ht += '</nobr></td>'
             for b_idx in bra_indices:
                 if k_idx is None and b_idx is None:

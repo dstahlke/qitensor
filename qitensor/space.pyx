@@ -546,9 +546,23 @@ cdef class HilbertSpace:
         png = latex_to_png(s, backend='dvipng', wrap=True)
         return png
 
+    def _html_(self):
+        """
+        For internal use.
+        # FIXME - Maybe should expose this to ipython notebook and Qt console.
+        """
+        ht = ''
+        if self.ket_set:
+            ht += '|'+(','.join([ x.label for x in self.sorted_kets ]))+'&#x27e9;'
+        if self.bra_set:
+            ht += '&#x27e8;'+(','.join([ x.label for x in self.sorted_bras ]))+'|'
+        return ht
+
     def _latex_(self):
         """
         Returns a latex representation, for Sage.
+
+        This is also called by, for example, ``_repr_latex_``.
         """
 
         bra_labels = [x.latex_label for x in self.sorted_bras]

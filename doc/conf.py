@@ -16,6 +16,7 @@
 import sys
 import sysconfig
 import os
+import re
 
 # http://stackoverflow.com/a/14369968/1048959
 def distutils_dir_name(dname):
@@ -299,3 +300,14 @@ texinfo_documents = [
 
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #texinfo_no_detailmenu = False
+
+# Adapted from http://stackoverflow.com/a/11746519/1048959
+# Replace 'sage:' with '>>>' in docstrings so that Sphinx can parse them.
+# Ideally I'd like the generated HTML to say 'sage:', but I'm not sure how to make that
+# happen.
+def process_docstring(app, what, name, obj, options, lines):
+    for i in range(len(lines)):
+        lines[i] = re.sub(r'^(\s*)sage: ', r'\1>>> ', lines[i])
+
+def setup(app):
+    app.connect('autodoc-process-docstring', process_docstring)

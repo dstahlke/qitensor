@@ -234,6 +234,8 @@ class HilbertArrayFormatter(object):
         else:
             ht += "<colgroup "+st_tab+"></colgroup>\n"
 
+        bra_ket_font = 'font-size:100%'
+
         if spc.bra_set:
             ht += "<tbody "+st_tab+">\n"
             ht += '<tr '+st_tr+'>'
@@ -248,9 +250,9 @@ class HilbertArrayFormatter(object):
                         ht += str(x) + '_{' + y.latex_label + '}'
                     ht += r' \right|}$'
                 else:
-                    ht += '&lt;'
-                    ht += ','.join(y.label+'='+str(x) for (x, y) in zip(b_idx, spc.sorted_bras))
-                    ht += '|'
+                    ht += '<span style="'+bra_ket_font+'">&#x27e8;'
+                    ht += ''.join('<tt>'+str(x)+'</tt><sub>'+y.label+'</sub>' for (x, y) in zip(b_idx, spc.sorted_bras))
+                    ht += '|</span>'
                 ht += '</nobr></td>'
 
             ht += '</tr>\n'
@@ -272,9 +274,9 @@ class HilbertArrayFormatter(object):
                         ht += str(x) + '_{' + y.latex_label + '}'
                     ht += r' \right>}$'
                 else:
-                    ht += '|'
-                    ht += ','.join(y.label+'='+str(x) for (x, y) in zip(k_idx, spc.sorted_kets))
-                    ht += '&gt;'
+                    ht += '<span style="'+bra_ket_font+'">|'
+                    ht += ''.join('<tt>'+str(x)+'</tt><sub>'+y.label+'</sub>' for (x, y) in zip(k_idx, spc.sorted_kets))
+                    ht += '&#x27e9;</span>'
                 ht += '</nobr></td>'
             for b_idx in bra_indices:
                 if k_idx is None and b_idx is None:

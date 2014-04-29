@@ -475,7 +475,7 @@ class CP_Map(Superoperator):
         True
         """
 
-        return [ self.J[{ self.env_space: x }] for x in self.env_space.indices ]
+        return [ self.J[x] for x in self.env_space.index_iter_dict() ]
 
     def __str__(self):
         return 'CP_Map( '+str(self.in_space.O)+' to '+str(self.out_space.O)+' )'

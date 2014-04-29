@@ -254,7 +254,7 @@ class HilbertArrayFormatter(object):
         ht = ''
 
         if self.use_latex_label_in_html:
-            ht += spc._repr_latex_()
+            ht += '$'+spc._latex_()+'$'
         else:
             # FIXME - here, and elsewhere, use unicode symbols '&#x27e8;' and '&#x27e9;'
             # for html.

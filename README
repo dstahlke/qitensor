@@ -4,8 +4,11 @@ Author: Dan Stahlke
 License: BSD
 
 Installation:
+    ./setup.py build
     ./setup.py test
     sudo ./setup.py install
+      or
+    ./setup.py install --user
 
     # If you have Sage:
     cd sage_package
